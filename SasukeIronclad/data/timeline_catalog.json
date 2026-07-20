@@ -1,59 +1,17 @@
 {
   "schema_version": 1,
   "entries": [
-    {
-      "animation_id": "strike_kusanagi_draw_slash",
-      "card_id": "Strike",
-      "path": "res://SasukeIronclad/data/timelines/strike_kusanagi_draw_slash.json",
-      "status": "graybox"
-    },
-    {
-      "animation_id": "defend_wire_parry_guard",
-      "card_id": "Defend",
-      "path": "res://SasukeIronclad/data/timelines/defend_wire_parry_stance.json",
-      "status": "graybox"
-    },
-    {
-      "animation_id": "bash_sharingan_breaker",
-      "card_id": "Bash",
-      "path": "res://SasukeIronclad/data/timelines/bash_sharingan_breaker.json",
-      "status": "graybox"
-    },
-    {
-      "animation_id": "anger_shuriken_afterimage",
-      "card_id": "Anger",
-      "path": "res://SasukeIronclad/data/timelines/anger_shuriken_afterimage.json",
-      "status": "graybox"
-    },
-    {
-      "animation_id": "cleave_chidori_ground_arc",
-      "card_id": "Cleave",
-      "path": "res://SasukeIronclad/data/timelines/cleave_chidori_ground_arc.json",
-      "status": "graybox"
-    },
-    {
-      "animation_id": "thunderclap_chidori_ring_burst",
-      "card_id": "Thunderclap",
-      "path": "res://SasukeIronclad/data/timelines/thunderclap_chidori_ring_burst.json",
-      "status": "graybox"
-    },
-    {
-      "animation_id": "heavy_blade_lightning_execution",
-      "card_id": "Heavy Blade",
-      "path": "res://SasukeIronclad/data/timelines/heavy_blade_lightning_execution.json",
-      "status": "graybox"
-    },
-    {
-      "animation_id": "whirlwind_chidori_blade_storm",
-      "card_id": "Whirlwind",
-      "path": "res://SasukeIronclad/data/timelines/whirlwind_chidori_blade_storm.json",
-      "status": "graybox"
-    },
-    {
-      "animation_id": "fiend_fire_dragon_flame_annihilation",
-      "card_id": "Fiend Fire",
-      "path": "res://SasukeIronclad/data/timelines/fiend_fire_dragon_flame_annihilation.json",
-      "status": "graybox"
-    }
+    {"animation_id":"strike_kusanagi_draw_slash","card_id":"Strike","path":"res://SasukeIronclad/data/timelines/strike_kusanagi_draw_slash.json","status":"graybox"},
+    {"animation_id":"defend_wire_parry_guard","card_id":"Defend","path":"res://SasukeIronclad/data/timelines/defend_wire_parry_stance.json","status":"graybox"},
+    {"animation_id":"bash_sharingan_breaker","card_id":"Bash","path":"res://SasukeIronclad/data/timelines/bash_sharingan_breaker.json","status":"graybox"},
+    {"animation_id":"anger_shuriken_afterimage","card_id":"Anger","path":"res://SasukeIronclad/data/timelines/anger_shuriken_afterimage.json","status":"graybox"},
+    {"animation_id":"cleave_chidori_ground_arc","card_id":"Cleave","path":"res://SasukeIronclad/data/timelines/cleave_chidori_ground_arc.json","status":"graybox"},
+    {"animation_id":"thunderclap_chidori_ring_burst","card_id":"Thunderclap","path":"res://SasukeIronclad/data/timelines/thunderclap_chidori_ring_burst.json","status":"graybox"},
+    {"animation_id":"heavy_blade_lightning_execution","card_id":"Heavy Blade","path":"res://SasukeIronclad/data/timelines/heavy_blade_lightning_execution.json","status":"graybox"},
+    {"animation_id":"flame_barrier_uchiha_fire_guard","card_id":"Flame Barrier","path":"res://SasukeIronclad/data/timelines/flame_barrier_uchiha_fire_guard.json","status":"graybox"},
+    {"animation_id":"whirlwind_chidori_blade_storm","card_id":"Whirlwind","path":"res://SasukeIronclad/data/timelines/whirlwind_chidori_blade_storm.json","status":"graybox"},
+    {"animation_id":"burning_pact_curse_seal_consumption","card_id":"Burning Pact","path":"res://SasukeIronclad/data/timelines/burning_pact_curse_seal_consumption.json","status":"graybox"},
+    {"animation_id":"limit_break_sharingan_curse_overdrive","card_id":"Limit Break","path":"res://SasukeIronclad/data/timelines/limit_break_sharingan_curse_overdrive.json","status":"graybox"},
+    {"animation_id":"fiend_fire_dragon_flame_annihilation","card_id":"Fiend Fire","path":"res://SasukeIronclad/data/timelines/fiend_fire_dragon_flame_annihilation.json","status":"graybox"}
   ]
 }
