@@ -13,19 +13,12 @@ def load_manifest() -> dict:
 
 
 def select_animation_id(card: dict, **runtime_values: int | bool) -> str:
-    """Offline invariant model: runtime values never select AnimationId."""
     _ = runtime_values
     return card["animation_id"]
 
 
-def select_variant(card: dict, **runtime_values: int | bool) -> str:
+def select_content_variant(card: dict, **runtime_values: int | bool) -> str:
     variants = set(card["variants"])
-    if runtime_values.get("low_flash") and "low_flash" in variants:
-        return "low_flash"
-    # Fast mode is a global runtime policy. Released timelines must provide the
-    # override even when older manifest entries do not list a fast alias.
-    if runtime_values.get("fast"):
-        return "fast"
     if runtime_values.get("lethal") and "lethal" in variants:
         return "lethal"
 
@@ -43,6 +36,14 @@ def select_variant(card: dict, **runtime_values: int | bool) -> str:
     if runtime_values.get("upgraded") and "upgraded" in variants:
         return "upgraded"
     return "base"
+
+
+def select_presentation(card: dict, **runtime_values: int | bool) -> tuple[str, bool, bool]:
+    return (
+        select_content_variant(card, **runtime_values),
+        bool(runtime_values.get("fast")),
+        bool(runtime_values.get("low_flash")),
+    )
 
 
 def main() -> int:
@@ -64,21 +65,47 @@ def main() -> int:
 
     animation_ids = [card["animation_id"] for card in cards.values()]
     assert len(animation_ids) == len(set(animation_ids)), "animation_id values must be unique"
-
     assert cards["Strike"]["animation_id"] != cards["Heavy Blade"]["animation_id"]
     assert cards["Strike"]["animation_id"] != cards["Fiend Fire"]["animation_id"]
     assert cards["Whirlwind"]["animation_id"] != cards["Thunderclap"]["animation_id"]
 
-    assert select_variant(cards["Heavy Blade"], strength=10) == "empowered"
-    assert select_variant(cards["Whirlwind"], energy_spent=3) == "empowered"
-    assert select_variant(cards["Fiend Fire"], exhausted_card_count=5) == "empowered"
-    assert select_variant(cards["Limit Break"], strength=8) == "empowered"
-    assert select_variant(cards["Limit Break"], strength=2) == "base"
-    assert select_variant(cards["Strike"], strength=99, final_damage=999) == "base"
-    assert select_variant(cards["Flame Barrier"], fast=True) == "fast"
-    assert select_variant(cards["Heavy Blade"], strength=10, low_flash=True) == "low_flash"
+    assert select_content_variant(cards["Heavy Blade"], strength=10) == "empowered"
+    assert select_content_variant(cards["Whirlwind"], energy_spent=3) == "empowered"
+    assert select_content_variant(cards["Fiend Fire"], exhausted_card_count=5) == "empowered"
+    assert select_content_variant(cards["Limit Break"], strength=8) == "empowered"
+    assert select_content_variant(cards["Limit Break"], strength=2) == "base"
+    assert select_content_variant(cards["Strike"], strength=99, final_damage=999) == "base"
 
-    print(f"OK: animation identity and card-local variant invariants hold for {len(cards)} timelines.")
+    layered = select_presentation(
+        cards["Heavy Blade"],
+        strength=10,
+        low_flash=True,
+        fast=True,
+    )
+    assert layered == ("empowered", True, True)
+    lethal_accessible = select_presentation(
+        cards["Fiend Fire"],
+        lethal=True,
+        low_flash=True,
+    )
+    assert lethal_accessible == ("lethal", False, True)
+
+    selector_source = (ROOT / "SasukeIroncladCode/Runtime/CardAnimationSelector.cs").read_text(encoding="utf-8")
+    assert "SelectContentVariant" in selector_source
+    assert "FastMode = context.FastMode" in selector_source
+    assert "LowFlashMode = context.LowFlashMode" in selector_source
+    assert "return CardAnimationVariant.LowFlash" not in selector_source
+    assert "return CardAnimationVariant.Fast" not in selector_source
+
+    host_source = (ROOT / "SasukeIroncladCode/Adapters/GodotVisualSceneHost.cs").read_text(encoding="utf-8")
+    assert '["fast_mode"] = selection.FastMode' in host_source
+    assert '["low_flash"] = selection.LowFlashMode' in host_source
+
+    director_source = (ROOT / "SasukeIronclad/scripts/runtime/animation_director.gd").read_text(encoding="utf-8")
+    for contract in ["_is_fast_mode", "_is_low_flash_mode", "content_scale * fast_scale"]:
+        assert contract in director_source
+
+    print(f"OK: animation identity and layered card-local presentation invariants hold for {len(cards)} timelines.")
     return 0
 
 
