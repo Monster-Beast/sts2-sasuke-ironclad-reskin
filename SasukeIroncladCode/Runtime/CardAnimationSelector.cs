@@ -44,15 +44,25 @@ public static class CardAnimationSelector
         if (context.IsLethal && variants.Contains("lethal"))
             return CardAnimationVariant.Lethal;
 
-        // Empowerment is card-local. A manifest entry must explicitly expose
-        // this variant; raw damage alone is intentionally insufficient.
-        if (variants.Contains("empowered") && IsCardLocallyEmpowered(spec.CardId, context))
+        // Empowerment is card-local. Manifests may use a semantic alias such as
+        // high_strength or x_energy, but the runtime sends one stable variant
+        // name (empowered) to Godot. Raw damage alone remains insufficient.
+        if (HasEmpoweredVariant(spec, variants) && IsCardLocallyEmpowered(spec.CardId, context))
             return CardAnimationVariant.Empowered;
         if (context.IsUpgraded && variants.Contains("upgraded"))
             return CardAnimationVariant.Upgraded;
 
         return CardAnimationVariant.Base;
     }
+
+    private static bool HasEmpoweredVariant(CardAnimationSpec spec, HashSet<string> variants) =>
+        variants.Contains("empowered") || spec.CardId switch
+        {
+            "Heavy Blade" => variants.Contains("high_strength"),
+            "Whirlwind" => variants.Contains("x_energy"),
+            "Fiend Fire" => variants.Contains("hand_count"),
+            _ => false
+        };
 
     private static bool IsCardLocallyEmpowered(string cardId, AnimationContext context) => cardId switch
     {
