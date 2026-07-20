@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "SasukeIronclad/data/timeline_catalog.json"
 MANIFEST = ROOT / "SasukeIronclad/data/card_animation_manifest.json"
 
-ALLOWED_EVENTS = {"pose", "eye", "vfx", "camera", "impact", "return_idle"}
-REQUIRED_GRAYBOX = {"Strike", "Defend", "Bash"}
+ALLOWED_EVENTS = {"pose", "eye", "vfx", "camera", "cutin", "impact", "return_idle"}
+REQUIRED_GRAYBOX = {"Strike", "Defend", "Bash", "Cleave", "Heavy Blade"}
 
 
 def load(path: Path):
@@ -25,11 +25,13 @@ def main() -> int:
     assert {entry["card_id"] for entry in entries} == REQUIRED_GRAYBOX
     assert len({entry["animation_id"] for entry in entries}) == len(entries)
 
+    timelines: dict[str, dict] = {}
     for entry in entries:
         relative = entry["path"].removeprefix("res://")
         path = ROOT / relative
         assert path.exists(), f"missing timeline: {path}"
         timeline = load(path)
+        timelines[entry["card_id"]] = timeline
         assert timeline["schema_version"] == 1
         assert timeline["animation_id"] == entry["animation_id"]
         assert timeline["card_id"] == entry["card_id"]
@@ -44,20 +46,37 @@ def main() -> int:
         overrides = timeline.get("variant_overrides", {})
         assert "fast" in overrides and "low_flash" in overrides
 
+    cleave_effects = {
+        event.get("effect")
+        for event in timelines["Cleave"]["events"]
+        if event["type"] == "vfx"
+    }
+    assert {"chidori_ground_fan", "multi_target_impact"}.issubset(cleave_effects)
+
+    heavy = timelines["Heavy Blade"]
+    assert "empowered" in heavy["variant_overrides"]
+    assert any(event["type"] == "cutin" for event in heavy["events"])
+    assert any(
+        event["type"] == "vfx" and event.get("effect") == "focused_lightning_pillar"
+        for event in heavy["events"]
+    )
+
     required_files = [
         "SasukeIronclad/scenes/runtime/sasuke_character_rig.tscn",
         "SasukeIronclad/scenes/runtime/animation_director.tscn",
         "SasukeIronclad/scenes/runtime/vfx_director.tscn",
         "SasukeIronclad/scenes/runtime/camera_effect_director.tscn",
+        "SasukeIronclad/scenes/runtime/cutin_director.tscn",
         "SasukeIronclad/scenes/runtime/graybox_preview.tscn",
         "SasukeIronclad/scripts/runtime/sasuke_character_rig.gd",
         "SasukeIronclad/scripts/runtime/animation_director.gd",
         "SasukeIronclad/scripts/runtime/vfx_director.gd",
         "SasukeIronclad/scripts/runtime/camera_effect_director.gd",
+        "SasukeIronclad/scripts/runtime/cutin_director.gd",
         "SasukeIronclad/scripts/runtime/graybox_preview.gd",
     ]
     assert all((ROOT / path).exists() for path in required_files)
-    print("OK: 3 graybox timelines and the runnable preview scene validated.")
+    print("OK: 5 graybox timelines, Cut-in runtime, and preview scene validated.")
     return 0
 
 
