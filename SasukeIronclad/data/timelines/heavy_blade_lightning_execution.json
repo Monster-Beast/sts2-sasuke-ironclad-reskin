@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "animation_id": "heavy_blade_lightning_execution",
+  "card_id": "Heavy Blade",
+  "duration_ms": 1480,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.45},
+    "upgraded": {"speed_scale": 1.0},
+    "empowered": {"speed_scale": 0.92},
+    "lethal": {"speed_scale": 0.86},
+    "low_flash": {"speed_scale": 0.95}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "heavy_charge", "duration_ms": 240},
+    {"time_ms": 70, "type": "eye", "active": true},
+    {"time_ms": 130, "type": "vfx", "effect": "lightning_blade_charge", "anchor": "weapon", "params": {"count": 18}},
+    {"time_ms": 255, "type": "cutin", "style": "sharingan_side", "duration_ms": 250, "suppress_in_low_flash": true, "skip_in_fast": true},
+    {"time_ms": 420, "type": "camera", "effect": "scene_dim", "params": {"opacity": 0.28, "duration": 0.30}, "skip_in_fast": true},
+    {"time_ms": 520, "type": "pose", "pose": "heavy_overhead", "duration_ms": 190},
+    {"time_ms": 705, "type": "pose", "pose": "heavy_impact", "duration_ms": 100},
+    {"time_ms": 725, "type": "vfx", "effect": "vertical_lightning_slash", "anchor": "weapon", "params": {"height": 245.0, "width": 22.0}},
+    {"time_ms": 755, "type": "impact"},
+    {"time_ms": 770, "type": "camera", "effect": "shake_medium", "params": {"amplitude": 9.0, "duration": 0.22}},
+    {"time_ms": 790, "type": "camera", "effect": "impact_flash", "params": {"opacity": 0.28, "duration": 0.10}, "suppress_in_low_flash": true},
+    {"time_ms": 805, "type": "vfx", "effect": "focused_lightning_pillar", "anchor": "ground", "params": {"height": 280.0, "branches": 7}},
+    {"time_ms": 930, "type": "pose", "pose": "heavy_recover", "duration_ms": 180},
+    {"time_ms": 1010, "type": "eye", "active": false},
+    {"time_ms": 1160, "type": "return_idle", "duration_ms": 230}
+  ]
+}
