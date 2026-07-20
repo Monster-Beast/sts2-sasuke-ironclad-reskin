@@ -11,6 +11,7 @@
     {"animation_id":"flame_barrier_uchiha_fire_guard","card_id":"Flame Barrier","path":"res://SasukeIronclad/data/timelines/flame_barrier_uchiha_fire_guard.json","status":"graybox"},
     {"animation_id":"whirlwind_chidori_blade_storm","card_id":"Whirlwind","path":"res://SasukeIronclad/data/timelines/whirlwind_chidori_blade_storm.json","status":"graybox"},
     {"animation_id":"burning_pact_curse_seal_consumption","card_id":"Burning Pact","path":"res://SasukeIronclad/data/timelines/burning_pact_curse_seal_consumption.json","status":"graybox"},
+    {"animation_id":"demon_form_curse_mark_stage_two","card_id":"Demon Form","path":"res://SasukeIronclad/data/timelines/demon_form_curse_mark_stage_two.json","status":"graybox"},
     {"animation_id":"limit_break_sharingan_curse_overdrive","card_id":"Limit Break","path":"res://SasukeIronclad/data/timelines/limit_break_sharingan_curse_overdrive.json","status":"graybox"},
     {"animation_id":"fiend_fire_dragon_flame_annihilation","card_id":"Fiend Fire","path":"res://SasukeIronclad/data/timelines/fiend_fire_dragon_flame_annihilation.json","status":"graybox"}
   ]
