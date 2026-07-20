@@ -2,109 +2,123 @@
 
 《杀戮尖塔 2》战士（Ironclad）的佐助主题**纯视觉美化 Mod**。
 
-> 当前阶段：表现系统、逐卡动画、人物状态机与显示层重构开发。仓库不包含任何从《火影忍者》《杀戮尖塔 2》或其他 Mod 中提取的图片、音频、动画、字体、代码或游戏文件。
+> 当前阶段：可运行灰盒表现系统、显示名称重构与游戏接口审计。仓库不包含任何从《火影忍者》《杀戮尖塔 2》或其他 Mod 中提取的图片、音频、动画、字体、代码或游戏文件。
 
-## 项目目标
+## 不改变游戏效果
 
-这不是简单换皮，而是一套完整的角色演出包：
+本项目只修改玩家看到的表现：
 
-- Hebi 时期佐助人物模型、选人立绘、头像和加载页；
-- 完整战士卡池的原创佐助主题卡面及 Ancient 输出；
-- 卡牌标题可完全重构为佐助招式名称，但内部 `card_id`、规则、升级、存档和联机同步保持原样；
-- 24 个以上人物状态/交互动作；
-- 每张攻击牌拥有唯一 `animation_id` 和独立成品时间轴；
-- 剑术、雷遁、火遁、写轮眼、咒印和蛇术动作原子；
-- Quick、Standard、Signature、Cut-in、Finisher 五级战斗演出；
-- 营火、商店、胜利、战败 CG 和多人手势；
-- Cut-in、粒子、低闪烁、快速战斗和调试设置；
-- 保持卡牌数值、结算顺序、随机数和多人同步完全不变；
-- 任意资源、命名或 Hook 失败时自动回退原游戏表现。
+- 原始 `card_id`、费用、伤害、格挡、关键词和规则文本保持不变；
+- 升级、生成、复制、变化、存档、随机数和多人同步保持不变；
+- 每张牌仍由原始 `card_id` 选择自己的唯一动画；
+- 卡牌显示名称可以重构为佐助招式名称，但不会参与游戏逻辑；
+- 视觉资源、命名或 Hook 失败时回退原游戏表现。
 
 ## 角色版本
 
-v0.1 默认采用疾风传前中期 / Hebi 时期佐助：草薙剑、写轮眼、千鸟系雷遁、火遁、蛇术、咒印和麒麟。轮回眼、天手力、成年披风和完全体须佐能乎不进入默认 Profile。
+v0.1 默认采用疾风传前中期 / Hebi 时期佐助：草薙剑、写轮眼、千鸟系雷遁、火遁、蛇术和咒印。轮回眼、天手力、成年披风和完全体须佐能乎不进入默认 Profile。
 
-## 表现目标
-
-| 类别 | 目标 |
-|---|---|
-| 卡名 | 当前版本完整战士卡池、多人卡与衍生牌的中英文佐助主题显示名 |
-| 卡面 | 当前版本战士完整卡池 + Ancient 输出 |
-| 人物动作 | 24 个以上状态/交互动作 |
-| 攻击动作 | 所有攻击牌逐卡专属时间轴 |
-| 演出等级 | Quick / Standard / Signature / Cut-in / Finisher |
-| 非战斗立绘 | 选人、加载、营火、商店、胜利、战败等 |
-| 设置 | Cut-in、粒子、低闪烁、快速战斗、日志 |
-| 性能 | 预加载、锚点缓存、粒子池和三档画质 |
-| 兼容 | Stable/Beta、多人、存档和多 Mod |
-
-完整矩阵见 [`docs/design/presentation-matrix.md`](docs/design/presentation-matrix.md)。逐卡动画规则见 [`docs/design/card-specific-animation-system.md`](docs/design/card-specific-animation-system.md)。卡牌改名规则见 [`docs/design/card-renaming-system.md`](docs/design/card-renaming-system.md)。
-
-## 卡牌显示名重构
-
-卡牌改名是纯显示层：
-
-```text
-原始 card_id / 规则 / 升级 / 衍生关系
-→ card_name_overrides.json
-→ 中文或英文佐助显示名
-```
-
-首批示例：
-
-| 原卡名 | 佐助显示名 |
-|---|---|
-| 打击 | 草薙·瞬斩 |
-| 痛击 | 写轮眼·破势 |
-| 旋风斩 | 千鸟流·剑刃风暴 |
-| 恶魔形态 | 咒印·二阶段 |
-| 巨石（衍生牌） | 千鸟锐枪 |
-
-标题解析失败时保留原游戏名称；升级牌继续使用 `+` 后缀。命名层不会修改卡牌描述中的伤害、费用、格挡和关键词。
-
-## 当前工程能力
+## 当前完成能力
 
 - Godot 4.5.1、.NET 9、BaseLib 和 Harmony 工程；
-- JSON 视觉配置加载器与严格校验；
 - 卡牌身份优先的 C# 动画选择器；
-- 中英文显示名目录与 `CardDisplayNameResolver`；
-- 卡内升级、强化、斩杀、快速和低闪烁变体；
-- C# `GodotVisualSceneHost` 与原游戏 impact 门控接口；
-- 45 个动作与状态原子；
-- 5 级演出层级配置；
-- 24 个完整表现表面清单；
-- 13 张首批卡牌独立灰盒时间轴；
-- Demon Form 持久 Form、视觉状态和人物战斗状态机；
-- 可运行的佐助几何人物 Rig、程序化 VFX、镜头 Director 和预览场景；
-- GitHub Actions 元数据、命名、时间轴和版权边界检查。
+- 内容变体与快速/低闪烁修饰分层，可同时启用；
+- 单活动播放句柄、原始 impact 门控和异步失败回退；
+- 状态与 Form 独立事务、取消回滚和重复安装恢复；
+- Demon Form 咒印二阶段、持久替代待机与显式移除；
+- 入场、随机待机、轻/重受击、死亡和胜利人物状态机；
+- 剑术、雷遁、火遁、写轮眼、咒印和手里剑程序化 VFX；
+- 13 张首批卡牌的独立灰盒时间轴；
+- 中英文佐助卡牌显示名、六种标题显示面和卡面生产 Brief；
+- 100 次播放/取消压力测试和战斗结束资源释放测试。
 
-## 灰盒预览
+## 当前 13 张灰盒时间轴
 
-在 MegaDot 编辑器中打开并运行：
+| 原卡牌 | 佐助显示名 | animation_id |
+|---|---|---|
+| Strike | 草薙·瞬斩 | `strike_kusanagi_draw_slash` |
+| Defend | 草薙·剑御 | `defend_wire_parry_guard` |
+| Bash | 写轮眼·破势 | `bash_sharingan_breaker` |
+| Anger | 影手里剑 | `anger_shuriken_afterimage` |
+| Cleave | 千鸟流·横扫 | `cleave_chidori_ground_arc` |
+| Thunderclap | 千鸟流·雷震 | `thunderclap_chidori_ring_burst` |
+| Heavy Blade | 雷遁·草薙断 | `heavy_blade_lightning_execution` |
+| Flame Barrier | 火遁·炎阵 | `flame_barrier_uchiha_fire_guard` |
+| Whirlwind | 千鸟流·剑刃风暴 | `whirlwind_chidori_blade_storm` |
+| Burning Pact | 咒印·献契 | `burning_pact_curse_seal_consumption` |
+| Demon Form | 咒印·二阶段 | `demon_form_curse_mark_stage_two` |
+| Limit Break | 写轮眼·极限解放 | `limit_break_sharingan_curse_overdrive` |
+| Fiend Fire | 火遁·龙火歼灭 | `fiend_fire_dragon_flame_annihilation` |
+
+衍生牌 `GIANT_ROCK` 暂定显示为“千鸟锐枪 / Chidori Spear”，其真实游戏 ID 仍等待安装版本审计。
+
+## MegaDot 灰盒场景
+
+独立预览：
 
 ```text
 SasukeIronclad/scenes/runtime/graybox_preview.tscn
+SasukeIronclad/scenes/runtime/card_name_preview.tscn
 ```
 
-预览场景只验证人物动作、VFX、镜头和时间轴，不会执行伤害或卡牌逻辑。接入游戏后，Director 会在每个 impact 节点等待原游戏真实命中事件。
+自动退出测试：
+
+```text
+SasukeIronclad/scenes/runtime/runtime_stress_test.tscn
+SasukeIronclad/scenes/runtime/combat_resource_release_test.tscn
+SasukeIronclad/scenes/runtime/form_lifecycle_test.tscn
+SasukeIronclad/scenes/runtime/character_state_machine_test.tscn
+```
+
+已在 GitHub Actions 使用官方 Godot 4.5.1 headless 实际运行，成功标记为：
+
+```text
+STRESS_OK iterations=100 baseline_nodes=37 peak_nodes=37
+RELEASE_OK states=0 transients=0
+FORM_OK form='' states=0 transients=0
+CHAR_STATE_OK state='' terminal=false form=''
+```
+
+运行日志中不允许出现脚本错误、运行期 `ERROR:` 或 ObjectDB 泄漏警告。
+
+## 自动验证
+
+```bash
+python tools/validate_repo.py
+python tools/test_card_animation_policy.py
+python tools/test_card_name_overrides.py
+python tools/test_card_title_pipeline.py
+python tools/test_graybox_timelines.py
+python tools/test_demon_form_contract.py
+python tools/test_character_state_contract.py
+python tools/test_runtime_safety_contract.py
+```
+
+GitHub Actions 还会：
+
+- 使用独立 Godot.NET.Sdk 4.5.1 / .NET 9 工程编译 Runtime、Adapters 和 Visuals 层；
+- 使用 Godot 4.5.1 headless 导入全部 `.gd`、`.tscn`；
+- 真实执行四个运行时测试场景；
+- 将解析、编译和场景日志保存为 Artifact；
+- 将脚本错误、运行期 `ERROR:` 和 ObjectDB 泄漏视为失败。
 
 ## 目录
 
 ```text
-SasukeIronclad/                 Godot/PCK 场景、脚本、时间轴、命名与视觉配置
-SasukeIroncladCode/             C# 选择器、名称解析器、播放服务、Godot 适配器和未来 Hook
-docs/character                  佐助与战士角色圣经
-docs/design                     卡名、卡面、动画、VFX 和完整表现矩阵
+SasukeIronclad/                 Godot 场景、脚本、时间轴和视觉配置
+SasukeIroncladCode/             C# 选择器、播放服务、Godot 适配器和未来 Hook
+SasukeIronclad/data/            卡牌动画、显示名、标题显示面和卡面 Brief
+docs/design                     动画、卡面、命名和完整表现矩阵
 docs/research                   外部项目和官方设定研究
 docs/technical                  架构、环境、资源和符号审计
 art/                            原创美术源文件与导出目录
 animation/                      原创动画源文件、事件表与导出目录
-tools/                          仓库校验和测试脚本
+tools/                          仓库校验、Godot 和 .NET 契约测试
 ```
 
-## 开发环境
+## 本地开发环境
 
-- Slay the Spire 2 当前版本；
+- Slay the Spire 2 当前安装版本；
 - .NET SDK 9；
 - MegaDot / Godot Mono 4.5.1；
 - BaseLib；
@@ -117,7 +131,7 @@ tools/                          仓库校验和测试脚本
 <!-- <Sts2Path>D:/SteamLibrary/steamapps/common/Slay the Spire 2</Sts2Path> -->
 ```
 
-构建：
+完整游戏工程构建：
 
 ```powershell
 dotnet restore
@@ -125,26 +139,14 @@ dotnet build
 dotnet publish
 ```
 
-不依赖游戏文件的仓库检查：
+## 仍需完成
 
-```bash
-python tools/validate_repo.py
-python tools/test_card_animation_policy.py
-python tools/test_card_name_overrides.py
-python tools/test_graybox_timelines.py
-python tools/test_demon_form_contract.py
-python tools/test_character_state_contract.py
-```
-
-## 开发顺序
-
-1. 本地核验当前游戏版本资源、完整卡牌 ID、动画接口和多人状态；
-2. 为完整战士普通卡、多人卡和衍生卡建立佐助显示名与卡面语义；
-3. 在灰盒预览中完成首批卡牌动作质量；
-4. 将名称解析器与 `GodotVisualSceneHost` 接入核验后的游戏视觉 Hook；
-5. 替换为正式人物 Rig、卡面、VFX 和非战斗立绘；
-6. 完成全部攻击牌逐卡时间轴；
-7. 做性能、Stable/Beta 和多人验证。
+1. 导出当前 Stable/Beta 安装版本的卡牌、人物节点和方法签名；
+2. 核验原始命中、状态移除、战斗结束和卡牌标题 UI 事件；
+3. 只对已核验方法建立 Harmony 视觉 Hook；
+4. 扩展完整 Ironclad 卡池名称、卡面和逐卡动画；
+5. 替换正式原创人物 Rig、卡面、VFX 和非战斗立绘；
+6. 完成真实游戏、多人和多 Mod 验证。
 
 参见 [`ROADMAP.md`](ROADMAP.md)、[`docs/design/card-renaming-system.md`](docs/design/card-renaming-system.md) 和 [`docs/design/graybox-runtime.md`](docs/design/graybox-runtime.md)。
 
