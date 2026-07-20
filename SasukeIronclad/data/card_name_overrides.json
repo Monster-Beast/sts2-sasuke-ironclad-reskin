@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "gameplay_changes": false,
+  "policy": {
+    "display_only": true,
+    "internal_card_id_unchanged": true,
+    "preserve_rules_text": true,
+    "preserve_upgrade_state": true,
+    "fallback_to_original_name": true,
+    "allow_derived_cards": true,
+    "supported_locales": ["zh-CN", "en-US"],
+    "default_locale": "zh-CN"
+  },
+  "cards": [
+    {
+      "card_id": "Strike",
+      "original_name": {"zh-CN": "打击", "en-US": "Strike"},
+      "display_name": {"zh-CN": "草薙·瞬斩", "en-US": "Kusanagi Flash"},
+      "card_kind": "normal",
+      "semantic_anchor": "快速单体剑击",
+      "art_concept": "写轮眼聚焦后，以草薙剑完成极短距离拔刀斩",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Defend",
+      "original_name": {"zh-CN": "防御", "en-US": "Defend"},
+      "display_name": {"zh-CN": "草薙·剑御", "en-US": "Kusanagi Guard"},
+      "card_kind": "normal",
+      "semantic_anchor": "基础格挡",
+      "art_concept": "草薙剑横于身前，辅以忍具钢丝形成防御架势",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Bash",
+      "original_name": {"zh-CN": "痛击", "en-US": "Bash"},
+      "display_name": {"zh-CN": "写轮眼·破势", "en-US": "Sharingan Breaker"},
+      "card_kind": "normal",
+      "semantic_anchor": "伤害并施加易伤",
+      "art_concept": "写轮眼捕捉破绽，瞬身以刀鞘和肘击击溃防御",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Anger",
+      "original_name": {"zh-CN": "愤怒", "en-US": "Anger"},
+      "display_name": {"zh-CN": "影手里剑", "en-US": "Afterimage Shuriken"},
+      "card_kind": "normal",
+      "semantic_anchor": "低费攻击并生成自身复制",
+      "art_concept": "多个残影从不同角度投出同一组手里剑，呼应复制机制",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Cleave",
+      "original_name": {"zh-CN": "顺劈斩", "en-US": "Cleave"},
+      "display_name": {"zh-CN": "千鸟流·横扫", "en-US": "Chidori Stream Sweep"},
+      "card_kind": "normal",
+      "semantic_anchor": "对所有敌人造成伤害",
+      "art_concept": "草薙剑贴地横扫，千鸟流沿地面扇形扩散",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Thunderclap",
+      "original_name": {"zh-CN": "闪电霹雳", "en-US": "Thunderclap"},
+      "display_name": {"zh-CN": "千鸟流·雷震", "en-US": "Chidori Stream Burst"},
+      "card_kind": "normal",
+      "semantic_anchor": "群体伤害并施加易伤",
+      "art_concept": "双手压地释放环形千鸟流，雷震标出所有敌人的破绽",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Heavy Blade",
+      "original_name": {"zh-CN": "重刃", "en-US": "Heavy Blade"},
+      "display_name": {"zh-CN": "雷遁·草薙断", "en-US": "Lightning Blade Execution"},
+      "card_kind": "normal",
+      "semantic_anchor": "受力量高倍率强化的重击",
+      "art_concept": "将雷遁注入草薙剑后完成高压纵斩，力量越高雷光越密集",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Flame Barrier",
+      "original_name": {"zh-CN": "火焰屏障", "en-US": "Flame Barrier"},
+      "display_name": {"zh-CN": "火遁·炎阵", "en-US": "Fire Style: Flame Ward"},
+      "card_kind": "normal",
+      "semantic_anchor": "获得格挡并在受击时反伤",
+      "art_concept": "结印后形成半环火焰防御阵，敌人接触时火焰反卷",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Whirlwind",
+      "original_name": {"zh-CN": "旋风斩", "en-US": "Whirlwind"},
+      "display_name": {"zh-CN": "千鸟流·剑刃风暴", "en-US": "Chidori Blade Storm"},
+      "card_kind": "normal",
+      "semantic_anchor": "消耗全部能量进行多段群体攻击",
+      "art_concept": "瞬身穿梭敌阵，以草薙剑和千鸟雷环完成连续剑舞",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Burning Pact",
+      "original_name": {"zh-CN": "燃烧契约", "en-US": "Burning Pact"},
+      "display_name": {"zh-CN": "咒印·献契", "en-US": "Curse Mark Covenant"},
+      "card_kind": "normal",
+      "semantic_anchor": "消耗一张牌并抽牌",
+      "art_concept": "咒印吞噬一张卡牌残影，将其转化为新的战斗选择",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Demon Form",
+      "original_name": {"zh-CN": "恶魔形态", "en-US": "Demon Form"},
+      "display_name": {"zh-CN": "咒印·二阶段", "en-US": "Curse Mark Stage Two"},
+      "card_kind": "normal",
+      "semantic_anchor": "持续获得力量的形态能力",
+      "art_concept": "咒印二阶段展开翼状轮廓，并切换为持续强化的战斗形态",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Limit Break",
+      "original_name": {"zh-CN": "突破极限", "en-US": "Limit Break"},
+      "display_name": {"zh-CN": "写轮眼·极限解放", "en-US": "Sharingan Overdrive"},
+      "card_kind": "normal",
+      "semantic_anchor": "使当前力量翻倍",
+      "art_concept": "写轮眼与咒印同时脉冲，将已积累的力量完全释放",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "Fiend Fire",
+      "original_name": {"zh-CN": "恶魔之焰", "en-US": "Fiend Fire"},
+      "display_name": {"zh-CN": "火遁·龙火歼灭", "en-US": "Dragon Flame Annihilation"},
+      "card_kind": "normal",
+      "semantic_anchor": "消耗手牌并按消耗数量多段攻击",
+      "art_concept": "所有手牌残影被吸入火遁，化为逐段命中的龙形火焰",
+      "rename_status": "approved"
+    },
+    {
+      "card_id": "GIANT_ROCK",
+      "original_name": {"zh-CN": "巨石", "en-US": "Giant Rock"},
+      "display_name": {"zh-CN": "千鸟锐枪", "en-US": "Chidori Spear"},
+      "card_kind": "derived",
+      "semantic_anchor": "由其他卡牌变化而来的高伤害单体攻击",
+      "art_concept": "将大量雷遁压缩成笔直贯穿目标的千鸟长枪，保留16/20点伤害效果",
+      "rename_status": "provisional",
+      "game_id_verified": false
+    }
+  ]
+}
