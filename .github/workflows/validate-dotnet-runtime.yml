@@ -1,0 +1,13 @@
+name: Validate .NET runtime
+on: [push, pull_request]
+
+jobs:
+  build-runtime-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - run: dotnet restore tools/runtime_contract/SasukeIronclad.RuntimeContract.csproj
+      - run: dotnet build tools/runtime_contract/SasukeIronclad.RuntimeContract.csproj --configuration Release --no-restore
