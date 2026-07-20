@@ -4,7 +4,7 @@ using SasukeIronclad.SasukeIroncladCode.Runtime;
 namespace SasukeIronclad.SasukeIroncladCode.Adapters;
 
 /// <summary>
-/// Bridges the card-specific C# runtime to the local-only Godot graybox scene.
+/// Bridges the card-specific C# runtime to the local-only Godot visual scene.
 /// The scene pauses at each impact gate until RaiseImpact receives the matching
 /// authoritative hit event from the game adapter.
 /// </summary>
@@ -78,6 +78,29 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         _director.CallDeferred("notify_original_impact", impactIndex);
     }
 
+    /// <summary>
+    /// Pulses a previously committed local-only visual state, for example when
+    /// Flame Barrier reacts to an authoritative enemy hit.
+    /// </summary>
+    public void PulseVisualState(string stateId, Godot.Collections.Dictionary? parameters = null)
+    {
+        if (!EnsureMounted() || _director is null || string.IsNullOrWhiteSpace(stateId))
+            return;
+
+        _director.CallDeferred(
+            "pulse_visual_state",
+            stateId,
+            parameters ?? new Godot.Collections.Dictionary()
+        );
+    }
+
+    public void ClearVisualState(string stateId)
+    {
+        if (_director is null || string.IsNullOrWhiteSpace(stateId))
+            return;
+        _director.CallDeferred("clear_visual_state", stateId);
+    }
+
     public void Release(AnimationPlaybackHandle handle)
     {
         if (!_active.Remove(handle.Id))
@@ -91,7 +114,7 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
     {
         _active.Clear();
         if (_director is not null)
-            _director.CallDeferred("cancel_current");
+            _director.Call("release_combat_resources");
         _runtimeRoot?.QueueFree();
         _runtimeRoot = null;
         _director = null;
