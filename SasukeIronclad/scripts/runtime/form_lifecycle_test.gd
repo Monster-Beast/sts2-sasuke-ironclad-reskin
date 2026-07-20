@@ -18,10 +18,8 @@ func _ready() -> void:
         "hit_count": 1
     }
 
-    # Cancel after both form_install and state_install have executed. This proves
-    # rollback, rather than merely cancelling before any persistent state exists.
     director.play_timeline("demon_form_curse_mark_stage_two", "base", context)
-    await get_tree().create_timer(0.66).timeout
+    await get_tree().create_timer(0.82).timeout
     _expect(director.active_visual_form_id() == "curse_mark_stage_two", "test did not reach pending Demon Form installation")
     _expect(director.has_visual_state("demon_form_stage_two_aura"), "test did not reach pending Demon Form aura installation")
     director.cancel_current()
@@ -34,10 +32,8 @@ func _ready() -> void:
     _expect(director.active_visual_form_id() == "curse_mark_stage_two", "Demon Form was not committed")
     _expect(director.has_visual_state("demon_form_stage_two_aura"), "Demon Form aura was not committed")
 
-    # Reinstall the already committed Form and cancel after the pending replacement
-    # appears. Rollback must restore the previous committed Form and aura.
     director.play_timeline("demon_form_curse_mark_stage_two", "base", context)
-    await get_tree().create_timer(0.66).timeout
+    await get_tree().create_timer(0.82).timeout
     director.cancel_current()
     await _settle()
     _expect(director.active_visual_form_id() == "curse_mark_stage_two", "cancelled replacement removed committed Demon Form")
@@ -59,6 +55,11 @@ func _ready() -> void:
     _expect(director.active_visual_form_id().is_empty(), "combat release retained Demon Form")
     _expect(director.active_visual_state_count() == 0, "combat release retained visual states")
     _expect(_count_transient_nodes(runtime) == 0, "combat release retained transient VFX")
+
+    runtime.queue_free()
+    await get_tree().process_frame
+    await get_tree().process_frame
+    await get_tree().create_timer(0.05).timeout
 
     if failures.is_empty():
         print("FORM_OK form='' states=0 transients=0")
