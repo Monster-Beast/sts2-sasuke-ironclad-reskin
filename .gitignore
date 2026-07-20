@@ -11,7 +11,8 @@ releases/
 extracted/
 recovered_project/
 game_assets/
-local-audit/private/
+local-audit/
+audit-output/
 *.autosave
 *.bak
 .idea/
