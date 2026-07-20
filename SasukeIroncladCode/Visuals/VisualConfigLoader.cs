@@ -13,10 +13,17 @@ internal static class VisualConfigLoader
 
     internal static T Load<T>(string resourcePath) where T : class
     {
-        using FileAccess file = FileAccess.Open(resourcePath, FileAccess.ModeFlags.Read)
-            ?? throw new InvalidOperationException($"Unable to open visual configuration: {resourcePath}");
+        using Godot.FileAccess file = Godot.FileAccess.Open(
+            resourcePath,
+            Godot.FileAccess.ModeFlags.Read
+        ) ?? throw new InvalidOperationException(
+            $"Unable to open visual configuration: {resourcePath}"
+        );
+
         string json = file.GetAsText();
         return JsonSerializer.Deserialize<T>(json, JsonOptions)
-            ?? throw new InvalidOperationException($"Visual configuration was empty: {resourcePath}");
+            ?? throw new InvalidOperationException(
+                $"Visual configuration was empty: {resourcePath}"
+            );
     }
 }
