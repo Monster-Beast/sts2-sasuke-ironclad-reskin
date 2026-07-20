@@ -20,31 +20,31 @@ width = 4.0
 default_color = Color(0.25, 0.29, 0.38, 1)
 
 [node name="SasukeAnimationRuntime" parent="." instance=ExtResource("2_runtime")]
-position = Vector2(330, 400)
+position = Vector2(320, 400)
 
 [node name="Interface" type="CanvasLayer" parent="."]
 layer = 20
 
 [node name="Panel" type="PanelContainer" parent="Interface"]
-offset_left = 735.0
-offset_top = 4.0
-offset_right = 1260.0
-offset_bottom = 716.0
+offset_left = 715.0
+offset_top = 2.0
+offset_right = 1265.0
+offset_bottom = 718.0
 
 [node name="Margin" type="MarginContainer" parent="Interface/Panel"]
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 6
 
 [node name="VBox" type="VBoxContainer" parent="Interface/Panel/Margin"]
-theme_override_constants/separation = 3
+theme_override_constants/separation = 2
 
 [node name="Title" type="Label" parent="Interface/Panel/Margin/VBox"]
 text = "Sasuke Ironclad — Graybox"
 
 [node name="Hint" type="Label" parent="Interface/Panel/Margin/VBox"]
-text = "12 card timelines. Persistent state controls are local-only."
+text = "13 card timelines. State and Form controls are local-only."
 autowrap_mode = 2
 
 [node name="Strike" type="Button" parent="Interface/Panel/Margin/VBox"]
@@ -77,6 +77,9 @@ text = "Whirlwind — Chidori Blade Storm"
 [node name="BurningPact" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Burning Pact — Curse Seal Consumption"
 
+[node name="DemonForm" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Demon Form — Curse Mark Stage Two"
+
 [node name="LimitBreak" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Limit Break — Sharingan Curse Overdrive"
 
@@ -97,6 +100,9 @@ text = "Pulse Flame Barrier state"
 
 [node name="ClearStates" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Clear persistent visual states"
+
+[node name="ClearForm" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Clear Demon Form"
 
 [node name="Cancel" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Cancel current timeline"
