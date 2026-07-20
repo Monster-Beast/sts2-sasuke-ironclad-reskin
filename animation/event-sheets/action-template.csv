@@ -1,0 +1,4 @@
+profile,event,time_ms,notes
+example,windup_start,0,
+example,impact,350,Align with original visual impact
+example,complete,650,Cleanup all temporary nodes

@@ -1,0 +1,12 @@
+config_version=5
+
+[application]
+config/name="SasukeIronclad"
+config/features=PackedStringArray("4.5", "C#", "Mobile")
+config/icon="res://SasukeIronclad/mod_image.svg"
+
+[dotnet]
+project/assembly_name="SasukeIronclad"
+
+[rendering]
+renderer/rendering_method="mobile"

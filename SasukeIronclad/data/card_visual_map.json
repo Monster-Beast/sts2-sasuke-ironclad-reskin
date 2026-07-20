@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "profile": "hebi_sasuke",
+  "gameplay_changes": false,
+  "notes": "Concept IDs must be verified against the current game before a runtime hook uses them.",
+  "cards": [
+    {"card_id":"Strike","game_id_verified":false,"visual_family":"sword","action_profile":"sword_slash_fast","concept":"草薙剑快速横斩，少量雷遁附刃","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Defend","game_id_verified":false,"visual_family":"guard","action_profile":"guard_parry","concept":"直刀格挡与钢丝牵制形成双层防线","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Bash","game_id_verified":false,"visual_family":"focus","action_profile":"sword_bash","concept":"写轮眼预判后贴身刀柄撞击","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Anger","game_id_verified":false,"visual_family":"sword","action_profile":"projectile_burst","concept":"快速手里剑追击","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Cleave","game_id_verified":false,"visual_family":"lightning","action_profile":"chidori_stream","concept":"千鸟流沿地面扇形横扫","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Thunderclap","game_id_verified":false,"visual_family":"lightning","action_profile":"chidori_stream_burst","concept":"环形雷流瞬发","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Heavy Blade","game_id_verified":false,"visual_family":"lightning","action_profile":"sword_slash_heavy","concept":"雷遁附刃的集中重斩","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Flame Barrier","game_id_verified":false,"visual_family":"fire","action_profile":"fire_guard","concept":"流线火遁构成防御半环","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Whirlwind","game_id_verified":false,"visual_family":"lightning","action_profile":"sword_spin","concept":"旋身剑舞与低位千鸟流组合","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Burning Pact","game_id_verified":false,"visual_family":"exhaust","action_profile":"curse_seal_sacrifice","concept":"咒印纹路吞噬卡牌残影","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Demon Form","game_id_verified":false,"visual_family":"curse_mark","action_profile":"curse_mark_transform","concept":"咒印二阶段的受控变身","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Limit Break","game_id_verified":false,"visual_family":"curse_mark","action_profile":"curse_mark_amplify","concept":"咒印与写轮眼共同强化","art_status":"brief","legal_status":"original_required"},
+    {"card_id":"Fiend Fire","game_id_verified":false,"visual_family":"fire","action_profile":"dragon_flame","concept":"龙形火遁吞噬全部卡牌残影","art_status":"brief","legal_status":"original_required"}
+  ]
+}

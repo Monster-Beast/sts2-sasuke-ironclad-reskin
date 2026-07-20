@@ -1,0 +1,75 @@
+<Project Sdk="Godot.NET.Sdk/4.5.1" InitialTargets="CheckDependencyPaths">
+  <Import Project=".\Sts2PathDiscovery.props"/>
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>true</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
+    <PathMap>$(AppOutputBase)=.\</PathMap>
+    <GodotDisabledSourceGenerators>GodotPluginsInitializer</GodotDisabledSourceGenerators>
+    <NoWarn>$(NoWarn);MSB3270</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(Sts2DataDir)')">
+    <Reference Include="0Harmony"><HintPath>$(Sts2DataDir)/0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="sts2"><HintPath>$(Sts2DataDir)/sts2.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(PublicizeSts)' == 'true'">
+    <Publicize Include="sts2" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Alchyr.Sts2.BaseLib" Version="*" PrivateAssets="All"/>
+    <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="All"/>
+    <PackageReference Include="Alchyr.Sts2.ModAnalyzers" Version="*" />
+    <AdditionalFiles Include="SasukeIronclad/localization/**/*.json"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="SasukeIronclad/**" />
+    <Compile Remove="art/**" />
+    <Compile Remove="animation/**" />
+    <EmbeddedResource Remove="SasukeIronclad/**" />
+    <EmbeddedResource Remove="art/**" />
+    <EmbeddedResource Remove="animation/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Condition="Exists('Directory.Build.props')" Include="Directory.Build.props"/>
+    <None Include=".gitignore" />
+    <None Include="SasukeIronclad.json" />
+    <None Include="project.godot"/>
+    <None Include="SasukeIronclad/**" />
+  </ItemGroup>
+
+  <Target Name="CheckDependencyPaths">
+    <Error Text="Slay the Spire 2 data not found at path '$(Sts2DataDir)'" Condition="'$(Sts2DataDir)' == '' or !Exists('$(Sts2DataDir)')" />
+  </Target>
+
+  <Target Name="UpdateDependencyVersions" BeforeTargets="BeforeBuild" Condition="Exists('.godot/mono/temp/obj/project.assets.json')">
+    <PropertyGroup>
+      <ManifestPath>$(MSBuildProjectName).json</ManifestPath>
+      <NuGetData>$([System.IO.File]::ReadAllText(&quot;.godot/mono/temp/obj/project.assets.json&quot;))</NuGetData>
+      <ActiveBaseLibVersion>$([System.Text.RegularExpressions.Regex]::Match($(NuGetData), '&quot;Alchyr.Sts2.BaseLib\/([^&quot;]*)&quot;').Result('$1'))</ActiveBaseLibVersion>
+      <OldContent>$([System.IO.File]::ReadAllText($(ManifestPath)))</OldContent>
+      <NewContent>$([System.Text.RegularExpressions.Regex]::Replace($(OldContent), '(&quot;id&quot;:\s*&quot;BaseLib&quot;,\s*&quot;min_version&quot;:\s*&quot;)[^&quot;]*', '${1}$(ActiveBaseLibVersion)'))</NewContent>
+    </PropertyGroup>
+    <WriteLinesToFile Condition="'$(OldContent)' != '$(NewContent)'" File="$(ManifestPath)" Lines="$(NewContent)" Overwrite="true" Encoding="UTF-8" />
+  </Target>
+
+  <Target Name="CopyToModsFolderOnBuild" AfterTargets="PostBuildEvent">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
+    <Copy SourceFiles="$(AssemblyName).json" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
+  </Target>
+
+  <Target Name="NeedGodotForPublish" BeforeTargets="Publish">
+    <Error Text="Godot path must be configured; not found at '$(GodotPath)'." Condition="'$(GodotPath)' == '' or !Exists('$(GodotPath)')"/>
+  </Target>
+
+  <Target Name="GodotPublish" AfterTargets="Publish" Condition="'$(GodotPath)' != '' and Exists('$(GodotPath)') and '$(IsInnerGodotExport)' != 'true'">
+    <Exec Command="&quot;$(GodotPath)&quot; --headless --export-pack &quot;BasicExport&quot; &quot;$(ModsPath)$(MSBuildProjectName)/$(MSBuildProjectName).pck&quot;" EnvironmentVariables="IsInnerGodotExport=true;MSBUILDDISABLENODEREUSE=1" ContinueOnError="WarnAndContinue"/>
+  </Target>
+</Project>

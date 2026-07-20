@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "gameplay_timing_locked": true,
+  "profiles": [
+    {"id":"sword_slash_fast","max_duration_ms":650,"impact_fraction":0.45,"camera_shake":"none","vfx":["silver_arc","minor_blue_sparks"],"fallback":"original"},
+    {"id":"guard_parry","max_duration_ms":700,"impact_fraction":0.40,"camera_shake":"none","vfx":["indigo_guard_arc","wire_glint"],"fallback":"original"},
+    {"id":"sword_bash","max_duration_ms":850,"impact_fraction":0.55,"camera_shake":"light","vfx":["red_target_line","short_impact_ring"],"fallback":"original"},
+    {"id":"projectile_burst","max_duration_ms":650,"impact_fraction":0.50,"camera_shake":"none","vfx":["thin_projectile_trails"],"fallback":"original"},
+    {"id":"chidori_stream","max_duration_ms":900,"impact_fraction":0.55,"camera_shake":"light","vfx":["ground_electric_fan"],"fallback":"original"},
+    {"id":"chidori_stream_burst","max_duration_ms":900,"impact_fraction":0.50,"camera_shake":"light","vfx":["electric_ring","low_flash"],"accessibility_variant":"low_flash","fallback":"original"},
+    {"id":"sword_slash_heavy","max_duration_ms":1200,"impact_fraction":0.62,"camera_shake":"medium","vfx":["thick_silver_arc","focused_lightning"],"fallback":"original"},
+    {"id":"fire_guard","max_duration_ms":850,"impact_fraction":0.35,"camera_shake":"none","vfx":["transparent_fire_half_ring"],"fallback":"original"},
+    {"id":"sword_spin","max_duration_ms":1000,"impact_fraction":0.52,"camera_shake":"light","vfx":["circular_sword_arc","ground_electric_ring"],"fallback":"original"},
+    {"id":"curse_seal_sacrifice","max_duration_ms":750,"impact_fraction":0.45,"camera_shake":"none","vfx":["purple_seal_converge","card_afterimage_dissolve"],"fallback":"original"},
+    {"id":"curse_mark_transform","max_duration_ms":1800,"impact_fraction":0.70,"camera_shake":"light","vfx":["seal_spread","brief_scene_dim"],"accessibility_variant":"low_flash","fallback":"original"},
+    {"id":"curse_mark_amplify","max_duration_ms":800,"impact_fraction":0.55,"camera_shake":"none","vfx":["seal_pulse","brief_eye_glow"],"accessibility_variant":"low_flash","fallback":"original"},
+    {"id":"dragon_flame","max_duration_ms":1250,"impact_fraction":0.60,"camera_shake":"medium","vfx":["stylized_dragon_fire","card_afterimage_dissolve"],"fallback":"original"}
+  ]
+}

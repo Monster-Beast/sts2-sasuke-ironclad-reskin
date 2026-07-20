@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <!-- MegaDot current compatible version is 4.5.1. -->
+    <GodotPath>C:/megadot/MegaDot_v4.5.1-stable_mono_win64.exe</GodotPath>
+    <!-- Uncomment when Steam discovery cannot find the game. -->
+    <!-- <Sts2Path>D:/SteamLibrary/steamapps/common/Slay the Spire 2</Sts2Path> -->
+    <PublicizeSts>false</PublicizeSts>
+  </PropertyGroup>
+</Project>
