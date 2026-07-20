@@ -107,6 +107,78 @@ const POSES := {
         "right_leg_rotation": 0.22,
         "sword_rotation": 0.12,
         "sword_position": Vector2(46, -4)
+    },
+    "cleave_windup": {
+        "root_position": Vector2(-20, 8),
+        "root_rotation": -0.14,
+        "torso_rotation": -0.22,
+        "head_rotation": 0.12,
+        "left_arm_rotation": 0.46,
+        "right_arm_rotation": -1.02,
+        "left_leg_rotation": 0.34,
+        "right_leg_rotation": -0.26,
+        "sword_rotation": -1.46,
+        "sword_position": Vector2(6, 10)
+    },
+    "cleave_impact": {
+        "root_position": Vector2(30, 10),
+        "root_rotation": 0.06,
+        "torso_rotation": 0.18,
+        "head_rotation": -0.04,
+        "left_arm_rotation": 0.78,
+        "right_arm_rotation": 0.28,
+        "left_leg_rotation": -0.20,
+        "right_leg_rotation": 0.28,
+        "sword_rotation": 0.04,
+        "sword_position": Vector2(66, 22)
+    },
+    "heavy_charge": {
+        "root_position": Vector2(-18, 4),
+        "root_rotation": -0.08,
+        "torso_rotation": -0.18,
+        "head_rotation": 0.14,
+        "left_arm_rotation": -0.52,
+        "right_arm_rotation": -0.96,
+        "left_leg_rotation": 0.26,
+        "right_leg_rotation": -0.22,
+        "sword_rotation": -1.18,
+        "sword_position": Vector2(10, -36)
+    },
+    "heavy_overhead": {
+        "root_position": Vector2(4, -4),
+        "root_rotation": 0.02,
+        "torso_rotation": -0.02,
+        "head_rotation": -0.08,
+        "left_arm_rotation": -1.22,
+        "right_arm_rotation": -1.42,
+        "left_leg_rotation": 0.08,
+        "right_leg_rotation": -0.08,
+        "sword_rotation": -1.72,
+        "sword_position": Vector2(16, -88)
+    },
+    "heavy_impact": {
+        "root_position": Vector2(48, 8),
+        "root_rotation": 0.18,
+        "torso_rotation": 0.30,
+        "head_rotation": -0.16,
+        "left_arm_rotation": 1.10,
+        "right_arm_rotation": 0.92,
+        "left_leg_rotation": -0.24,
+        "right_leg_rotation": 0.32,
+        "sword_rotation": 1.20,
+        "sword_position": Vector2(58, 38)
+    },
+    "heavy_recover": {
+        "root_position": Vector2(32, 7),
+        "root_rotation": 0.10,
+        "torso_rotation": 0.16,
+        "head_rotation": -0.04,
+        "left_arm_rotation": 0.42,
+        "right_arm_rotation": 0.34,
+        "left_leg_rotation": -0.12,
+        "right_leg_rotation": 0.18,
+        "sword_rotation": 0.84,
+        "sword_position": Vector2(48, 20)
     }
 }
 
