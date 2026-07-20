@@ -20,9 +20,10 @@ def unique(items, key, label):
 def main():
     required=[
         'README.md','LEGAL.md','SasukeIronclad.json','SasukeIronclad.csproj','project.godot',
-        'SasukeIronclad/data/card_visual_map.json','SasukeIronclad/data/action_profiles.json',
-        'SasukeIronclad/data/presentation_tiers.json','SasukeIronclad/data/presentation_surfaces.json',
-        'docs/design/presentation-matrix.md','docs/research/reference-chizuru-ironclad.md'
+        'SasukeIronclad/data/card_visual_map.json','SasukeIronclad/data/card_animation_manifest.json',
+        'SasukeIronclad/data/action_profiles.json','SasukeIronclad/data/presentation_tiers.json',
+        'SasukeIronclad/data/presentation_surfaces.json','docs/design/presentation-matrix.md',
+        'docs/design/card-specific-animation-system.md','docs/research/reference-chizuru-ironclad.md'
     ]
     for p in required:
         if not (ROOT/p).exists(): die(f"missing {p}")
@@ -32,14 +33,16 @@ def main():
     if manifest.get('affects_gameplay') is not False: die('affects_gameplay must be false')
 
     cards=load('SasukeIronclad/data/card_visual_map.json')
+    card_animations=load('SasukeIronclad/data/card_animation_manifest.json')
     actions=load('SasukeIronclad/data/action_profiles.json')
     tiers=load('SasukeIronclad/data/presentation_tiers.json')
     surfaces=load('SasukeIronclad/data/presentation_surfaces.json')
-    if cards.get('schema_version')!=1: die('unsupported card schema')
+    if cards.get('schema_version')!=2: die('unsupported card schema')
+    if card_animations.get('schema_version')!=1: die('unsupported card animation schema')
     if actions.get('schema_version')!=2: die('unsupported action schema')
-    if tiers.get('schema_version')!=1: die('unsupported tier schema')
+    if tiers.get('schema_version')!=2: die('unsupported tier schema')
     if surfaces.get('schema_version')!=1: die('unsupported surface schema')
-    if cards.get('gameplay_changes') is not False or tiers.get('gameplay_changes') is not False:
+    if any(item.get('gameplay_changes') is not False for item in (cards,card_animations,tiers)):
         die('visual configuration declares gameplay changes')
     if actions.get('gameplay_timing_locked') is not True: die('action timing must remain locked')
 
@@ -53,15 +56,37 @@ def main():
     ranks=[tier['rank'] for tier in tiers['tiers']]
     if len(ranks)!=len(set(ranks)): die('duplicate presentation tier rank')
     policy=tiers['default_policy']
-    if policy.get('basic_common_cap') not in tier_ids or policy.get('fast_mode_cap') not in tier_ids:
-        die('presentation policy has unknown tier cap')
+    if policy.get('card_identity_first') is not True: die('card identity must be first')
+    if policy.get('damage_selects_base_animation') is not False or policy.get('hit_count_selects_base_animation') is not False:
+        die('damage or hit count cannot select the base animation')
+    if policy.get('fast_mode_cap') not in tier_ids: die('presentation policy has unknown fast cap')
     if policy.get('low_flash_available') is not True: die('low-flash mode is required')
-    allowed_inputs={'attack_topology','final_damage','card_rarity','energy_spent','lethal','explicit_visual_tag'}
-    if set(policy.get('runtime_inputs_read_only',[])) - allowed_inputs: die('unknown runtime presentation input')
     for tier in tiers['tiers']:
-        if not set(tier['default_profiles']) <= action_ids:
-            die(f"tier {tier['id']} references unknown action")
-        if tier['id']=='finisher' and not tier.get('screen_takeover'): die('finisher must be marked as screen takeover')
+        if not set(tier['development_fallback_profiles']) <= action_ids:
+            die(f"tier {tier['id']} references unknown fallback action")
+        if tier['id']=='finisher' and not tier.get('screen_takeover'): die('finisher must be screen takeover')
+
+    animation_policy=card_animations['policy']
+    required_true=['card_identity_is_primary_key','all_damage_cards_require_unique_timeline','damage_and_hits_are_variant_parameters_only','fallback_allowed_only_when_unverified_or_asset_failure']
+    if any(animation_policy.get(key) is not True for key in required_true): die('card animation policy is incomplete')
+    if animation_policy.get('damage_selects_base_animation') is not False or animation_policy.get('hit_count_selects_base_animation') is not False:
+        die('card animation policy is damage-driven')
+    allowed_modes=set(animation_policy['allowed_animation_modes'])
+    required_damage_variants=set(animation_policy['required_variants_for_damage_cards'])
+    animation_card_ids=unique(card_animations['animations'],'card_id','animation card id')
+    unique(card_animations['animations'],'animation_id','animation id')
+    animations_by_card={item['card_id']:item for item in card_animations['animations']}
+    for animation in card_animations['animations']:
+        if animation['animation_mode'] not in allowed_modes: die(f"unsupported animation mode for {animation['card_id']}")
+        if animation['base_action_profile'] not in action_ids: die(f"unknown primitive for {animation['card_id']}")
+        if animation['presentation_tier'] not in tier_ids: die(f"unknown tier for {animation['card_id']}")
+        if animation.get('unique_timeline') is not True: die(f"card lacks unique timeline: {animation['card_id']}")
+        if animation.get('damage_role')!='variant_parameter_only': die(f"damage selects base animation for {animation['card_id']}")
+        if animation.get('hit_sync')!='original_hit_events': die(f"hit timing is not original-bound for {animation['card_id']}")
+        if animation.get('fallback')!='original': die(f"invalid fallback for {animation['card_id']}")
+        if len(animation.get('sequence',[]))<3: die(f"animation sequence is not rich enough: {animation['card_id']}")
+        if animation.get('is_damage_card') and not required_damage_variants <= set(animation.get('variants',[])):
+            die(f"damage card lacks required variants: {animation['card_id']}")
 
     surface_ids=unique(surfaces['surfaces'],'id','presentation surface')
     if len(surface_ids)<20: die('presentation surface scope is not rich enough')
@@ -69,11 +94,17 @@ def main():
         if surface.get('required') and not surface.get('fallback'):
             die(f"required surface lacks fallback: {surface['id']}")
 
-    seen=set()
+    card_ids=unique(cards['cards'],'card_id','card')
+    if card_ids != animation_card_ids: die('card map and animation manifest differ')
     for card in cards['cards']:
-        if card['card_id'] in seen: die(f"duplicate card {card['card_id']}")
-        seen.add(card['card_id'])
+        animation=animations_by_card[card['card_id']]
         if card['action_profile'] not in action_ids: die(f"unknown action for {card['card_id']}")
+        if card['presentation_tier'] not in tier_ids: die(f"unknown tier for {card['card_id']}")
+        if card['animation_id']!=animation['animation_id'] or card['animation_mode']!=animation['animation_mode']:
+            die(f"animation metadata mismatch for {card['card_id']}")
+        if card.get('is_damage_card') != animation.get('is_damage_card'): die(f"damage flag mismatch for {card['card_id']}")
+        if card.get('is_damage_card') and card.get('special_animation_required') is not True:
+            die(f"damage card does not require a special animation: {card['card_id']}")
         if card['legal_status']!='original_required': die(f"invalid legal status for {card['card_id']}")
 
     for p in ['SasukeIronclad.csproj','Directory.Build.props','Sts2PathDiscovery.props']:
@@ -82,7 +113,9 @@ def main():
     forbidden={'.pck','.dll','.atlas','.skel','.ogg','.mp3','.ttf','.otf'}
     bad=[str(p.relative_to(ROOT)) for p in ROOT.rglob('*') if p.is_file() and '.git' not in p.parts and p.suffix.lower() in forbidden]
     if bad: die('forbidden binary/extracted assets: '+', '.join(bad))
-    print(f"OK: {len(seen)} card concepts, {len(action_ids)} action profiles, {len(tier_ids)} tiers, {len(surface_ids)} surfaces.")
+    damage_count=sum(1 for card in cards['cards'] if card['is_damage_card'])
+    bespoke_count=sum(1 for animation in card_animations['animations'] if animation['animation_mode']=='bespoke')
+    print(f"OK: {len(card_ids)} card timelines ({damage_count} damage, {bespoke_count} bespoke), {len(action_ids)} primitives, {len(tier_ids)} tiers, {len(surface_ids)} surfaces.")
     return 0
 
 if __name__=='__main__': sys.exit(main())
