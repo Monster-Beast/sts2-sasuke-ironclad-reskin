@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "animation_id": "anger_shuriken_afterimage",
+  "card_id": "Anger",
+  "duration_ms": 920,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.48},
+    "upgraded": {"speed_scale": 1.06},
+    "lethal": {"speed_scale": 0.94},
+    "low_flash": {"speed_scale": 0.98}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "anger_throw_windup", "duration_ms": 145},
+    {"time_ms": 55, "type": "advanced_vfx", "effect": "afterimage_split", "anchor": "vfx", "params": {"copies": 3, "distance": 66.0}},
+    {"time_ms": 135, "type": "pose", "pose": "anger_throw_release", "duration_ms": 105},
+    {"time_ms": 165, "type": "advanced_vfx", "effect": "shuriken_fan_launch", "anchor": "right_hand", "params": {"count": 3, "spread": 0.38, "distance": 210.0}},
+    {"time_ms": 310, "type": "impact"},
+    {"time_ms": 322, "type": "advanced_vfx", "effect": "shuriken_cross_impact", "anchor": "vfx", "params": {"size": 58.0, "blades": 3}},
+    {"time_ms": 338, "type": "camera", "effect": "shake_light", "params": {"amplitude": 2.8, "duration": 0.10}},
+    {"time_ms": 405, "type": "advanced_vfx", "effect": "afterimage_split", "anchor": "vfx", "params": {"copies": 2, "distance": 42.0}},
+    {"time_ms": 620, "type": "return_idle", "duration_ms": 180}
+  ]
+}
