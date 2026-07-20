@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "animation_id": "demon_form_curse_mark_stage_two",
+  "card_id": "Demon Form",
+  "duration_ms": 1960,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.45},
+    "upgraded": {"speed_scale": 0.96},
+    "low_flash": {"speed_scale": 1.0}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "demon_transform_start", "duration_ms": 240},
+    {"time_ms": 60, "type": "eye", "active": true},
+    {"time_ms": 130, "type": "advanced_vfx", "effect": "curse_mark_spread", "anchor": "vfx", "params": {"marks": 12, "radius": 96.0}},
+    {"time_ms": 270, "type": "cutin", "style": "curse_stage_two", "duration_ms": 330, "suppress_in_low_flash": true, "skip_in_fast": true},
+    {"time_ms": 390, "type": "camera", "effect": "scene_dim", "params": {"opacity": 0.34, "duration": 0.48}, "skip_in_fast": true},
+    {"time_ms": 610, "type": "advanced_vfx", "effect": "curse_mark_consume", "anchor": "vfx", "params": {"radius": 118.0, "marks": 14}},
+    {"time_ms": 820, "type": "form_install", "form_id": "curse_mark_stage_two", "params": {"intensity": 1.0}},
+    {"time_ms": 850, "type": "state_install", "state_id": "demon_form_stage_two_aura", "style": "curse_stage_two_aura", "anchor": "vfx", "params": {"radius": 118.0, "arcs": 3, "marks": 12, "rotation_speed": 0.16, "pulse": 0.035, "pulse_speed": 2.1}},
+    {"time_ms": 900, "type": "pose", "pose": "demon_transform_reveal", "duration_ms": 240},
+    {"time_ms": 1080, "type": "camera", "effect": "shake_medium", "params": {"amplitude": 8.0, "duration": 0.26}},
+    {"time_ms": 1120, "type": "impact"},
+    {"time_ms": 1150, "type": "state_pulse", "state_id": "demon_form_stage_two_aura", "params": {"scale": 1.18, "opacity": 1.0, "duration": 0.26}},
+    {"time_ms": 1320, "type": "eye", "active": false},
+    {"time_ms": 1430, "type": "pose", "pose": "demon_idle", "duration_ms": 220},
+    {"time_ms": 1620, "type": "return_idle", "duration_ms": 190}
+  ]
+}
