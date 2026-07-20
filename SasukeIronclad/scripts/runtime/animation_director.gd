@@ -9,11 +9,13 @@ signal timeline_failed(animation_id: String, reason: String)
 @export_file("*.json") var catalog_path := "res://SasukeIronclad/data/timeline_catalog.json"
 @export var rig_path: NodePath
 @export var vfx_director_path: NodePath
+@export var advanced_vfx_director_path: NodePath
 @export var camera_director_path: NodePath
 @export var cutin_director_path: NodePath
 
 @onready var rig: SasukeGrayboxRig = get_node(rig_path)
 @onready var vfx_director: SasukeVfxDirector = get_node(vfx_director_path)
+@onready var advanced_vfx_director: SasukeAdvancedVfxDirector = get_node(advanced_vfx_director_path)
 @onready var camera_director: SasukeCameraEffectDirector = get_node(camera_director_path)
 @onready var cutin_director: SasukeCutinDirector = get_node(cutin_director_path)
 
@@ -38,6 +40,7 @@ func cancel_current() -> void:
     _external_impact_sync = false
     _latest_original_impact = -1
     vfx_director.clear_all()
+    advanced_vfx_director.clear_all()
     camera_director.reset_all()
     cutin_director.clear_all()
     rig.set_pose_immediate("idle_sword_ready")
@@ -65,6 +68,7 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
     var speed_scale := _resolve_speed_scale(timeline, variant)
     rig.set_low_flash(low_flash)
     vfx_director.configure(low_flash, float(context.get("quality_scale", 1.0)))
+    advanced_vfx_director.configure(low_flash, float(context.get("quality_scale", 1.0)))
     camera_director.configure(rig, low_flash)
     cutin_director.configure(low_flash)
     timeline_started.emit(animation_id, variant)
@@ -82,7 +86,8 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
         if generation != _play_generation:
             return false
 
-        if String(event.get("type", "")) == "impact":
+        var event_type := String(event.get("type", ""))
+        if event_type == "impact":
             if _external_impact_sync:
                 var timeout_seconds := float(context.get("impact_timeout_seconds", 1.5))
                 if not await _wait_for_original_impact(impact_index, generation, timeout_seconds):
@@ -91,6 +96,25 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
                     return false
             impact.emit(animation_id, impact_index)
             impact_index += 1
+            continue
+
+        if event_type == "impact_loop":
+            var consumed := await _execute_impact_loop(
+                animation_id,
+                event,
+                variant,
+                context,
+                generation,
+                impact_index,
+                speed_scale
+            )
+            if consumed == -2:
+                return false
+            if consumed < 0:
+                _is_playing = false
+                timeline_failed.emit(animation_id, "original_impact_timeout")
+                return false
+            impact_index += consumed
             continue
 
         _execute_event(event, variant, context)
@@ -107,6 +131,69 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
     await rig.reset_to_idle(0.12 if variant == "fast" else 0.18)
     timeline_completed.emit(animation_id)
     return true
+
+func _execute_impact_loop(
+    animation_id: String,
+    event: Dictionary,
+    variant: String,
+    context: Dictionary,
+    generation: int,
+    first_impact_index: int,
+    speed_scale: float
+) -> int:
+    var count := _resolve_loop_count(event, context)
+    if count <= 0:
+        return 0
+
+    var detailed_visual_count := clampi(int(event.get("detailed_visual_count", 8)), 1, 32)
+    var poses: Array = event.get("poses", [])
+    var pose_duration := float(event.get("pose_duration_ms", 80)) / 1000.0
+    var effect_id := String(event.get("effect", ""))
+    var anchor_name := String(event.get("anchor", "vfx"))
+    var camera_effect := String(event.get("camera_effect", ""))
+    var camera_every := maxi(1, int(event.get("camera_every", 3)))
+    var base_interval_ms := int(event.get("interval_ms", 90))
+    if variant == "fast":
+        base_interval_ms = int(event.get("fast_interval_ms", maxi(25, base_interval_ms / 2)))
+    if _external_impact_sync:
+        base_interval_ms = mini(base_interval_ms, int(event.get("external_interval_cap_ms", 40)))
+
+    for loop_index in range(count):
+        if generation != _play_generation:
+            return -2
+
+        var absolute_impact_index := first_impact_index + loop_index
+        if _external_impact_sync:
+            var timeout_seconds := float(context.get("impact_timeout_seconds", 1.5))
+            if not await _wait_for_original_impact(absolute_impact_index, generation, timeout_seconds):
+                return -1
+
+        if not poses.is_empty():
+            rig.tween_pose(String(poses[loop_index % poses.size()]), pose_duration)
+
+        var render_detail := loop_index < detailed_visual_count or loop_index >= maxi(detailed_visual_count, count - 2)
+        if render_detail and not effect_id.is_empty():
+            var params := _resolve_event_params(event, context)
+            params["iteration"] = loop_index
+            params["loop_count"] = count
+            params["compressed"] = count > detailed_visual_count
+            advanced_vfx_director.spawn_effect(effect_id, rig.get_anchor(anchor_name), params)
+
+        if render_detail and not camera_effect.is_empty() and (loop_index % camera_every == 0 or loop_index == count - 1):
+            camera_director.apply_effect(camera_effect, event.get("camera_params", {}))
+
+        impact.emit(animation_id, absolute_impact_index)
+
+        if base_interval_ms > 0 and loop_index < count - 1:
+            await get_tree().create_timer(float(base_interval_ms) / 1000.0 / speed_scale).timeout
+
+    return count
+
+func _resolve_loop_count(event: Dictionary, context: Dictionary) -> int:
+    var source := String(event.get("count_source", "hit_count"))
+    var fallback_count := int(event.get("fallback_count", 1))
+    var value := int(context.get(source, fallback_count))
+    return clampi(value, int(event.get("min_count", 0)), int(event.get("max_count", 64)))
 
 func _wait_for_original_impact(impact_index: int, generation: int, timeout_seconds: float) -> bool:
     var elapsed := 0.0
@@ -130,8 +217,19 @@ func _execute_event(event: Dictionary, variant: String, context: Dictionary) -> 
         "vfx":
             if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
                 return
-            var anchor := rig.get_anchor(String(event.get("anchor", "vfx")))
-            vfx_director.spawn_effect(String(event.get("effect", "")), anchor, _resolve_event_params(event, context))
+            vfx_director.spawn_effect(
+                String(event.get("effect", "")),
+                rig.get_anchor(String(event.get("anchor", "vfx"))),
+                _resolve_event_params(event, context)
+            )
+        "advanced_vfx":
+            if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
+                return
+            advanced_vfx_director.spawn_effect(
+                String(event.get("effect", "")),
+                rig.get_anchor(String(event.get("anchor", "vfx"))),
+                _resolve_event_params(event, context)
+            )
         "camera":
             if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
                 return
