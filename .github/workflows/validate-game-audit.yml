@@ -16,8 +16,18 @@ jobs:
         run: dotnet restore tools/game_audit/SasukeIronclad.GameAudit.csproj
       - name: Build audit tool
         run: dotnet build tools/game_audit/SasukeIronclad.GameAudit.csproj --configuration Release --no-restore
+      - name: Restore integration gate behavior tests
+        run: dotnet restore tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj
+      - name: Build integration gate behavior tests
+        run: dotnet build tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj --configuration Release --no-restore
       - name: Validate disabled-until-audited integration contract
         run: python tools/test_game_integration_contract.py
+      - name: Execute exact-build integration gate matrix
+        run: |
+          set -o pipefail
+          dotnet run --project tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj \
+            --configuration Release --no-build | tee integration-gate-test.log
+          grep -q "INTEGRATION_GATE_OK" integration-gate-test.log
       - name: Run two-scan redaction self-test
         run: |
           set -o pipefail
@@ -31,6 +41,7 @@ jobs:
         with:
           name: game-audit-self-test-reports
           path: |
+            integration-gate-test.log
             audit-self-test.log
             audit-output/self-test/first/audit-report.json
             audit-output/self-test/first/audit-report.md
