@@ -78,6 +78,20 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         _director.CallDeferred("notify_original_impact", impactIndex);
     }
 
+    public void PlayCharacterState(CharacterVisualRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!EnsureMounted() || _director is null)
+            return;
+
+        Godot.Collections.Dictionary parameters = new()
+        {
+            ["intensity"] = Math.Clamp(request.Intensity, 0.4f, 2.0f),
+            ["force"] = request.Force
+        };
+        _director.CallDeferred("play_character_state", request.StateId, parameters);
+    }
+
     /// <summary>
     /// Pulses a previously committed local-only visual state, for example when
     /// Flame Barrier reacts to an authoritative enemy hit.
