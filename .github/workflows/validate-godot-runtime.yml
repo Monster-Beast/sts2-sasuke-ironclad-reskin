@@ -86,6 +86,9 @@ jobs:
             if [ "$code" -ne 0 ] || ! grep -q "$marker" "$log"; then
               status=1
             fi
+            if grep -E "SCRIPT ERROR|Parse Error|Compile Error|^ERROR:|ObjectDB instances leaked" "$log"; then
+              status=1
+            fi
           }
           run_scene stress res://SasukeIronclad/scenes/runtime/runtime_stress_test.tscn STRESS_OK
           run_scene release res://SasukeIronclad/scenes/runtime/combat_resource_release_test.tscn RELEASE_OK
@@ -107,3 +110,4 @@ jobs:
           grep -q "RELEASE_OK" godot-release.log
           grep -q "FORM_OK" godot-form.log
           grep -q "CHAR_STATE_OK" godot-character.log
+          ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|^ERROR:|ObjectDB instances leaked" godot-stress.log godot-release.log godot-form.log godot-character.log
