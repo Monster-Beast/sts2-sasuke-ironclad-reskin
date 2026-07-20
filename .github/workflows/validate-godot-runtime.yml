@@ -1,0 +1,58 @@
+name: Validate Godot runtime
+on: [push, pull_request]
+
+jobs:
+  parse-godot-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.5.1
+        run: |
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_linux.x86_64.zip"
+          mkdir -p .godot-ci/bin
+          unzip -q godot.zip -d .godot-ci/bin
+          chmod +x .godot-ci/bin/Godot_v4.5.1-stable_linux.x86_64
+      - name: Create isolated validation project
+        run: |
+          mkdir -p .godot-ci/project
+          cp -R SasukeIronclad .godot-ci/project/SasukeIronclad
+          cp tools/godot_validation/validate_all.gd .godot-ci/project/validate_all.gd
+          cat > .godot-ci/project/project.godot <<'EOF'
+          config_version=5
+
+          [application]
+          config/name="SasukeRuntimeValidation"
+          config/features=PackedStringArray("4.5")
+
+          [rendering]
+          renderer/rendering_method="gl_compatibility"
+          renderer/rendering_method.mobile="gl_compatibility"
+          EOF
+      - id: parse
+        continue-on-error: true
+        name: Import and parse GDScript resources
+        run: |
+          set -o pipefail
+          GODOT="${GITHUB_WORKSPACE}/.godot-ci/bin/Godot_v4.5.1-stable_linux.x86_64"
+          "$GODOT" --headless --editor \
+            --path "${GITHUB_WORKSPACE}/.godot-ci/project" \
+            --quit-after 30 2>&1 | tee godot-import.log
+          "$GODOT" --headless \
+            --path "${GITHUB_WORKSPACE}/.godot-ci/project" \
+            --script res://validate_all.gd 2>&1 | tee godot-parse.log
+      - name: Upload Godot validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-validation-logs
+          path: |
+            godot-import.log
+            godot-parse.log
+          if-no-files-found: error
+      - name: Fail on Godot parser errors
+        if: steps.parse.outcome == 'failure'
+        run: |
+          grep -E "SCRIPT ERROR|Parse Error|ERROR:" godot-import.log godot-parse.log || true
+          exit 1
