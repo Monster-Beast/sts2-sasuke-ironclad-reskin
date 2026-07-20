@@ -20,9 +20,21 @@
       "status": "graybox"
     },
     {
+      "animation_id": "anger_shuriken_afterimage",
+      "card_id": "Anger",
+      "path": "res://SasukeIronclad/data/timelines/anger_shuriken_afterimage.json",
+      "status": "graybox"
+    },
+    {
       "animation_id": "cleave_chidori_ground_arc",
       "card_id": "Cleave",
       "path": "res://SasukeIronclad/data/timelines/cleave_chidori_ground_arc.json",
+      "status": "graybox"
+    },
+    {
+      "animation_id": "thunderclap_chidori_ring_burst",
+      "card_id": "Thunderclap",
+      "path": "res://SasukeIronclad/data/timelines/thunderclap_chidori_ring_burst.json",
       "status": "graybox"
     },
     {
