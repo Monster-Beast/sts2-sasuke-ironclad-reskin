@@ -9,4 +9,5 @@ jobs:
         with:
           python-version: "3.12"
       - run: python tools/validate_repo.py
+      - run: python tools/test_card_animation_policy.py
       - run: python -m compileall -q tools
