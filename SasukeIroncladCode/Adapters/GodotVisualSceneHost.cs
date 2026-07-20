@@ -3,13 +3,16 @@ using SasukeIronclad.SasukeIroncladCode.Runtime;
 
 namespace SasukeIronclad.SasukeIroncladCode.Adapters;
 
-public partial class GodotVisualSceneHost : Node, IVisualSceneHost
+public partial class GodotVisualSceneHost : Node, IVisualSceneHost, IVisualSceneHostNotifications
 {
     private const string DefaultRuntimeScene = "res://SasukeIronclad/scenes/runtime/animation_director.tscn";
 
     private AnimationPlaybackHandle? _activeHandle;
     private Node? _runtimeRoot;
     private Node? _director;
+
+    public event Action<AnimationPlaybackHandle>? PlaybackCompleted;
+    public event Action<AnimationPlaybackHandle, string>? PlaybackFailed;
 
     [Export(PropertyHint.File, "*.tscn")]
     public string RuntimeScenePath { get; set; } = DefaultRuntimeScene;
@@ -209,21 +212,39 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         }
     }
 
-    private void OnTimelineCompleted(string animationId) => RetireCompletedHandle(animationId);
+    private void OnTimelineCompleted(string animationId)
+    {
+        RetireCompletedHandle(animationId, null);
+    }
 
     private void OnTimelineFailed(string animationId, string reason)
     {
-        _ = reason;
-        RetireCompletedHandle(animationId);
+        RetireCompletedHandle(animationId, reason);
     }
 
-    private void RetireCompletedHandle(string animationId)
+    private void RetireCompletedHandle(string animationId, string? failureReason)
     {
         AnimationPlaybackHandle? handle = _activeHandle;
         if (handle is null || !string.Equals(handle.AnimationId, animationId, StringComparison.Ordinal))
             return;
+
         _activeHandle = null;
-        handle.MarkReleased();
+        try
+        {
+            if (failureReason is null)
+                PlaybackCompleted?.Invoke(handle);
+            else
+                PlaybackFailed?.Invoke(handle, failureReason);
+        }
+        catch
+        {
+            // Notification consumers are cosmetic coordinators; their failures
+            // cannot be allowed to affect the Godot signal path.
+        }
+        finally
+        {
+            handle.MarkReleased();
+        }
     }
 
     private void ReleaseActiveHandle(bool cancelDirector)
