@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "gameplay_changes": false,
+  "policy": {
+    "original_art_required": true,
+    "effect_semantics_are_authoritative": true,
+    "display_name_and_art_must_share_semantic_anchor": true,
+    "upgrade_changes_visual_emphasis_only": true,
+    "title_safe_area": "top_18_percent",
+    "forbidden_sources": ["anime_frames", "manga_panels", "game_extractions", "third_party_mod_assets"]
+  },
+  "briefs": [
+    {
+      "brief_id": "card.strike.kusanagi_flash",
+      "card_id": "Strike",
+      "family": "sword",
+      "focal_action": "极短距离拔刀斩",
+      "composition": "佐助位于左下，草薙剑银白轨迹斜切画面，目标仅保留受击剪影",
+      "upgrade_delta": "增加写轮眼聚焦和刀锋雷光，不改变动作方向",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.defend.kusanagi_guard",
+      "card_id": "Defend",
+      "family": "sword",
+      "focal_action": "草薙剑与钢丝联合防御",
+      "composition": "剑身横置形成主对角线，钢丝在前景构成半圆防区",
+      "upgrade_delta": "增加第二层钢丝和更完整的靛蓝防御弧",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.bash.sharingan_breaker",
+      "card_id": "Bash",
+      "family": "sharingan",
+      "focal_action": "写轮眼识破防御后瞬身破势",
+      "composition": "红色视线锁定敌人弱点，刀鞘撞击位于画面中心",
+      "upgrade_delta": "破绽线更清晰，加入第二段残影但不暗示额外伤害段数",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.anger.afterimage_shuriken",
+      "card_id": "Anger",
+      "family": "shuriken",
+      "focal_action": "残影同步投掷手里剑",
+      "composition": "三个佐助残影沿扇面排列，手里剑轨迹汇聚到同一目标",
+      "upgrade_delta": "残影更清晰、轨迹更密集，仍表现单次原始攻击",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.cleave.chidori_stream_sweep",
+      "card_id": "Cleave",
+      "family": "lightning",
+      "focal_action": "贴地横扫并扩散千鸟流",
+      "composition": "低机位展示草薙剑接触地面，雷流扇形覆盖多个敌人位置",
+      "upgrade_delta": "扩大地面雷流宽度和分支数量",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.thunderclap.chidori_stream_burst",
+      "card_id": "Thunderclap",
+      "family": "lightning",
+      "focal_action": "双手压地释放环形雷震",
+      "composition": "佐助居中压地，多层雷环向所有敌人扩散并标记破绽",
+      "upgrade_delta": "增加雷环层数和破绽标记亮度",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.heavy_blade.lightning_execution",
+      "card_id": "Heavy Blade",
+      "family": "lightning",
+      "focal_action": "高压雷遁纵斩",
+      "composition": "草薙剑垂直贯穿画面，力量以刀身雷电密度表达",
+      "upgrade_delta": "加粗雷柱和刀光，禁止改变成不同招式",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.flame_barrier.flame_ward",
+      "card_id": "Flame Barrier",
+      "family": "fire",
+      "focal_action": "结印形成反击火阵",
+      "composition": "半环火墙包围佐助，外侧敌人攻击触碰后被火焰反卷",
+      "upgrade_delta": "增加内外两层火阵与火星密度",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.whirlwind.chidori_blade_storm",
+      "card_id": "Whirlwind",
+      "family": "lightning",
+      "focal_action": "瞬身多段剑舞",
+      "composition": "多个瞬身路径环绕敌阵，中央保留千鸟雷环和最终交叉斩",
+      "upgrade_delta": "提高剑弧数量和最终斩击占比，不固定实际命中次数",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.burning_pact.curse_mark_covenant",
+      "card_id": "Burning Pact",
+      "family": "curse_mark",
+      "focal_action": "咒印吞噬卡牌残影",
+      "composition": "被消耗卡牌位于中心，紫色咒印从四周收束并转化为蓝色查克拉",
+      "upgrade_delta": "增加咒印纹路与回流粒子，不表现额外消耗数量",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.demon_form.curse_mark_stage_two",
+      "card_id": "Demon Form",
+      "family": "curse_mark",
+      "focal_action": "咒印二阶段展开",
+      "composition": "人物正面或三分之二侧面，翼状轮廓和咒印纹路形成完整剪影",
+      "upgrade_delta": "增强咒印亮度和翼状轮廓层次，不改形态身份",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.limit_break.sharingan_overdrive",
+      "card_id": "Limit Break",
+      "family": "sharingan",
+      "focal_action": "写轮眼与咒印同步超载",
+      "composition": "写轮眼特写位于上方，人物力量残影向外扩张",
+      "upgrade_delta": "增加残影层数和咒印脉冲范围",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.fiend_fire.dragon_flame_annihilation",
+      "card_id": "Fiend Fire",
+      "family": "fire",
+      "focal_action": "手牌残影化为龙火多段歼灭",
+      "composition": "卡牌残影从佐助手中升起并汇入贯穿画面的火龙",
+      "upgrade_delta": "强化火龙轮廓、余烬和终结爆发，不固定卡牌数量",
+      "status": "approved"
+    },
+    {
+      "brief_id": "card.giant_rock.chidori_spear",
+      "card_id": "GIANT_ROCK",
+      "family": "lightning",
+      "focal_action": "千鸟锐枪直线贯穿",
+      "composition": "佐助位于近景侧身，压缩雷枪从手部笔直贯穿远处目标",
+      "upgrade_delta": "雷枪更粗并增加贯穿残光，仍保持原卡单段高伤语义",
+      "status": "provisional"
+    }
+  ]
+}
