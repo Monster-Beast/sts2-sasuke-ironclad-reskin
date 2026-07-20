@@ -25,9 +25,21 @@ func spawn_effect(effect_id: String, anchor: Node2D, params: Dictionary = {}) ->
         "dragon_flame_launch": _spawn_dragon_flame_launch(effect, params)
         "dragon_flame_impact": _spawn_dragon_flame_impact(effect, params)
         "dragon_flame_coil": _spawn_dragon_flame_coil(effect, params)
+        "shuriken_fan_launch": _spawn_shuriken_fan(effect, params)
+        "shuriken_cross_impact": _spawn_shuriken_cross_impact(effect, params)
+        "afterimage_split": _spawn_afterimage_split(effect, params)
+        "chidori_ring_burst": _spawn_chidori_ring_burst(effect, params)
+        "vulnerable_marks": _spawn_vulnerable_marks(effect, params)
         _: _spawn_dragon_flame_impact(effect, params)
 
     return effect
+
+func active_effect_count() -> int:
+    var count := 0
+    for effect in _active_effects:
+        if is_instance_valid(effect) and not effect.is_queued_for_deletion():
+            count += 1
+    return count
 
 func clear_all() -> void:
     for effect in _active_effects:
@@ -197,6 +209,113 @@ func _spawn_dragon_flame_coil(root: Node2D, params: Dictionary) -> void:
     tween.tween_property(root, "scale", Vector2.ONE, 0.20)
     tween.parallel().tween_property(root, "rotation", 0.55, 0.32)
     tween.parallel().tween_property(root, "modulate:a", 0.0, 0.48 if low_flash_mode else 0.32)
+    tween.tween_callback(_release_effect.bind(root))
+
+func _spawn_shuriken_fan(root: Node2D, params: Dictionary) -> void:
+    var count := clampi(int(params.get("count", 3)), 1, 7)
+    var spread := float(params.get("spread", 0.38))
+    var distance := float(params.get("distance", 210.0))
+    for index in range(count):
+        var shuriken := Polygon2D.new()
+        shuriken.polygon = PackedVector2Array([Vector2(-10, 0), Vector2(0, -3), Vector2(10, 0), Vector2(0, 3)])
+        shuriken.color = Color(0.72, 0.82, 0.92, 0.58 if low_flash_mode else 0.94)
+        var t := 0.5 if count == 1 else float(index) / float(count - 1)
+        var angle := lerpf(-spread, spread, t)
+        shuriken.rotation = angle
+        shuriken.position = Vector2.RIGHT.rotated(angle) * distance * 0.25
+        root.add_child(shuriken)
+    root.scale = Vector2(0.35, 0.35)
+    var tween := root.create_tween()
+    tween.tween_property(root, "scale", Vector2.ONE, 0.10)
+    tween.parallel().tween_property(root, "position:x", distance * 0.55, 0.17)
+    tween.parallel().tween_property(root, "rotation", 1.8, 0.17)
+    tween.tween_property(root, "modulate:a", 0.0, 0.13)
+    tween.tween_callback(_release_effect.bind(root))
+
+func _spawn_shuriken_cross_impact(root: Node2D, params: Dictionary) -> void:
+    var size := float(params.get("size", 58.0))
+    var blades := clampi(int(params.get("blades", 3)), 2, 6)
+    for index in range(blades):
+        var line := Line2D.new()
+        var angle := TAU * float(index) / blades
+        line.points = PackedVector2Array([Vector2(-size * 0.55, 0).rotated(angle), Vector2(size * 0.55, 0).rotated(angle)])
+        line.width = 5.0 * quality_scale
+        line.default_color = Color(0.68, 0.88, 1.0, 0.55 if low_flash_mode else 0.95)
+        root.add_child(line)
+    root.scale = Vector2(0.25, 0.25)
+    var tween := root.create_tween()
+    tween.tween_property(root, "scale", Vector2.ONE, 0.08)
+    tween.parallel().tween_property(root, "rotation", 0.75, 0.15)
+    tween.parallel().tween_property(root, "modulate:a", 0.0, 0.20 if low_flash_mode else 0.13)
+    tween.tween_callback(_release_effect.bind(root))
+
+func _spawn_afterimage_split(root: Node2D, params: Dictionary) -> void:
+    var copies := clampi(int(params.get("copies", 3)), 2, 6)
+    var distance := float(params.get("distance", 66.0))
+    for index in range(copies):
+        var silhouette := Line2D.new()
+        var centered := float(index) - float(copies - 1) * 0.5
+        silhouette.position = Vector2(centered * distance, -28.0 + absf(centered) * 5.0)
+        silhouette.points = PackedVector2Array([Vector2(0, -46), Vector2(0, 10), Vector2(-13, 42), Vector2(0, 10), Vector2(16, 40)])
+        silhouette.width = 7.0 * quality_scale
+        silhouette.default_color = Color(0.28, 0.48, 0.70, 0.24 if low_flash_mode else 0.46)
+        root.add_child(silhouette)
+    root.scale = Vector2(0.60, 0.60)
+    var tween := root.create_tween()
+    tween.tween_property(root, "scale", Vector2.ONE, 0.10)
+    tween.parallel().tween_property(root, "modulate:a", 0.0, 0.26 if low_flash_mode else 0.17)
+    tween.tween_callback(_release_effect.bind(root))
+
+func _spawn_chidori_ring_burst(root: Node2D, params: Dictionary) -> void:
+    var radius := float(params.get("radius", 150.0))
+    var rings := clampi(int(params.get("rings", 3)), 1, 5)
+    var branches := clampi(int(params.get("branches", 10)), 6, 20)
+    for ring_index in range(rings):
+        var ring := Line2D.new()
+        ring.closed = true
+        ring.width = maxf(2.0, (7.0 - ring_index) * quality_scale)
+        ring.default_color = Color(0.28, 0.82, 1.0, (0.34 + 0.12 * ring_index) if low_flash_mode else (0.66 + 0.08 * ring_index))
+        var points := PackedVector2Array()
+        var segments := maxi(16, int(34 * quality_scale))
+        var ring_radius := radius * (0.55 + 0.22 * ring_index)
+        for segment in range(segments):
+            var angle := TAU * float(segment) / segments
+            var jitter := 1.0 + 0.04 * sin(float(segment * 5 + ring_index))
+            points.append(Vector2(cos(angle), sin(angle) * 0.58) * ring_radius * jitter)
+        ring.points = points
+        root.add_child(ring)
+    for branch_index in range(branches):
+        var branch := Line2D.new()
+        var angle := TAU * float(branch_index) / branches
+        var direction := Vector2(cos(angle), sin(angle) * 0.58)
+        branch.points = PackedVector2Array([direction * radius * 0.35, direction * radius * 0.68 + Vector2(0, -8 if branch_index % 2 == 0 else 8), direction * radius * 1.05])
+        branch.width = 2.4 * quality_scale
+        branch.default_color = Color(0.36, 0.88, 1.0, 0.52 if low_flash_mode else 0.88)
+        root.add_child(branch)
+    root.scale = Vector2(0.18, 0.18)
+    var tween := root.create_tween()
+    tween.tween_property(root, "scale", Vector2.ONE, 0.16)
+    tween.parallel().tween_property(root, "modulate:a", 0.0, 0.36 if low_flash_mode else 0.25)
+    tween.tween_callback(_release_effect.bind(root))
+
+func _spawn_vulnerable_marks(root: Node2D, params: Dictionary) -> void:
+    var count := clampi(int(params.get("count", 3)), 1, 6)
+    var spacing := float(params.get("spacing", 72.0))
+    for index in range(count):
+        var mark_root := Node2D.new()
+        mark_root.position = Vector2(float(index) * spacing, -16.0 * float(index % 2))
+        root.add_child(mark_root)
+        for angle in [-0.72, 0.72]:
+            var line := Line2D.new()
+            line.points = PackedVector2Array([Vector2(-18, 0).rotated(angle), Vector2(18, 0).rotated(angle)])
+            line.width = 4.0 * quality_scale
+            line.default_color = Color(0.90, 0.12, 0.18, 0.42 if low_flash_mode else 0.78)
+            mark_root.add_child(line)
+    root.scale = Vector2(0.45, 0.45)
+    var tween := root.create_tween()
+    tween.tween_property(root, "scale", Vector2.ONE, 0.12)
+    tween.tween_interval(0.10)
+    tween.tween_property(root, "modulate:a", 0.0, 0.22)
     tween.tween_callback(_release_effect.bind(root))
 
 func _release_effect(effect: Node) -> void:
