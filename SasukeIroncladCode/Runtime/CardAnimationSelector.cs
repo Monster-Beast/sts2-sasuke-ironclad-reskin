@@ -4,7 +4,7 @@ namespace SasukeIronclad.SasukeIroncladCode.Runtime;
 
 /// <summary>
 /// Selects only variants of the card-specific animation identified by CardId.
-/// Damage and hit count never participate in selecting AnimationId.
+/// Accessibility and speed remain independent flags on the selection.
 /// </summary>
 public static class CardAnimationSelector
 {
@@ -18,36 +18,33 @@ public static class CardAnimationSelector
             return false;
         }
 
-        CardAnimationVariant variant = SelectVariant(spec, context);
+        CardAnimationVariant variant = SelectContentVariant(spec, context);
         bool usesCutin = spec.PresentationTier is "cutin" or "finisher";
 
         selection = new CardAnimationSelection(
             spec.CardId,
             spec.AnimationId,
             variant,
-            usesCutin,
+            usesCutin && !context.FastMode && !context.LowFlashMode,
             spec.Fallback
-        );
+        )
+        {
+            FastMode = context.FastMode,
+            LowFlashMode = context.LowFlashMode
+        };
         return true;
     }
 
-    internal static CardAnimationVariant SelectVariant(CardAnimationSpec spec, AnimationContext context)
+    internal static CardAnimationVariant SelectContentVariant(CardAnimationSpec spec, AnimationContext context)
     {
         HashSet<string> variants = spec.Variants.ToHashSet(StringComparer.Ordinal);
 
-        // Accessibility and speed are global user choices. Every released
-        // timeline must provide these variants, but neither can change AnimationId.
-        if (context.LowFlashMode && variants.Contains("low_flash"))
-            return CardAnimationVariant.LowFlash;
-        if (context.FastMode)
-            return CardAnimationVariant.Fast;
         if (context.IsLethal && variants.Contains("lethal"))
             return CardAnimationVariant.Lethal;
 
-        // Empowerment is card-local. Manifests may use a semantic alias, while
-        // the runtime sends one stable variant name (empowered) to Godot.
         if (HasEmpoweredVariant(spec, variants) && IsCardLocallyEmpowered(spec.CardId, context))
             return CardAnimationVariant.Empowered;
+
         if (context.IsUpgraded && variants.Contains("upgraded"))
             return CardAnimationVariant.Upgraded;
 
