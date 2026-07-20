@@ -30,53 +30,74 @@ func install_state(
     params: Dictionary,
     generation: int
 ) -> Node2D:
-    if state_id.is_empty():
-        push_warning("Cannot install an unnamed visual state")
+    if state_id.is_empty() or not is_instance_valid(anchor):
+        push_warning("Cannot install an unnamed visual state or use an invalid anchor")
         return Node2D.new()
 
-    clear_state(state_id)
-    var root := Node2D.new()
-    root.name = "StateVFX_%s" % state_id
-    anchor.add_child(root)
-    root.position = Vector2.ZERO
-    _build_state(root, style, params)
-
-    _states[state_id] = {
-        "node": root,
-        "style": style,
-        "generation": generation,
-        "committed": false,
-        "rotation_speed": float(params.get("rotation_speed", 0.0)),
-        "pulse": float(params.get("pulse", 0.025)),
-        "pulse_speed": float(params.get("pulse_speed", 3.0))
-    }
     if not _pending_by_generation.has(generation):
-        _pending_by_generation[generation] = []
-    (_pending_by_generation[generation] as Array).append(state_id)
-    return root
+        _pending_by_generation[generation] = {}
+    var pending: Dictionary = _pending_by_generation[generation]
+
+    # Snapshot the previously committed state only once. Reinstalling the same
+    # state inside one timeline must still roll back to the state that existed
+    # before that timeline began.
+    if not pending.has(state_id):
+        var snapshot := {"had_previous": false}
+        if _states.has(state_id):
+            var previous: Dictionary = _states[state_id]
+            if bool(previous.get("committed", false)):
+                snapshot = {
+                    "had_previous": true,
+                    "style": String(previous.get("style", "curse_channel")),
+                    "params": (previous.get("params", {}) as Dictionary).duplicate(true),
+                    "anchor": previous.get("anchor")
+                }
+        pending[state_id] = snapshot
+        _pending_by_generation[generation] = pending
+
+    _erase_state_node(state_id)
+    return _create_state(state_id, style, anchor, params, generation, false)
 
 func commit_generation(generation: int) -> void:
     if not _pending_by_generation.has(generation):
         return
-    for state_id in _pending_by_generation[generation]:
-        if _states.has(state_id):
-            var entry: Dictionary = _states[state_id]
-            if int(entry.get("generation", -1)) == generation:
-                entry["committed"] = true
-                _states[state_id] = entry
+    var pending: Dictionary = _pending_by_generation[generation]
+    for state_id in pending.keys():
+        if not _states.has(state_id):
+            continue
+        var entry: Dictionary = _states[state_id]
+        if int(entry.get("generation", -1)) == generation:
+            entry["committed"] = true
+            _states[state_id] = entry
     _pending_by_generation.erase(generation)
 
 func rollback_generation(generation: int) -> void:
     if not _pending_by_generation.has(generation):
         return
-    var state_ids: Array = (_pending_by_generation[generation] as Array).duplicate()
+    var pending: Dictionary = _pending_by_generation[generation]
     _pending_by_generation.erase(generation)
-    for state_id in state_ids:
-        if not _states.has(state_id):
+
+    for state_id_variant in pending.keys():
+        var state_id := String(state_id_variant)
+        if _states.has(state_id):
+            var current: Dictionary = _states[state_id]
+            if int(current.get("generation", -1)) == generation and not bool(current.get("committed", false)):
+                _erase_state_node(state_id)
+
+        var snapshot: Dictionary = pending[state_id]
+        if not bool(snapshot.get("had_previous", false)):
             continue
-        var entry: Dictionary = _states[state_id]
-        if int(entry.get("generation", -1)) == generation and not bool(entry.get("committed", false)):
-            clear_state(String(state_id))
+        var previous_anchor: Node2D = snapshot.get("anchor")
+        if not is_instance_valid(previous_anchor):
+            continue
+        _create_state(
+            state_id,
+            String(snapshot.get("style", "curse_channel")),
+            previous_anchor,
+            (snapshot.get("params", {}) as Dictionary).duplicate(true),
+            -1,
+            true
+        )
 
 func pulse_state(state_id: String, params: Dictionary = {}) -> bool:
     if not _states.has(state_id):
@@ -103,24 +124,22 @@ func pulse_state(state_id: String, params: Dictionary = {}) -> bool:
     return true
 
 func clear_state(state_id: String) -> void:
-    if not _states.has(state_id):
-        return
-    var entry: Dictionary = _states[state_id]
-    var generation := int(entry.get("generation", -1))
-    var root: Node = entry.get("node")
-    _states.erase(state_id)
-    if _pending_by_generation.has(generation):
-        var pending: Array = _pending_by_generation[generation]
+    _erase_state_node(state_id)
+    var empty_generations: Array = []
+    for generation in _pending_by_generation.keys():
+        var pending: Dictionary = _pending_by_generation[generation]
         pending.erase(state_id)
         if pending.is_empty():
-            _pending_by_generation.erase(generation)
-    if is_instance_valid(root):
-        root.queue_free()
+            empty_generations.append(generation)
+        else:
+            _pending_by_generation[generation] = pending
+    for generation in empty_generations:
+        _pending_by_generation.erase(generation)
 
 func clear_all() -> void:
     var state_ids := _states.keys().duplicate()
     for state_id in state_ids:
-        clear_state(String(state_id))
+        _erase_state_node(String(state_id))
     _states.clear()
     _pending_by_generation.clear()
 
@@ -137,6 +156,40 @@ func has_state(state_id: String) -> bool:
         return false
     var root: Node = (_states[state_id] as Dictionary).get("node")
     return is_instance_valid(root) and not root.is_queued_for_deletion()
+
+func _create_state(
+    state_id: String,
+    style: String,
+    anchor: Node2D,
+    params: Dictionary,
+    generation: int,
+    committed: bool
+) -> Node2D:
+    var root := Node2D.new()
+    root.name = "StateVFX_%s" % state_id
+    anchor.add_child(root)
+    root.position = Vector2.ZERO
+    _build_state(root, style, params)
+    _states[state_id] = {
+        "node": root,
+        "style": style,
+        "params": params.duplicate(true),
+        "anchor": anchor,
+        "generation": generation,
+        "committed": committed,
+        "rotation_speed": float(params.get("rotation_speed", 0.0)),
+        "pulse": float(params.get("pulse", 0.025)),
+        "pulse_speed": float(params.get("pulse_speed", 3.0))
+    }
+    return root
+
+func _erase_state_node(state_id: String) -> void:
+    if not _states.has(state_id):
+        return
+    var root: Node = (_states[state_id] as Dictionary).get("node")
+    _states.erase(state_id)
+    if is_instance_valid(root):
+        root.queue_free()
 
 func _build_state(root: Node2D, style: String, params: Dictionary) -> void:
     match style:
