@@ -21,9 +21,10 @@ def main():
     required=[
         'README.md','LEGAL.md','SasukeIronclad.json','SasukeIronclad.csproj','project.godot',
         'SasukeIronclad/data/card_visual_map.json','SasukeIronclad/data/card_animation_manifest.json',
-        'SasukeIronclad/data/action_profiles.json','SasukeIronclad/data/presentation_tiers.json',
-        'SasukeIronclad/data/presentation_surfaces.json','docs/design/presentation-matrix.md',
-        'docs/design/card-specific-animation-system.md','docs/research/reference-chizuru-ironclad.md'
+        'SasukeIronclad/data/card_name_overrides.json','SasukeIronclad/data/action_profiles.json',
+        'SasukeIronclad/data/presentation_tiers.json','SasukeIronclad/data/presentation_surfaces.json',
+        'docs/design/presentation-matrix.md','docs/design/card-specific-animation-system.md',
+        'docs/design/card-renaming-system.md','docs/research/reference-chizuru-ironclad.md'
     ]
     for p in required:
         if not (ROOT/p).exists(): die(f"missing {p}")
@@ -34,17 +35,26 @@ def main():
 
     cards=load('SasukeIronclad/data/card_visual_map.json')
     card_animations=load('SasukeIronclad/data/card_animation_manifest.json')
+    card_names=load('SasukeIronclad/data/card_name_overrides.json')
     actions=load('SasukeIronclad/data/action_profiles.json')
     tiers=load('SasukeIronclad/data/presentation_tiers.json')
     surfaces=load('SasukeIronclad/data/presentation_surfaces.json')
     if cards.get('schema_version')!=2: die('unsupported card schema')
     if card_animations.get('schema_version')!=1: die('unsupported card animation schema')
+    if card_names.get('schema_version')!=1: die('unsupported card name schema')
     if actions.get('schema_version')!=2: die('unsupported action schema')
     if tiers.get('schema_version')!=2: die('unsupported tier schema')
     if surfaces.get('schema_version')!=1: die('unsupported surface schema')
-    if any(item.get('gameplay_changes') is not False for item in (cards,card_animations,tiers)):
+    if any(item.get('gameplay_changes') is not False for item in (cards,card_animations,card_names,tiers)):
         die('visual configuration declares gameplay changes')
     if actions.get('gameplay_timing_locked') is not True: die('action timing must remain locked')
+
+    name_policy=card_names['policy']
+    for key in ['display_only','internal_card_id_unchanged','preserve_rules_text','preserve_upgrade_state','fallback_to_original_name','allow_derived_cards']:
+        if name_policy.get(key) is not True: die(f'card naming policy missing {key}')
+    name_locales=name_policy.get('supported_locales',[])
+    if len(name_locales)<2 or name_policy.get('default_locale') not in name_locales:
+        die('card naming locales are incomplete')
 
     action_ids=unique(actions['profiles'],'id','action profile')
     for action in actions['profiles']:
@@ -107,6 +117,26 @@ def main():
             die(f"damage card does not require a special animation: {card['card_id']}")
         if card['legal_status']!='original_required': die(f"invalid legal status for {card['card_id']}")
 
+    name_ids=unique(card_names['cards'],'card_id','card name override')
+    normal_name_ids={item['card_id'] for item in card_names['cards'] if item.get('card_kind')=='normal'}
+    if normal_name_ids != card_ids: die('normal card names do not cover current card map')
+    display_by_locale={locale:set() for locale in name_locales}
+    for item in card_names['cards']:
+        if item.get('card_kind') not in {'normal','derived'}: die(f"invalid card name kind for {item['card_id']}")
+        if item.get('card_kind')=='derived' and name_policy.get('allow_derived_cards') is not True:
+            die(f"derived card name not allowed: {item['card_id']}")
+        if item.get('rename_status') not in {'approved','provisional'}: die(f"invalid rename status: {item['card_id']}")
+        if not item.get('semantic_anchor') or not item.get('art_concept'): die(f"missing naming concept: {item['card_id']}")
+        for locale in name_locales:
+            original=item.get('original_name',{}).get(locale,'').strip()
+            display=item.get('display_name',{}).get(locale,'').strip()
+            if not original or not display: die(f"missing localized card name: {item['card_id']} {locale}")
+            if item.get('rename_status')=='approved' and original.casefold()==display.casefold():
+                die(f"approved card was not renamed: {item['card_id']} {locale}")
+            if display.casefold() in display_by_locale[locale]: die(f"duplicate display name: {display} {locale}")
+            display_by_locale[locale].add(display.casefold())
+    if 'GIANT_ROCK' not in name_ids: die('derived Giant Rock display name is missing')
+
     for p in ['SasukeIronclad.csproj','Directory.Build.props','Sts2PathDiscovery.props']:
         try: ET.parse(ROOT/p)
         except Exception as exc: die(f"invalid XML {p}: {exc}")
@@ -115,7 +145,8 @@ def main():
     if bad: die('forbidden binary/extracted assets: '+', '.join(bad))
     damage_count=sum(1 for card in cards['cards'] if card['is_damage_card'])
     bespoke_count=sum(1 for animation in card_animations['animations'] if animation['animation_mode']=='bespoke')
-    print(f"OK: {len(card_ids)} card timelines ({damage_count} damage, {bespoke_count} bespoke), {len(action_ids)} primitives, {len(tier_ids)} tiers, {len(surface_ids)} surfaces.")
+    derived_names=sum(1 for item in card_names['cards'] if item.get('card_kind')=='derived')
+    print(f"OK: {len(card_ids)} card timelines ({damage_count} damage, {bespoke_count} bespoke), {len(name_ids)} display names ({derived_names} derived), {len(action_ids)} primitives, {len(tier_ids)} tiers, {len(surface_ids)} surfaces.")
     return 0
 
 if __name__=='__main__': sys.exit(main())
