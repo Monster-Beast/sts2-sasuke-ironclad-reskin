@@ -8,6 +8,15 @@ CATALOG = ROOT / "SasukeIronclad/data/timeline_catalog.json"
 MANIFEST = ROOT / "SasukeIronclad/data/card_animation_manifest.json"
 
 ALLOWED_EVENTS = {"pose", "eye", "vfx", "camera", "cutin", "impact", "return_idle"}
+ALLOWED_BINDING_SOURCES = {
+    "final_damage",
+    "hit_count",
+    "target_count",
+    "energy_spent",
+    "strength",
+    "exhausted_card_count",
+    "lethal",
+}
 REQUIRED_GRAYBOX = {"Strike", "Defend", "Bash", "Cleave", "Heavy Blade"}
 
 
@@ -46,12 +55,26 @@ def main() -> int:
         overrides = timeline.get("variant_overrides", {})
         assert "fast" in overrides and "low_flash" in overrides
 
+        for event in events:
+            bindings = event.get("param_bindings", {})
+            for param_name, binding in bindings.items():
+                assert isinstance(param_name, str) and param_name
+                assert binding["source"] in ALLOWED_BINDING_SOURCES
+                assert float(binding.get("min", -1e12)) <= float(binding.get("max", 1e12))
+                assert event["type"] in {"vfx", "camera"}
+
     cleave_effects = {
         event.get("effect")
         for event in timelines["Cleave"]["events"]
         if event["type"] == "vfx"
     }
     assert {"chidori_ground_fan", "multi_target_impact"}.issubset(cleave_effects)
+    cleave_bindings = [
+        binding
+        for event in timelines["Cleave"]["events"]
+        for binding in event.get("param_bindings", {}).values()
+    ]
+    assert any(binding["source"] == "target_count" for binding in cleave_bindings)
 
     heavy = timelines["Heavy Blade"]
     assert "empowered" in heavy["variant_overrides"]
@@ -60,6 +83,13 @@ def main() -> int:
         event["type"] == "vfx" and event.get("effect") == "focused_lightning_pillar"
         for event in heavy["events"]
     )
+    heavy_bindings = [
+        binding
+        for event in heavy["events"]
+        for binding in event.get("param_bindings", {}).values()
+    ]
+    assert len(heavy_bindings) >= 3
+    assert all(binding["source"] == "strength" for binding in heavy_bindings)
 
     required_files = [
         "SasukeIronclad/scenes/runtime/sasuke_character_rig.tscn",
@@ -76,7 +106,7 @@ def main() -> int:
         "SasukeIronclad/scripts/runtime/graybox_preview.gd",
     ]
     assert all((ROOT / path).exists() for path in required_files)
-    print("OK: 5 graybox timelines, Cut-in runtime, and preview scene validated.")
+    print("OK: 5 graybox timelines, card-local bindings, Cut-in runtime, and preview scene validated.")
     return 0
 
 
