@@ -18,6 +18,8 @@ signal timeline_failed(animation_id: String, reason: String)
 var _catalog: Dictionary = {}
 var _play_generation := 0
 var _is_playing := false
+var _external_impact_sync := false
+var _latest_original_impact := -1
 
 func _ready() -> void:
     _catalog = _load_catalog()
@@ -25,9 +27,14 @@ func _ready() -> void:
 func has_timeline(animation_id: String) -> bool:
     return _catalog.has(animation_id)
 
+func notify_original_impact(impact_index: int) -> void:
+    _latest_original_impact = maxi(_latest_original_impact, impact_index)
+
 func cancel_current() -> void:
     _play_generation += 1
     _is_playing = false
+    _external_impact_sync = false
+    _latest_original_impact = -1
     vfx_director.clear_all()
     camera_director.reset_all()
     rig.set_pose_immediate("idle_sword_ready")
@@ -49,6 +56,8 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
     _play_generation += 1
     var generation := _play_generation
     _is_playing = true
+    _external_impact_sync = bool(context.get("external_impact_sync", false))
+    _latest_original_impact = -1
     var low_flash := variant == "low_flash" or bool(context.get("low_flash", false))
     var speed_scale := _resolve_speed_scale(timeline, variant)
     rig.set_low_flash(low_flash)
@@ -68,9 +77,19 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
         elapsed_ms = event_time
         if generation != _play_generation:
             return false
-        _execute_event(animation_id, event, variant, context, impact_index)
+
         if String(event.get("type", "")) == "impact":
+            if _external_impact_sync:
+                var timeout_seconds := float(context.get("impact_timeout_seconds", 1.5))
+                if not await _wait_for_original_impact(impact_index, generation, timeout_seconds):
+                    _is_playing = false
+                    timeline_failed.emit(animation_id, "original_impact_timeout")
+                    return false
+            impact.emit(animation_id, impact_index)
             impact_index += 1
+            continue
+
+        _execute_event(event, variant)
 
     var duration_ms := int(timeline.get("duration_ms", elapsed_ms))
     if duration_ms > elapsed_ms:
@@ -79,11 +98,24 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
         return false
 
     _is_playing = false
+    _external_impact_sync = false
     await rig.reset_to_idle(0.12 if variant == "fast" else 0.18)
     timeline_completed.emit(animation_id)
     return true
 
-func _execute_event(animation_id: String, event: Dictionary, variant: String, context: Dictionary, impact_index: int) -> void:
+func _wait_for_original_impact(impact_index: int, generation: int, timeout_seconds: float) -> bool:
+    var elapsed := 0.0
+    while _latest_original_impact < impact_index:
+        if generation != _play_generation:
+            return false
+        if elapsed >= timeout_seconds:
+            return false
+        var step := minf(0.01, timeout_seconds - elapsed)
+        await get_tree().create_timer(step).timeout
+        elapsed += step
+    return true
+
+func _execute_event(event: Dictionary, variant: String) -> void:
     var event_type := String(event.get("type", ""))
     match event_type:
         "pose":
@@ -99,8 +131,6 @@ func _execute_event(animation_id: String, event: Dictionary, variant: String, co
             if variant == "fast" and bool(event.get("skip_in_fast", false)):
                 return
             camera_director.apply_effect(String(event.get("effect", "")), event.get("params", {}))
-        "impact":
-            impact.emit(animation_id, impact_index)
         "return_idle":
             rig.reset_to_idle(float(event.get("duration_ms", 160)) / 1000.0)
         _:
