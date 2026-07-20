@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "gameplay_changes": false,
+  "status": "pending_local_audit",
+  "policy": {
+    "exact_build_fingerprint_required": true,
+    "unverified_bindings_disabled": true,
+    "fallback_to_original_on_mismatch": true,
+    "multiplayer_local_visuals_only": true
+  },
+  "required_visual_events": [
+    "card_visual_request",
+    "original_impact",
+    "state_removed",
+    "form_removed",
+    "combat_ended",
+    "character_state"
+  ],
+  "required_title_surfaces": [
+    "card_art",
+    "hand",
+    "deck_list",
+    "reward",
+    "compendium",
+    "tooltip"
+  ],
+  "profiles": []
+}
