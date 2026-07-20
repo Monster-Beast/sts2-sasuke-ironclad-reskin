@@ -18,6 +18,18 @@
       "card_id": "Bash",
       "path": "res://SasukeIronclad/data/timelines/bash_sharingan_breaker.json",
       "status": "graybox"
+    },
+    {
+      "animation_id": "cleave_chidori_ground_arc",
+      "card_id": "Cleave",
+      "path": "res://SasukeIronclad/data/timelines/cleave_chidori_ground_arc.json",
+      "status": "graybox"
+    },
+    {
+      "animation_id": "heavy_blade_lightning_execution",
+      "card_id": "Heavy Blade",
+      "path": "res://SasukeIronclad/data/timelines/heavy_blade_lightning_execution.json",
+      "status": "graybox"
     }
   ]
 }
