@@ -35,18 +35,17 @@ public static class CardAnimationSelector
     {
         HashSet<string> variants = spec.Variants.ToHashSet(StringComparer.Ordinal);
 
-        // Accessibility and speed settings have the highest priority because
-        // they are explicit user choices. They still keep the same AnimationId.
+        // Accessibility and speed are global user choices. Every released
+        // timeline must provide these variants, but neither can change AnimationId.
         if (context.LowFlashMode && variants.Contains("low_flash"))
             return CardAnimationVariant.LowFlash;
-        if (context.FastMode && variants.Contains("fast"))
+        if (context.FastMode)
             return CardAnimationVariant.Fast;
         if (context.IsLethal && variants.Contains("lethal"))
             return CardAnimationVariant.Lethal;
 
-        // Empowerment is card-local. Manifests may use a semantic alias such as
-        // high_strength or x_energy, but the runtime sends one stable variant
-        // name (empowered) to Godot. Raw damage alone remains insufficient.
+        // Empowerment is card-local. Manifests may use a semantic alias, while
+        // the runtime sends one stable variant name (empowered) to Godot.
         if (HasEmpoweredVariant(spec, variants) && IsCardLocallyEmpowered(spec.CardId, context))
             return CardAnimationVariant.Empowered;
         if (context.IsUpgraded && variants.Contains("upgraded"))
@@ -61,6 +60,7 @@ public static class CardAnimationSelector
             "Heavy Blade" => variants.Contains("high_strength"),
             "Whirlwind" => variants.Contains("x_energy"),
             "Fiend Fire" => variants.Contains("hand_count"),
+            "Limit Break" => variants.Contains("high_strength"),
             _ => false
         };
 
@@ -69,6 +69,7 @@ public static class CardAnimationSelector
         "Heavy Blade" => context.Strength > 0,
         "Whirlwind" => context.EnergySpent > 1,
         "Fiend Fire" => context.ExhaustedCardCount > 1,
+        "Limit Break" => context.Strength >= 5,
         _ => false
     };
 }
