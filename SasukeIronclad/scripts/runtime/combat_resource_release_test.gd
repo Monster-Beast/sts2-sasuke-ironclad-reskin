@@ -24,9 +24,6 @@ func _ready() -> void:
     _expect(director.has_visual_state("flame_barrier_guard"), "Flame Barrier state was not committed")
     _expect(director.active_visual_state_count() == 1, "unexpected state count after Flame Barrier")
 
-    # Reinstall the same state, then cancel after state_install. The previous
-    # committed guard must be restored instead of being lost with the pending
-    # replacement.
     director.play_timeline("flame_barrier_uchiha_fire_guard", "base", context)
     await get_tree().create_timer(0.32).timeout
     director.cancel_current()
@@ -68,6 +65,11 @@ func _ready() -> void:
     _expect(director.active_visual_state_count() == 0, "combat release left persistent states")
     _expect(_count_runtime_visual_nodes(runtime) == 0, "combat release left temporary visual nodes")
     _expect(not cutin_root.visible, "combat release left Cut-in visible")
+
+    runtime.queue_free()
+    await get_tree().process_frame
+    await get_tree().process_frame
+    await get_tree().create_timer(0.05).timeout
 
     if failures.is_empty():
         print("RELEASE_OK states=0 transients=0")
