@@ -101,6 +101,13 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         _director.CallDeferred("clear_visual_state", stateId);
     }
 
+    public void ClearVisualForm(string formId)
+    {
+        if (_director is null || string.IsNullOrWhiteSpace(formId))
+            return;
+        _director.CallDeferred("clear_visual_form", formId);
+    }
+
     public void Release(AnimationPlaybackHandle handle)
     {
         if (!_active.Remove(handle.Id))
