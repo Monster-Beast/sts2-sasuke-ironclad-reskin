@@ -30,6 +30,18 @@
       "card_id": "Heavy Blade",
       "path": "res://SasukeIronclad/data/timelines/heavy_blade_lightning_execution.json",
       "status": "graybox"
+    },
+    {
+      "animation_id": "whirlwind_chidori_blade_storm",
+      "card_id": "Whirlwind",
+      "path": "res://SasukeIronclad/data/timelines/whirlwind_chidori_blade_storm.json",
+      "status": "graybox"
+    },
+    {
+      "animation_id": "fiend_fire_dragon_flame_annihilation",
+      "card_id": "Fiend Fire",
+      "path": "res://SasukeIronclad/data/timelines/fiend_fire_dragon_flame_annihilation.json",
+      "status": "graybox"
     }
   ]
 }
