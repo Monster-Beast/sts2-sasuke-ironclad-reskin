@@ -1,0 +1,76 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://SasukeIronclad/scripts/runtime/sasuke_character_rig.gd" id="1_rig"]
+
+[node name="SasukeCharacterRig" type="Node2D"]
+script = ExtResource("1_rig")
+
+[node name="VisualRoot" type="Node2D" parent="."]
+
+[node name="Torso" type="Polygon2D" parent="VisualRoot"]
+polygon = PackedVector2Array(-18, -60, 20, -58, 28, 12, 10, 48, -18, 46, -30, 10)
+color = Color(0.65, 0.68, 0.74, 1)
+
+[node name="Head" type="Polygon2D" parent="VisualRoot"]
+position = Vector2(0, -88)
+polygon = PackedVector2Array(-18, -12, -8, -24, 8, -24, 20, -10, 18, 12, 8, 24, -10, 22, -20, 8)
+color = Color(0.78, 0.7, 0.64, 1)
+
+[node name="EyeGlow" type="Polygon2D" parent="VisualRoot"]
+position = Vector2(7, -88)
+polygon = PackedVector2Array(-8, -2, 8, -2, 5, 3, -5, 3)
+color = Color(0.82, 0.1, 0.18, 1)
+
+[node name="LeftArm" type="Line2D" parent="VisualRoot"]
+position = Vector2(-20, -40)
+points = PackedVector2Array(0, 0, -24, 34, -10, 64)
+width = 10.0
+default_color = Color(0.43, 0.46, 0.55, 1)
+
+[node name="RightArm" type="Line2D" parent="VisualRoot"]
+position = Vector2(18, -40)
+points = PackedVector2Array(0, 0, 24, 30, 34, 60)
+width = 10.0
+default_color = Color(0.43, 0.46, 0.55, 1)
+
+[node name="LeftLeg" type="Line2D" parent="VisualRoot"]
+position = Vector2(-10, 38)
+points = PackedVector2Array(0, 0, -8, 42, -16, 82)
+width = 13.0
+default_color = Color(0.16, 0.18, 0.25, 1)
+
+[node name="RightLeg" type="Line2D" parent="VisualRoot"]
+position = Vector2(10, 38)
+points = PackedVector2Array(0, 0, 10, 42, 18, 82)
+width = 13.0
+default_color = Color(0.16, 0.18, 0.25, 1)
+
+[node name="Sword" type="Line2D" parent="VisualRoot"]
+position = Vector2(30, -5)
+points = PackedVector2Array(-6, 30, 4, 14, 78, -42)
+width = 6.0
+default_color = Color(0.82, 0.87, 0.94, 1)
+
+[node name="RopeBelt" type="Line2D" parent="VisualRoot"]
+position = Vector2(0, 20)
+points = PackedVector2Array(-28, 0, -12, 10, 0, 0, 12, 10, 30, 0)
+width = 9.0
+default_color = Color(0.34, 0.18, 0.48, 1)
+
+[node name="WeaponAnchor" type="Node2D" parent="."]
+position = Vector2(70, -36)
+
+[node name="LeftHandAnchor" type="Node2D" parent="."]
+position = Vector2(-30, 20)
+
+[node name="RightHandAnchor" type="Node2D" parent="."]
+position = Vector2(48, 12)
+
+[node name="EyeAnchor" type="Node2D" parent="."]
+position = Vector2(7, -88)
+
+[node name="GroundAnchor" type="Node2D" parent="."]
+position = Vector2(0, 124)
+
+[node name="VfxAnchor" type="Node2D" parent="."]
+position = Vector2(30, -20)
