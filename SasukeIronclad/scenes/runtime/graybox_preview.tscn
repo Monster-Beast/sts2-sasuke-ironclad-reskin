@@ -20,31 +20,31 @@ width = 4.0
 default_color = Color(0.25, 0.29, 0.38, 1)
 
 [node name="SasukeAnimationRuntime" parent="." instance=ExtResource("2_runtime")]
-position = Vector2(390, 400)
+position = Vector2(360, 400)
 
 [node name="Interface" type="CanvasLayer" parent="."]
 layer = 20
 
 [node name="Panel" type="PanelContainer" parent="Interface"]
-offset_left = 790.0
-offset_top = 20.0
-offset_right = 1240.0
-offset_bottom = 705.0
+offset_left = 765.0
+offset_top = 10.0
+offset_right = 1250.0
+offset_bottom = 715.0
 
 [node name="Margin" type="MarginContainer" parent="Interface/Panel"]
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
 
 [node name="VBox" type="VBoxContainer" parent="Interface/Panel/Margin"]
-theme_override_constants/separation = 7
+theme_override_constants/separation = 5
 
 [node name="Title" type="Label" parent="Interface/Panel/Margin/VBox"]
 text = "Sasuke Ironclad — Graybox"
 
 [node name="Hint" type="Label" parent="Interface/Panel/Margin/VBox"]
-text = "Independent timeline preview. Impact loops use read-only preview context."
+text = "Independent preview. Impact loops use read-only visual context."
 autowrap_mode = 2
 
 [node name="Strike" type="Button" parent="Interface/Panel/Margin/VBox"]
@@ -56,8 +56,14 @@ text = "Defend — Wire Parry Guard"
 [node name="Bash" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Bash — Sharingan Breaker"
 
+[node name="Anger" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Anger — Shuriken Afterimage"
+
 [node name="Cleave" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Cleave — Chidori Ground Arc"
+
+[node name="Thunderclap" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Thunderclap — Chidori Ring Burst"
 
 [node name="HeavyBlade" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Heavy Blade — Lightning Execution"
