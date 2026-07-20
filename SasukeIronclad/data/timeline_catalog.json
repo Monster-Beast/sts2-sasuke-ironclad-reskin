@@ -8,7 +8,7 @@
       "status": "graybox"
     },
     {
-      "animation_id": "defend_wire_parry_stance",
+      "animation_id": "defend_wire_parry_guard",
       "card_id": "Defend",
       "path": "res://SasukeIronclad/data/timelines/defend_wire_parry_stance.json",
       "status": "graybox"
