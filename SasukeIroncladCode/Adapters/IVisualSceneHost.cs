@@ -12,5 +12,7 @@ public interface IVisualSceneHost
     AnimationPlaybackHandle Play(CardAnimationSelection selection, AnimationContext context);
     void RaiseImpact(AnimationPlaybackHandle handle, int impactIndex);
     void Release(AnimationPlaybackHandle handle);
+    void ClearVisualState(string stateId);
+    void ClearVisualForm(string formId);
     void ReleaseCombatResources();
 }
