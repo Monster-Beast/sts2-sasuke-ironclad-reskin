@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "gameplay_changes": false,
+  "default_policy": {
+    "basic_common_cap": "standard",
+    "cutin_enabled": true,
+    "finisher_policy": "lethal_or_explicit_signature",
+    "fast_mode_cap": "signature",
+    "low_flash_available": true,
+    "runtime_inputs_read_only": [
+      "attack_topology",
+      "final_damage",
+      "card_rarity",
+      "energy_spent",
+      "lethal",
+      "explicit_visual_tag"
+    ]
+  },
+  "score_policy": {
+    "description": "Original Sasuke presentation heuristic; reads combat results only and never changes them.",
+    "semantic_weight_range": [0, 8],
+    "rarity_bonus": {
+      "basic": 0,
+      "common": 0,
+      "uncommon": 2,
+      "rare": 5,
+      "event": 5,
+      "ancient": 9
+    },
+    "energy_bonus_cap": 4,
+    "damage_bonus_cap": 8
+  },
+  "tiers": [
+    {
+      "id": "quick",
+      "rank": 1,
+      "max_duration_ms": 650,
+      "cutin": false,
+      "screen_takeover": false,
+      "default_profiles": ["sword_slash_fast", "sword_thrust_fast", "projectile_burst"]
+    },
+    {
+      "id": "standard",
+      "rank": 2,
+      "max_duration_ms": 950,
+      "cutin": false,
+      "screen_takeover": false,
+      "default_profiles": ["sword_cross_slash", "sword_combo_three", "chidori_stream", "fireball_cast"]
+    },
+    {
+      "id": "signature",
+      "rank": 3,
+      "max_duration_ms": 1250,
+      "cutin": false,
+      "screen_takeover": false,
+      "default_profiles": ["sword_slash_heavy", "chidori_thrust", "dragon_flame", "curse_mark_amplify"]
+    },
+    {
+      "id": "cutin",
+      "rank": 4,
+      "max_duration_ms": 1600,
+      "cutin": true,
+      "screen_takeover": false,
+      "default_profiles": ["kirin_cutin", "curse_mark_transform"]
+    },
+    {
+      "id": "finisher",
+      "rank": 5,
+      "max_duration_ms": 2000,
+      "cutin": true,
+      "screen_takeover": true,
+      "default_profiles": ["kirin_finisher", "curse_mark_finisher"]
+    }
+  ]
+}
