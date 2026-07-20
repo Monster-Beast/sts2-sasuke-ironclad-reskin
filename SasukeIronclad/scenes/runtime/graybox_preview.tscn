@@ -20,31 +20,31 @@ width = 4.0
 default_color = Color(0.25, 0.29, 0.38, 1)
 
 [node name="SasukeAnimationRuntime" parent="." instance=ExtResource("2_runtime")]
-position = Vector2(360, 400)
+position = Vector2(330, 400)
 
 [node name="Interface" type="CanvasLayer" parent="."]
 layer = 20
 
 [node name="Panel" type="PanelContainer" parent="Interface"]
-offset_left = 765.0
-offset_top = 10.0
-offset_right = 1250.0
-offset_bottom = 715.0
+offset_left = 735.0
+offset_top = 4.0
+offset_right = 1260.0
+offset_bottom = 716.0
 
 [node name="Margin" type="MarginContainer" parent="Interface/Panel"]
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
 [node name="VBox" type="VBoxContainer" parent="Interface/Panel/Margin"]
-theme_override_constants/separation = 5
+theme_override_constants/separation = 3
 
 [node name="Title" type="Label" parent="Interface/Panel/Margin/VBox"]
 text = "Sasuke Ironclad — Graybox"
 
 [node name="Hint" type="Label" parent="Interface/Panel/Margin/VBox"]
-text = "Independent preview. Impact loops use read-only visual context."
+text = "12 card timelines. Persistent state controls are local-only."
 autowrap_mode = 2
 
 [node name="Strike" type="Button" parent="Interface/Panel/Margin/VBox"]
@@ -68,8 +68,17 @@ text = "Thunderclap — Chidori Ring Burst"
 [node name="HeavyBlade" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Heavy Blade — Lightning Execution"
 
+[node name="FlameBarrier" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Flame Barrier — Uchiha Fire Guard"
+
 [node name="Whirlwind" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Whirlwind — Chidori Blade Storm"
+
+[node name="BurningPact" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Burning Pact — Curse Seal Consumption"
+
+[node name="LimitBreak" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Limit Break — Sharingan Curse Overdrive"
 
 [node name="FiendFire" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Fiend Fire — Dragon Flame Annihilation"
@@ -83,8 +92,14 @@ text = "Fast timeline variant"
 [node name="LowFlash" type="CheckButton" parent="Interface/Panel/Margin/VBox"]
 text = "Low-flash variant"
 
+[node name="PulseFlame" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Pulse Flame Barrier state"
+
+[node name="ClearStates" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Clear persistent visual states"
+
 [node name="Cancel" type="Button" parent="Interface/Panel/Margin/VBox"]
-text = "Cancel / Reset"
+text = "Cancel current timeline"
 
 [node name="Status" type="Label" parent="Interface/Panel/Margin/VBox"]
 text = "Ready"
