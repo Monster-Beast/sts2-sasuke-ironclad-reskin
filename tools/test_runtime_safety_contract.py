@@ -37,15 +37,27 @@ def main() -> int:
     assert "string.Equals(cardId, context.CardId, StringComparison.Ordinal)" in playback
     assert "impactIndex < 0" in playback
     assert "finally" in playback and "handle.MarkReleased();" in playback
+    assert "IVisualSceneHostNotifications" in playback
+    assert "PlaybackCompleted += OnPlaybackCompleted" in playback
+    assert "PlaybackFailed += OnPlaybackFailed" in playback
+    assert "asynchronous visual playback failed" in playback
+    assert "IDisposable" in playback
     assert "SafeFallback" in playback
 
+    notifications = read("SasukeIroncladCode/Adapters/IVisualSceneHostNotifications.cs")
+    assert "event Action<AnimationPlaybackHandle>? PlaybackCompleted" in notifications
+    assert "event Action<AnimationPlaybackHandle, string>? PlaybackFailed" in notifications
+
     host = read("SasukeIroncladCode/Adapters/GodotVisualSceneHost.cs")
+    assert "IVisualSceneHostNotifications" in host
     assert "Dictionary<Guid, AnimationPlaybackHandle>" not in host
     assert "private AnimationPlaybackHandle? _activeHandle" in host
     assert "timeline_completed" in host
     assert "timeline_failed" in host
     assert "Callable.From<string>(OnTimelineCompleted)" in host
     assert "Callable.From<string, string>(OnTimelineFailed)" in host
+    assert "PlaybackCompleted?.Invoke(handle)" in host
+    assert "PlaybackFailed?.Invoke(handle, failureReason)" in host
     assert "RetireCompletedHandle" in host
     assert "ReleaseActiveHandle(cancelDirector: true)" in host
     assert "handle.MarkReleased();" in host
@@ -73,6 +85,15 @@ def main() -> int:
     assert "rollback_generation(_play_generation)" not in stateful
     assert "resolve_character_state_pose(\"idle_sword_ready\")" in stateful
 
+    state_runtime = read("SasukeIronclad/scripts/runtime/state_visual_director.gd")
+    assert '"had_previous": true' in state_runtime
+    assert '"previous_form_id"' not in state_runtime
+    assert "previous_anchor" in state_runtime
+    assert "_create_state(" in state_runtime
+    assert "cancelled replacement removed the previous Flame Barrier state" in read(
+        "SasukeIronclad/scripts/runtime/combat_resource_release_test.gd"
+    )
+
     selector = read("SasukeIroncladCode/Runtime/CardAnimationSelector.cs")
     assert "SelectContentVariant" in selector
     assert "FastMode = context.FastMode" in selector
@@ -81,9 +102,10 @@ def main() -> int:
     assert "return CardAnimationVariant.LowFlash" not in selector
 
     print(
-        "OK: single-active playback, host handle retirement, generation-safe "
-        "timeline completion, layered accessibility, independent state/Form "
-        "transactions, and stable timeline paths validated."
+        "OK: single-active playback, asynchronous failure fallback, host handle "
+        "retirement, generation-safe completion, layered accessibility, state "
+        "replacement rollback, independent state/Form transactions, and stable "
+        "timeline paths validated."
     )
     return 0
 
