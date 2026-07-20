@@ -52,8 +52,9 @@ def main() -> int:
     assert "IVisualSceneHostNotifications" in host
     assert "Dictionary<Guid, AnimationPlaybackHandle>" not in host
     assert "private AnimationPlaybackHandle? _activeHandle" in host
-    assert "timeline_completed" in host
     assert "timeline_failed" in host
+    assert 'HasSignal("playback_committed")' in host
+    assert 'completionSignal = mountedDirector.HasSignal("playback_committed")' in host
     assert "Callable.From<string>(OnTimelineCompleted)" in host
     assert "Callable.From<string, string>(OnTimelineFailed)" in host
     assert "PlaybackCompleted?.Invoke(handle)" in host
@@ -77,9 +78,13 @@ def main() -> int:
     assert "content_scale * fast_scale" in director
 
     stateful = read("SasukeIronclad/scripts/runtime/stateful_animation_director.gd")
+    assert "signal playback_committed" in stateful
+    state_commit_index = stateful.index("state_visual_director.commit_generation(transaction)")
+    form_commit_index = stateful.index("form_visual_director.commit_generation(transaction)")
+    committed_signal_index = stateful.index("playback_committed.emit(animation_id)")
+    assert state_commit_index < form_commit_index < committed_signal_index
     assert "var _transaction_counter := 0" in stateful
     assert "var _active_transaction := -1" in stateful
-    assert "commit_generation(transaction)" in stateful
     assert "rollback_generation(transaction)" in stateful
     assert "commit_generation(_play_generation)" not in stateful
     assert "rollback_generation(_play_generation)" not in stateful
@@ -102,9 +107,9 @@ def main() -> int:
     assert "return CardAnimationVariant.LowFlash" not in selector
 
     print(
-        "OK: single-active playback, asynchronous failure fallback, host handle "
-        "retirement, generation-safe completion, layered accessibility, state "
-        "replacement rollback, independent state/Form transactions, and stable "
+        "OK: single-active playback, asynchronous failure fallback, post-commit "
+        "completion notification, generation-safe completion, layered accessibility, "
+        "state replacement rollback, independent state/Form transactions, and stable "
         "timeline paths validated."
     )
     return 0
