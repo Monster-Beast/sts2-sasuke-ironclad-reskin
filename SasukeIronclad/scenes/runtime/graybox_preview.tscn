@@ -20,31 +20,31 @@ width = 4.0
 default_color = Color(0.25, 0.29, 0.38, 1)
 
 [node name="SasukeAnimationRuntime" parent="." instance=ExtResource("2_runtime")]
-position = Vector2(420, 400)
+position = Vector2(390, 400)
 
 [node name="Interface" type="CanvasLayer" parent="."]
 layer = 20
 
 [node name="Panel" type="PanelContainer" parent="Interface"]
-offset_left = 805.0
-offset_top = 55.0
-offset_right = 1225.0
-offset_bottom = 650.0
+offset_left = 790.0
+offset_top = 20.0
+offset_right = 1240.0
+offset_bottom = 705.0
 
 [node name="Margin" type="MarginContainer" parent="Interface/Panel"]
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
 
 [node name="VBox" type="VBoxContainer" parent="Interface/Panel/Margin"]
-theme_override_constants/separation = 10
+theme_override_constants/separation = 7
 
 [node name="Title" type="Label" parent="Interface/Panel/Margin/VBox"]
 text = "Sasuke Ironclad — Graybox"
 
 [node name="Hint" type="Label" parent="Interface/Panel/Margin/VBox"]
-text = "Independent timeline preview. No gameplay logic is executed."
+text = "Independent timeline preview. Impact loops use read-only preview context."
 autowrap_mode = 2
 
 [node name="Strike" type="Button" parent="Interface/Panel/Margin/VBox"]
@@ -62,8 +62,17 @@ text = "Cleave — Chidori Ground Arc"
 [node name="HeavyBlade" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Heavy Blade — Lightning Execution"
 
+[node name="Whirlwind" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Whirlwind — Chidori Blade Storm"
+
+[node name="FiendFire" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Fiend Fire — Dragon Flame Annihilation"
+
 [node name="Empowered" type="CheckButton" parent="Interface/Panel/Margin/VBox"]
 text = "Empowered card-local variant"
+
+[node name="FastMode" type="CheckButton" parent="Interface/Panel/Margin/VBox"]
+text = "Fast timeline variant"
 
 [node name="LowFlash" type="CheckButton" parent="Interface/Panel/Margin/VBox"]
 text = "Low-flash variant"
