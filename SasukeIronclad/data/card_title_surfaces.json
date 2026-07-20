@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "gameplay_changes": false,
+  "fallback": "original_title",
+  "surfaces": [
+    {
+      "id": "card_art",
+      "purpose": "卡牌大图标题",
+      "max_lines": 2,
+      "minimum_scale": 0.72,
+      "width_units": {"zh-CN": 20.0, "en-US": 32.0},
+      "overflow_order": ["scale", "wrap", "original_title"],
+      "hook_status": "pending_local_audit"
+    },
+    {
+      "id": "hand",
+      "purpose": "战斗手牌标题",
+      "max_lines": 2,
+      "minimum_scale": 0.72,
+      "width_units": {"zh-CN": 20.0, "en-US": 32.0},
+      "overflow_order": ["scale", "wrap", "original_title"],
+      "hook_status": "pending_local_audit"
+    },
+    {
+      "id": "deck_list",
+      "purpose": "牌组列表标题",
+      "max_lines": 1,
+      "minimum_scale": 0.80,
+      "width_units": {"zh-CN": 22.0, "en-US": 36.0},
+      "overflow_order": ["scale", "original_title"],
+      "hook_status": "pending_local_audit"
+    },
+    {
+      "id": "reward",
+      "purpose": "战斗奖励标题",
+      "max_lines": 2,
+      "minimum_scale": 0.72,
+      "width_units": {"zh-CN": 20.0, "en-US": 32.0},
+      "overflow_order": ["scale", "wrap", "original_title"],
+      "hook_status": "pending_local_audit"
+    },
+    {
+      "id": "compendium",
+      "purpose": "图鉴和卡牌库标题",
+      "max_lines": 2,
+      "minimum_scale": 0.75,
+      "width_units": {"zh-CN": 22.0, "en-US": 36.0},
+      "overflow_order": ["scale", "wrap", "original_title"],
+      "hook_status": "pending_local_audit"
+    },
+    {
+      "id": "tooltip",
+      "purpose": "悬浮提示标题",
+      "max_lines": 2,
+      "minimum_scale": 0.75,
+      "width_units": {"zh-CN": 22.0, "en-US": 36.0},
+      "overflow_order": ["scale", "wrap", "original_title"],
+      "hook_status": "pending_local_audit"
+    }
+  ]
+}
