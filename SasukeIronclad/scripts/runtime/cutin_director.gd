@@ -36,6 +36,10 @@ func play_cutin(style: String, duration_ms: int = 260) -> void:
             band.color = Color(0.11, 0.045, 0.025, 0.96)
             eye.color = Color(0.92, 0.12, 0.08, 0.94)
             slash.default_color = Color(1.0, 0.43, 0.12, 0.92)
+        "curse_stage_two":
+            band.color = Color(0.075, 0.035, 0.11, 0.97)
+            eye.color = Color(0.76, 0.10, 0.22, 0.94)
+            slash.default_color = Color(0.66, 0.22, 0.88, 0.94)
         _:
             band.color = Color(0.08, 0.09, 0.14, 0.94)
             eye.color = Color(0.80, 0.12, 0.16, 0.88)
