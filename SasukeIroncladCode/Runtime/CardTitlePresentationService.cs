@@ -37,41 +37,51 @@ public sealed class CardTitlePresentationService
         bool upgraded,
         string originalName)
     {
-        if (!_surfaces.TryGetValue(surfaceId, out CardTitleSurfaceSpec? surface) ||
-            !adapter.CanApply(surfaceId))
+        ArgumentNullException.ThrowIfNull(adapter);
+        if (!_surfaces.TryGetValue(surfaceId, out CardTitleSurfaceSpec? surface))
+            return false;
+
+        try
         {
+            if (!adapter.CanApply(surfaceId))
+                return false;
+
+            bool localeSupported = CardDisplayNameResolver.TryNormalizeSupportedLocale(
+                locale,
+                out string normalizedLocale
+            );
+            string layoutLocale = localeSupported ? normalizedLocale : "en-US";
+            string baseOriginal = CardDisplayNameResolver.RemoveUpgradeSuffix(originalName) ?? string.Empty;
+            string originalDisplay = CardDisplayNameResolver.ApplyUpgradeSuffix(baseOriginal, upgraded);
+            string displayName = localeSupported
+                ? _nameResolver.Resolve(cardId, normalizedLocale, upgraded, baseOriginal)
+                : originalDisplay;
+
+            double widthUnits = surface.WidthUnits.TryGetValue(layoutLocale, out double units)
+                ? units
+                : surface.WidthUnits.Values.First();
+
+            adapter.Apply(new CardTitlePresentation(
+                cardId,
+                surfaceId,
+                layoutLocale,
+                displayName,
+                originalDisplay,
+                upgraded,
+                surface.MaxLines,
+                surface.MinimumScale,
+                widthUnits,
+                surface.OverflowOrder,
+                _fallback
+            ));
+            return true;
+        }
+        catch
+        {
+            // Title replacement is cosmetic. A surface adapter failure leaves the
+            // original game title in place and must never interrupt UI/gameplay.
             return false;
         }
-
-        string resolvedLocale = NormalizeLocale(locale);
-        string displayName = _nameResolver.Resolve(cardId, resolvedLocale, upgraded, originalName);
-        string originalDisplay = upgraded ? $"{originalName}+" : originalName;
-        double widthUnits = surface.WidthUnits.TryGetValue(resolvedLocale, out double units)
-            ? units
-            : surface.WidthUnits.Values.First();
-
-        adapter.Apply(new CardTitlePresentation(
-            cardId,
-            surfaceId,
-            resolvedLocale,
-            displayName,
-            originalDisplay,
-            upgraded,
-            surface.MaxLines,
-            surface.MinimumScale,
-            widthUnits,
-            surface.OverflowOrder,
-            _fallback
-        ));
-        return true;
-    }
-
-    private static string NormalizeLocale(string? locale)
-    {
-        if (string.IsNullOrWhiteSpace(locale))
-            return "zh-CN";
-        string normalized = locale.Replace('_', '-');
-        return normalized.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "zh-CN" : "en-US";
     }
 
     private static void Validate(CardTitleSurfaceMap map)
