@@ -30,7 +30,9 @@ v0.1 默认采用疾风传前中期 / Hebi 时期佐助：草薙剑、写轮眼�
 - 剑术、雷遁、火遁、写轮眼、咒印和手里剑程序化 VFX；
 - 13 张首批卡牌的独立灰盒时间轴；
 - 中英文佐助卡牌显示名、六种标题显示面和卡面生产 Brief；
-- 100 次播放/取消压力测试和战斗结束资源释放测试。
+- 100 次播放/取消压力测试和战斗结束资源释放测试；
+- 不执行游戏程序集的本地版本、资源与方法签名审计工具；
+- 精确 build 指纹安全门：没有已验证 Profile 时所有真实游戏绑定保持关闭。
 
 ## 当前 13 张灰盒时间轴
 
@@ -81,6 +83,55 @@ CHAR_STATE_OK state='' terminal=false form=''
 
 运行日志中不允许出现脚本错误、运行期 `ERROR:` 或 ObjectDB 泄漏警告。
 
+## 本地游戏审计
+
+审计工具位于 `tools/game_audit`，只读取托管元数据和文件元数据：
+
+- 不加载或执行 `sts2.dll`；
+- 不复制 PCK、DLL、贴图或恢复工程；
+- 输出程序集 SHA-256、MVID、Steam buildid、BaseLib 版本；
+- 输出候选类型/方法签名、Metadata Token；
+- 输出候选资源的相对路径、大小、图片尺寸和可选 SHA-256；
+- 自动比较两次独立运行，避免把一次性或错误结果当成已验证接口；
+- 报告不会包含本机游戏安装目录或恢复目录的绝对路径。
+
+Windows：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\run-game-audit.ps1 `
+  -GamePath "D:\SteamLibrary\steamapps\common\Slay the Spire 2" `
+  -AssetRoot "D:\STS2-recovered" `
+  -Branch stable
+```
+
+Linux / macOS：
+
+```bash
+chmod +x tools/run-game-audit.sh
+./tools/run-game-audit.sh \
+  "$HOME/.local/share/Steam/steamapps/common/Slay the Spire 2" \
+  "$HOME/STS2-recovered"
+```
+
+结果写入已被 Git 忽略的 `local-audit/`。详细规则与填写表见 [`docs/technical/local-asset-audit.md`](docs/technical/local-asset-audit.md)。
+
+## 游戏绑定安全门
+
+`SasukeIronclad/data/game_integration_contract.json` 当前保持：
+
+```json
+"status": "pending_local_audit",
+"profiles": []
+```
+
+因此现在不会绑定任何猜测的 Harmony 目标。只有某个 Profile 同时精确匹配以下信息，且全部必需视觉事件与六种标题显示面均标记为 `verified`，运行时才允许启用对应适配器：
+
+```text
+branch + Steam buildid + sts2.dll SHA-256 + Module MVID + BaseLib version
+```
+
+任何不匹配、缺失或未验证项都会保留原游戏动画与原标题。
+
 ## 自动验证
 
 ```bash
@@ -92,6 +143,7 @@ python tools/test_graybox_timelines.py
 python tools/test_demon_form_contract.py
 python tools/test_character_state_contract.py
 python tools/test_runtime_safety_contract.py
+python tools/test_game_integration_contract.py
 ```
 
 GitHub Actions 还会：
@@ -99,6 +151,7 @@ GitHub Actions 还会：
 - 使用独立 Godot.NET.Sdk 4.5.1 / .NET 9 工程编译 Runtime、Adapters 和 Visuals 层；
 - 使用 Godot 4.5.1 headless 导入全部 `.gd`、`.tscn`；
 - 真实执行四个运行时测试场景；
+- 编译并运行本地游戏审计工具的双扫描脱敏自测；
 - 将解析、编译和场景日志保存为 Artifact；
 - 将脚本错误、运行期 `ERROR:` 和 ObjectDB 泄漏视为失败。
 
@@ -107,12 +160,13 @@ GitHub Actions 还会：
 ```text
 SasukeIronclad/                 Godot 场景、脚本、时间轴和视觉配置
 SasukeIroncladCode/             C# 选择器、播放服务、Godot 适配器和未来 Hook
-SasukeIronclad/data/            卡牌动画、显示名、标题显示面和卡面 Brief
+SasukeIronclad/data/            卡牌动画、显示名、标题显示面、卡面 Brief 和集成契约
 docs/design                     动画、卡面、命名和完整表现矩阵
 docs/research                   外部项目和官方设定研究
 docs/technical                  架构、环境、资源和符号审计
 art/                            原创美术源文件与导出目录
 animation/                      原创动画源文件、事件表与导出目录
+tools/game_audit                当前安装版本的元数据审计 CLI
 tools/                          仓库校验、Godot 和 .NET 契约测试
 ```
 
@@ -141,9 +195,9 @@ dotnet publish
 
 ## 仍需完成
 
-1. 导出当前 Stable/Beta 安装版本的卡牌、人物节点和方法签名；
-2. 核验原始命中、状态移除、战斗结束和卡牌标题 UI 事件；
-3. 只对已核验方法建立 Harmony 视觉 Hook；
+1. 在当前 Stable/Beta 安装版本执行两次本地审计；
+2. 核验原始 card_id、人物节点、命中、状态移除、战斗结束和卡牌标题 UI；
+3. 将确认结果手工写入集成 Profile，只对精确 build 启用绑定；
 4. 扩展完整 Ironclad 卡池名称、卡面和逐卡动画；
 5. 替换正式原创人物 Rig、卡面、VFX 和非战斗立绘；
 6. 完成真实游戏、多人和多 Mod 验证。
