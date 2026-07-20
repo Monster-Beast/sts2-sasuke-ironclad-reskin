@@ -31,7 +31,9 @@ REQUIRED_GRAYBOX = {
     "Strike",
     "Defend",
     "Bash",
+    "Anger",
     "Cleave",
+    "Thunderclap",
     "Heavy Blade",
     "Whirlwind",
     "Fiend Fire",
@@ -88,6 +90,15 @@ def main() -> int:
                 assert int(event.get("fast_interval_ms", 1)) <= int(event.get("interval_ms", 1))
                 assert event.get("effect")
 
+    anger = timelines["Anger"]
+    anger_effects = {
+        event.get("effect")
+        for event in anger["events"]
+        if event["type"] == "advanced_vfx"
+    }
+    assert {"afterimage_split", "shuriken_fan_launch", "shuriken_cross_impact"}.issubset(anger_effects)
+    assert sum(1 for event in anger["events"] if event["type"] == "impact") == 1
+
     cleave_effects = {
         event.get("effect")
         for event in timelines["Cleave"]["events"]
@@ -100,6 +111,21 @@ def main() -> int:
         for binding in event.get("param_bindings", {}).values()
     ]
     assert any(binding["source"] == "target_count" for binding in cleave_bindings)
+
+    thunderclap = timelines["Thunderclap"]
+    thunder_effects = {
+        event.get("effect")
+        for event in thunderclap["events"]
+        if event["type"] == "advanced_vfx"
+    }
+    assert {"chidori_ring_burst", "vulnerable_marks"}.issubset(thunder_effects)
+    thunder_bindings = [
+        binding
+        for event in thunderclap["events"]
+        for binding in event.get("param_bindings", {}).values()
+    ]
+    assert len(thunder_bindings) >= 2
+    assert all(binding["source"] == "target_count" for binding in thunder_bindings)
 
     heavy = timelines["Heavy Blade"]
     assert "empowered" in heavy["variant_overrides"]
@@ -150,6 +176,7 @@ def main() -> int:
         "SasukeIronclad/scenes/runtime/camera_effect_director.tscn",
         "SasukeIronclad/scenes/runtime/cutin_director.tscn",
         "SasukeIronclad/scenes/runtime/graybox_preview.tscn",
+        "SasukeIronclad/scenes/runtime/runtime_stress_test.tscn",
         "SasukeIronclad/scripts/runtime/sasuke_character_rig.gd",
         "SasukeIronclad/scripts/runtime/animation_director.gd",
         "SasukeIronclad/scripts/runtime/vfx_director.gd",
@@ -157,6 +184,7 @@ def main() -> int:
         "SasukeIronclad/scripts/runtime/camera_effect_director.gd",
         "SasukeIronclad/scripts/runtime/cutin_director.gd",
         "SasukeIronclad/scripts/runtime/graybox_preview.gd",
+        "SasukeIronclad/scripts/runtime/runtime_stress_test.gd",
     ]
     assert all((ROOT / path).exists() for path in required_files)
 
@@ -164,8 +192,30 @@ def main() -> int:
     assert "_execute_impact_loop" in director_source
     assert "_wait_for_original_impact" in director_source
     assert "detailed_visual_count" in director_source
+    assert "vfx_director.clear_all()" in director_source
+    assert "advanced_vfx_director.clear_all()" in director_source
+    assert "cutin_director.clear_all()" in director_source
 
-    print("OK: 7 graybox timelines, authoritative impact loops, card-local bindings, and preview runtime validated.")
+    advanced_source = (ROOT / "SasukeIronclad/scripts/runtime/advanced_vfx_director.gd").read_text(encoding="utf-8")
+    for effect_name in [
+        "shuriken_fan_launch",
+        "shuriken_cross_impact",
+        "afterimage_split",
+        "chidori_ring_burst",
+        "vulnerable_marks",
+    ]:
+        assert effect_name in advanced_source
+    assert "_active_effects.erase(effect)" in advanced_source
+    assert "effect.queue_free()" in advanced_source
+
+    stress_source = (ROOT / "SasukeIronclad/scripts/runtime/runtime_stress_test.gd").read_text(encoding="utf-8")
+    assert "const ITERATIONS := 100" in stress_source
+    assert "director.cancel_current()" in stress_source
+    assert "_count_transient_nodes" in stress_source
+    assert "get_tree().quit(0)" in stress_source
+    assert "get_tree().quit(1)" in stress_source
+
+    print("OK: 9 graybox timelines, cleanup stress contract, card-local bindings, and preview runtime validated.")
     return 0
 
 
