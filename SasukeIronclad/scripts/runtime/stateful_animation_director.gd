@@ -3,13 +3,21 @@ class_name SasukeStatefulAnimationDirector
 
 @export var state_visual_director_path: NodePath
 @export var form_visual_director_path: NodePath
+@export var character_state_director_path: NodePath
 @onready var state_visual_director: SasukeStateVisualDirector = get_node(state_visual_director_path)
 @onready var form_visual_director: SasukeFormVisualDirector = get_node(form_visual_director_path)
+@onready var character_state_director: SasukeCharacterStateDirector = get_node(character_state_director_path)
 
 func play_timeline(animation_id: String, variant: String = "base", context: Dictionary = {}) -> bool:
+    if character_state_director.is_terminal():
+        timeline_failed.emit(animation_id, "character_terminal")
+        return false
+
+    character_state_director.set_card_animation_active(true)
     var low_flash := variant == "low_flash" or bool(context.get("low_flash", false))
     state_visual_director.configure(low_flash, float(context.get("quality_scale", 1.0)))
     var completed := await super.play_timeline(animation_id, variant, context)
+    character_state_director.set_card_animation_active(false)
     if completed:
         state_visual_director.commit_generation(_play_generation)
         form_visual_director.commit_generation(_play_generation)
@@ -21,7 +29,26 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
 func cancel_current() -> void:
     state_visual_director.rollback_generation(_play_generation)
     form_visual_director.rollback_generation(_play_generation)
+    character_state_director.set_card_animation_active(false)
     super.cancel_current()
+
+func play_character_state(state_id: String, params: Dictionary = {}) -> bool:
+    var normalized := state_id.strip_edges().to_lower()
+    if normalized in ["death", "die", "victory", "win", "victory_sheathe"]:
+        cancel_current()
+    return await character_state_director.play_state(state_id, params)
+
+func reset_character_state_machine() -> void:
+    character_state_director.reset_for_combat()
+
+func cancel_character_state(force: bool = false) -> void:
+    character_state_director.cancel_state(force)
+
+func current_character_state_id() -> String:
+    return character_state_director.current_state_id()
+
+func is_character_terminal() -> bool:
+    return character_state_director.is_terminal()
 
 func pulse_visual_state(state_id: String, params: Dictionary = {}) -> bool:
     return state_visual_director.pulse_state(state_id, params)
@@ -58,6 +85,7 @@ func release_combat_resources() -> void:
     advanced_vfx_director.clear_all()
     camera_director.reset_all()
     cutin_director.clear_all()
+    character_state_director.release_combat_resources()
     rig.set_pose_immediate("idle_sword_ready")
 
 func _execute_event(event: Dictionary, variant: String, context: Dictionary) -> void:
