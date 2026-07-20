@@ -95,7 +95,16 @@ Expect(partial.EnableVisualBindings, "verified visual bindings should remain ind
 Expect(!partial.EnableTitleBindings, "pending title surface unexpectedly enabled title bindings");
 
 GameIntegrationContractMap duplicate = CreateContract("verified", "verified");
-duplicate.Profiles.Add(duplicate.Profiles[0] with { Id = "duplicate-fixture" });
+GameIntegrationProfile original = duplicate.Profiles[0];
+duplicate.Profiles.Add(new GameIntegrationProfile
+{
+    Id = "duplicate-fixture",
+    Status = original.Status,
+    Branch = original.Branch,
+    Fingerprint = original.Fingerprint,
+    VisualBindings = original.VisualBindings,
+    TitleBindings = original.TitleBindings,
+});
 try
 {
     GameIntegrationGate.Evaluate(duplicate, runtime);
