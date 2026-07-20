@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "animation_id": "defend_wire_parry_stance",
+  "animation_id": "defend_wire_parry_guard",
   "card_id": "Defend",
   "duration_ms": 700,
   "variant_overrides": {
