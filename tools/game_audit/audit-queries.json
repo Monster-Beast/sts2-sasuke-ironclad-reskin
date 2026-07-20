@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "queries": [
+    {
+      "id": "cards",
+      "typeContains": ["Card", "Ironclad"],
+      "methodContains": ["Card", "Model", "Id", "Upgrade", "Transform"],
+      "assetContains": ["ironclad", "strike", "defend", "bash", "card"]
+    },
+    {
+      "id": "visuals",
+      "typeContains": ["Animation", "Player", "Combat", "Visual"],
+      "methodContains": ["Play", "Animate", "Impact", "Visual", "Block"],
+      "assetContains": ["animation", "spine", "atlas", "character", "combat", "effect"]
+    },
+    {
+      "id": "titles",
+      "typeContains": ["Hand", "Deck", "Reward", "Compendium", "Tooltip", "Localization"],
+      "methodContains": ["Name", "Title", "Text", "Local", "Render", "Refresh"],
+      "assetContains": ["localization", "hand", "deck", "reward", "compendium", "tooltip"]
+    },
+    {
+      "id": "lifecycle",
+      "typeContains": ["Combat", "Power", "Status", "Player"],
+      "methodContains": ["End", "Remove", "Apply", "Dispose", "Victory", "Start", "Reset"],
+      "assetContains": ["combat", "power", "status", "victory"]
+    },
+    {
+      "id": "audit_fixture",
+      "typeContains": ["Audit"],
+      "methodContains": ["Scan", "Compare", "Write"],
+      "assetContains": ["audit_fixture"]
+    }
+  ]
+}
