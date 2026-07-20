@@ -20,16 +20,16 @@ width = 4.0
 default_color = Color(0.25, 0.29, 0.38, 1)
 
 [node name="SasukeAnimationRuntime" parent="." instance=ExtResource("2_runtime")]
-position = Vector2(460, 400)
+position = Vector2(420, 400)
 
 [node name="Interface" type="CanvasLayer" parent="."]
 layer = 20
 
 [node name="Panel" type="PanelContainer" parent="Interface"]
-offset_left = 820.0
-offset_top = 80.0
-offset_right = 1210.0
-offset_bottom = 475.0
+offset_left = 805.0
+offset_top = 55.0
+offset_right = 1225.0
+offset_bottom = 650.0
 
 [node name="Margin" type="MarginContainer" parent="Interface/Panel"]
 theme_override_constants/margin_left = 20
@@ -38,7 +38,7 @@ theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
 [node name="VBox" type="VBoxContainer" parent="Interface/Panel/Margin"]
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="Interface/Panel/Margin/VBox"]
 text = "Sasuke Ironclad — Graybox"
@@ -51,10 +51,19 @@ autowrap_mode = 2
 text = "Strike — Kusanagi Draw Slash"
 
 [node name="Defend" type="Button" parent="Interface/Panel/Margin/VBox"]
-text = "Defend — Wire Parry Stance"
+text = "Defend — Wire Parry Guard"
 
 [node name="Bash" type="Button" parent="Interface/Panel/Margin/VBox"]
 text = "Bash — Sharingan Breaker"
+
+[node name="Cleave" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Cleave — Chidori Ground Arc"
+
+[node name="HeavyBlade" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Heavy Blade — Lightning Execution"
+
+[node name="Empowered" type="CheckButton" parent="Interface/Panel/Margin/VBox"]
+text = "Empowered card-local variant"
 
 [node name="LowFlash" type="CheckButton" parent="Interface/Panel/Margin/VBox"]
 text = "Low-flash variant"
