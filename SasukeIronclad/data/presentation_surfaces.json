@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "profile": "hebi_sasuke",
+  "surfaces": [
+    {"id":"character_select_portrait","phase":"selection","asset_kind":"illustration","required":true,"target":"full","fallback":"original"},
+    {"id":"character_select_background","phase":"selection","asset_kind":"illustration","required":true,"target":"full","fallback":"original"},
+    {"id":"character_select_intro","phase":"selection","asset_kind":"animation","required":true,"target":"full","fallback":"original"},
+    {"id":"map_portrait","phase":"run_ui","asset_kind":"portrait","required":true,"target":"full","fallback":"original"},
+    {"id":"top_panel_portrait","phase":"run_ui","asset_kind":"portrait","required":true,"target":"full","fallback":"original"},
+    {"id":"loading_screen","phase":"loading","asset_kind":"illustration","required":true,"target":"full","fallback":"original"},
+    {"id":"combat_body","phase":"combat","asset_kind":"character_rig","required":true,"target":"full","fallback":"original"},
+    {"id":"combat_entry","phase":"combat","asset_kind":"animation","required":true,"target":"full","fallback":"original"},
+    {"id":"idle_variants","phase":"combat","asset_kind":"animation_set","required":true,"target":"three_variants","fallback":"original"},
+    {"id":"guard_reactions","phase":"combat","asset_kind":"animation_set","required":true,"target":"two_variants","fallback":"original"},
+    {"id":"hit_reactions","phase":"combat","asset_kind":"animation_set","required":true,"target":"three_variants","fallback":"original"},
+    {"id":"death_sequence","phase":"combat","asset_kind":"animation_set","required":true,"target":"death_ready_and_death","fallback":"original"},
+    {"id":"victory_sequence","phase":"combat","asset_kind":"animation","required":true,"target":"full","fallback":"original"},
+    {"id":"card_play_cutin","phase":"combat_ui","asset_kind":"illustration_animation","required":true,"target":"toggleable","fallback":"disabled"},
+    {"id":"attack_vfx","phase":"combat","asset_kind":"vfx_library","required":true,"target":"high_standard_low","fallback":"original"},
+    {"id":"buff_debuff_vfx","phase":"combat","asset_kind":"vfx_library","required":true,"target":"full","fallback":"original"},
+    {"id":"card_portraits_normal","phase":"cards","asset_kind":"illustration_set","required":true,"target":"full_current_pool","fallback":"original"},
+    {"id":"card_portraits_ancient","phase":"cards","asset_kind":"illustration_set","required":true,"target":"full_current_pool","fallback":"original"},
+    {"id":"rest_site_rest","phase":"rest_site","asset_kind":"illustration_animation","required":true,"target":"full","fallback":"original"},
+    {"id":"rest_site_smith","phase":"rest_site","asset_kind":"illustration_animation","required":true,"target":"full","fallback":"original"},
+    {"id":"merchant_feedback","phase":"merchant","asset_kind":"animation_set","required":true,"target":"enter_buy_decline_leave","fallback":"original"},
+    {"id":"defeat_cg","phase":"run_end","asset_kind":"illustration","required":true,"target":"full","fallback":"original"},
+    {"id":"multiplayer_hand","phase":"multiplayer","asset_kind":"illustration_set","required":true,"target":"full","fallback":"original"},
+    {"id":"mod_config","phase":"settings","asset_kind":"ui","required":true,"target":"cutin_particles_flash_log","fallback":"defaults"}
+  ]
+}
