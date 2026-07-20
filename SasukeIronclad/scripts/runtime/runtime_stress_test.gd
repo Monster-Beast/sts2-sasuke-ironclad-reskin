@@ -14,7 +14,8 @@ const TIMELINES := [
 ]
 
 @onready var runtime: Node2D = $SasukeAnimationRuntime
-@onready var director: SasukeAnimationDirector = $SasukeAnimationRuntime/AnimationDirector
+@onready var director: SasukeStatefulAnimationDirector = $SasukeAnimationRuntime/AnimationDirector
+@onready var camera_director: SasukeCameraEffectDirector = $SasukeAnimationRuntime/CameraEffectDirector
 @onready var cutin_root: Control = $SasukeAnimationRuntime/CutinDirector/Root
 
 var failures: Array[String] = []
@@ -29,6 +30,7 @@ func _ready() -> void:
         var hit_count := 4 if animation_id in ["whirlwind_chidori_blade_storm", "fiend_fire_dragon_flame_annihilation"] else 1
         var context := {
             "low_flash": iteration % 5 == 0,
+            "fast_mode": true,
             "quality_scale": 0.5,
             "strength": 8,
             "target_count": 3,
@@ -38,11 +40,11 @@ func _ready() -> void:
         }
 
         if iteration % 3 == 0:
-            director.play_timeline(animation_id, "fast", context)
+            director.play_timeline(animation_id, "base", context)
             await get_tree().create_timer(0.035).timeout
             director.cancel_current()
         else:
-            var completed := await director.play_timeline(animation_id, "fast", context)
+            var completed := await director.play_timeline(animation_id, "base", context)
             if not completed:
                 failures.append("timeline did not complete: %s at iteration %d" % [animation_id, iteration])
 
@@ -59,12 +61,18 @@ func _ready() -> void:
             failures.append("transient nodes remained after iteration %d: %d" % [iteration, transient_nodes])
         if cutin_root.visible:
             failures.append("Cut-in remained visible after iteration %d" % iteration)
+        if not camera_director.is_clear():
+            failures.append("camera overlay or shake remained after iteration %d" % iteration)
         if current_nodes > baseline_nodes + 2:
             failures.append("runtime node count grew from %d to %d at iteration %d" % [baseline_nodes, current_nodes, iteration])
 
-    director.cancel_current()
+    director.release_combat_resources()
     await get_tree().process_frame
     await get_tree().process_frame
+    runtime.queue_free()
+    await get_tree().process_frame
+    await get_tree().process_frame
+    await get_tree().create_timer(0.05).timeout
 
     if failures.is_empty():
         print("STRESS_OK iterations=%d baseline_nodes=%d peak_nodes=%d" % [ITERATIONS, baseline_nodes, peak_nodes])
