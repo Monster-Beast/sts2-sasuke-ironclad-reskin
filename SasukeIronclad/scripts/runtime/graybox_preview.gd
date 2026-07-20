@@ -18,10 +18,12 @@ func _ready() -> void:
     $Interface/Panel/Margin/VBox/FlameBarrier.pressed.connect(_play.bind("flame_barrier_uchiha_fire_guard"))
     $Interface/Panel/Margin/VBox/Whirlwind.pressed.connect(_play.bind("whirlwind_chidori_blade_storm"))
     $Interface/Panel/Margin/VBox/BurningPact.pressed.connect(_play.bind("burning_pact_curse_seal_consumption"))
+    $Interface/Panel/Margin/VBox/DemonForm.pressed.connect(_play.bind("demon_form_curse_mark_stage_two"))
     $Interface/Panel/Margin/VBox/LimitBreak.pressed.connect(_play.bind("limit_break_sharingan_curse_overdrive"))
     $Interface/Panel/Margin/VBox/FiendFire.pressed.connect(_play.bind("fiend_fire_dragon_flame_annihilation"))
     $Interface/Panel/Margin/VBox/PulseFlame.pressed.connect(_pulse_flame)
     $Interface/Panel/Margin/VBox/ClearStates.pressed.connect(_clear_states)
+    $Interface/Panel/Margin/VBox/ClearForm.pressed.connect(_clear_form)
     $Interface/Panel/Margin/VBox/Cancel.pressed.connect(_cancel)
     director.timeline_started.connect(_on_started)
     director.impact.connect(_on_impact)
@@ -68,11 +70,15 @@ func _pulse_flame() -> void:
 
 func _clear_states() -> void:
     director.clear_all_visual_states()
-    status_label.text = "All persistent visual states cleared"
+    status_label.text = "Persistent states cleared — form: %s" % director.active_visual_form_id()
+
+func _clear_form() -> void:
+    director.clear_visual_form("curse_mark_stage_two")
+    status_label.text = "Demon Form cleared — states: %d" % director.active_visual_state_count()
 
 func _cancel() -> void:
     director.cancel_current()
-    status_label.text = "Cancelled — committed states: %d" % director.active_visual_state_count()
+    status_label.text = "Cancelled — states: %d, form: %s" % [director.active_visual_state_count(), director.active_visual_form_id()]
 
 func _on_started(animation_id: String, variant: String) -> void:
     status_label.text = "Playing %s — %s" % [animation_id, variant]
@@ -81,7 +87,7 @@ func _on_impact(animation_id: String, impact_index: int) -> void:
     status_label.text = "%s — impact %d" % [animation_id, impact_index + 1]
 
 func _on_completed(animation_id: String) -> void:
-    status_label.text = "%s completed — states: %d" % [animation_id, director.active_visual_state_count()]
+    status_label.text = "%s completed — states: %d, form: %s" % [animation_id, director.active_visual_state_count(), director.active_visual_form_id()]
 
 func _on_failed(animation_id: String, reason: String) -> void:
     status_label.text = "%s failed: %s" % [animation_id, reason]
