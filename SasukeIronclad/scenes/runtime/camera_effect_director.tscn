@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://SasukeIronclad/scripts/runtime/camera_effect_director.gd" id="1_camera"]
+
+[node name="CameraEffectDirector" type="CanvasLayer"]
+script = ExtResource("1_camera")
+layer = 90
+
+[node name="DimOverlay" type="ColorRect" parent="."]
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+color = Color(0.03, 0.04, 0.08, 1)
+modulate = Color(1, 1, 1, 0)
+
+[node name="FlashOverlay" type="ColorRect" parent="."]
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+color = Color(0.72, 0.9, 1, 1)
+modulate = Color(1, 1, 1, 0)
