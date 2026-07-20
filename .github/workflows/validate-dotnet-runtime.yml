@@ -10,4 +10,22 @@ jobs:
         with:
           dotnet-version: "9.0.x"
       - run: dotnet restore tools/runtime_contract/SasukeIronclad.RuntimeContract.csproj
-      - run: dotnet build tools/runtime_contract/SasukeIronclad.RuntimeContract.csproj --configuration Release --no-restore
+      - id: build
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          dotnet build tools/runtime_contract/SasukeIronclad.RuntimeContract.csproj \
+            --configuration Release --no-restore --nologo --verbosity minimal \
+            2>&1 | tee runtime-build.log
+      - name: Upload runtime build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-build-log
+          path: runtime-build.log
+          if-no-files-found: error
+      - name: Fail on compiler errors
+        if: steps.build.outcome == 'failure'
+        run: |
+          grep -E "error (CS|GD|MSB|NETSDK)" runtime-build.log || tail -n 100 runtime-build.log
+          exit 1
