@@ -4,15 +4,15 @@ using SasukeIronclad.SasukeIroncladCode.Runtime;
 namespace SasukeIronclad.SasukeIroncladCode.Adapters;
 
 /// <summary>
-/// Bridges the card-specific C# runtime to the local-only Godot visual scene.
-/// The scene pauses at each impact gate until RaiseImpact receives the matching
-/// authoritative hit event from the game adapter.
+/// Bridges the card-specific C# runtime to the local-only Godot graybox scene.
+/// The mounted runtime owns one AnimationDirector and therefore one active card
+/// timeline. Completion and failure signals retire the matching handle.
 /// </summary>
 public partial class GodotVisualSceneHost : Node, IVisualSceneHost
 {
     private const string DefaultRuntimeScene = "res://SasukeIronclad/scenes/runtime/animation_director.tscn";
 
-    private readonly Dictionary<Guid, AnimationPlaybackHandle> _active = [];
+    private AnimationPlaybackHandle? _activeHandle;
     private Node? _runtimeRoot;
     private Node? _director;
 
@@ -32,20 +32,31 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
 
     public bool CanPlay(CardAnimationSelection selection)
     {
+        ArgumentNullException.ThrowIfNull(selection);
         if (!EnsureMounted() || _director is null)
             return false;
 
-        return _director.Call("has_timeline", selection.AnimationId).AsBool();
+        try
+        {
+            return _director.Call("has_timeline", selection.AnimationId).AsBool();
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public AnimationPlaybackHandle Play(CardAnimationSelection selection, AnimationContext context)
     {
+        ArgumentNullException.ThrowIfNull(selection);
+        ArgumentNullException.ThrowIfNull(context);
+
         if (!CanPlay(selection) || _director is null)
             throw new InvalidOperationException($"Timeline is unavailable: {selection.AnimationId}");
 
-        AnimationPlaybackHandle handle = new(selection.CardId, selection.AnimationId);
-        _active[handle.Id] = handle;
+        ReleaseActiveHandle(cancelDirector: true);
 
+        AnimationPlaybackHandle handle = new(selection.CardId, selection.AnimationId);
         Godot.Collections.Dictionary runtimeContext = new()
         {
             ["low_flash"] = context.LowFlashMode,
@@ -61,21 +72,42 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
             ["lethal"] = context.IsLethal
         };
 
-        _director.CallDeferred(
-            "play_timeline",
-            selection.AnimationId,
-            ToVariantName(selection.Variant),
-            runtimeContext
-        );
-        return handle;
+        _activeHandle = handle;
+        try
+        {
+            _director.CallDeferred(
+                "play_timeline",
+                selection.AnimationId,
+                ToVariantName(selection.Variant),
+                runtimeContext
+            );
+            return handle;
+        }
+        catch
+        {
+            if (_activeHandle?.Id == handle.Id)
+                _activeHandle = null;
+            handle.MarkReleased();
+            TryCancelDirector();
+            throw;
+        }
     }
 
     public void RaiseImpact(AnimationPlaybackHandle handle, int impactIndex)
     {
-        if (handle.IsReleased || !_active.ContainsKey(handle.Id) || _director is null)
+        ArgumentNullException.ThrowIfNull(handle);
+        if (impactIndex < 0 || handle.IsReleased || _activeHandle?.Id != handle.Id || _director is null)
             return;
 
-        _director.CallDeferred("notify_original_impact", impactIndex);
+        try
+        {
+            _director.CallDeferred("notify_original_impact", impactIndex);
+        }
+        catch
+        {
+            ReleaseActiveHandle(cancelDirector: true);
+            throw;
+        }
     }
 
     public void PlayCharacterState(CharacterVisualRequest request)
@@ -89,7 +121,15 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
             ["intensity"] = Math.Clamp(request.Intensity, 0.4f, 2.0f),
             ["force"] = request.Force
         };
-        _director.CallDeferred("play_character_state", request.StateId, parameters);
+
+        try
+        {
+            _director.CallDeferred("play_character_state", request.StateId, parameters);
+        }
+        catch
+        {
+            // Character presentation is cosmetic and must not affect gameplay.
+        }
     }
 
     /// <summary>
@@ -101,44 +141,86 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         if (!EnsureMounted() || _director is null || string.IsNullOrWhiteSpace(stateId))
             return;
 
-        _director.CallDeferred(
-            "pulse_visual_state",
-            stateId,
-            parameters ?? new Godot.Collections.Dictionary()
-        );
+        try
+        {
+            _director.CallDeferred(
+                "pulse_visual_state",
+                stateId,
+                parameters ?? new Godot.Collections.Dictionary()
+            );
+        }
+        catch
+        {
+            // State feedback is local-only.
+        }
     }
 
     public void ClearVisualState(string stateId)
     {
         if (_director is null || string.IsNullOrWhiteSpace(stateId))
             return;
-        _director.CallDeferred("clear_visual_state", stateId);
+
+        try
+        {
+            _director.CallDeferred("clear_visual_state", stateId);
+        }
+        catch
+        {
+            // State cleanup is best-effort and the combat release path also clears all nodes.
+        }
     }
 
     public void ClearVisualForm(string formId)
     {
         if (_director is null || string.IsNullOrWhiteSpace(formId))
             return;
-        _director.CallDeferred("clear_visual_form", formId);
+
+        try
+        {
+            _director.CallDeferred("clear_visual_form", formId);
+        }
+        catch
+        {
+            // Form cleanup is best-effort and the combat release path also clears all nodes.
+        }
     }
 
     public void Release(AnimationPlaybackHandle handle)
     {
-        if (!_active.Remove(handle.Id))
+        ArgumentNullException.ThrowIfNull(handle);
+        if (handle.IsReleased)
             return;
 
-        if (_director is not null)
-            _director.CallDeferred("cancel_current");
+        if (_activeHandle?.Id != handle.Id)
+        {
+            handle.MarkReleased();
+            return;
+        }
+
+        ReleaseActiveHandle(cancelDirector: true);
     }
 
     public void ReleaseCombatResources()
     {
-        _active.Clear();
-        if (_director is not null)
-            _director.Call("release_combat_resources");
-        _runtimeRoot?.QueueFree();
-        _runtimeRoot = null;
-        _director = null;
+        AnimationPlaybackHandle? handle = _activeHandle;
+        _activeHandle = null;
+
+        try
+        {
+            if (_director is not null)
+                _director.Call("release_combat_resources");
+        }
+        catch
+        {
+            // Continue with node teardown even if a script cleanup call fails.
+        }
+        finally
+        {
+            handle?.MarkReleased();
+            _runtimeRoot?.QueueFree();
+            _runtimeRoot = null;
+            _director = null;
+        }
     }
 
     private bool EnsureMounted()
@@ -150,15 +232,92 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         if (scene is null)
             return false;
 
-        _runtimeRoot = scene.Instantiate<Node>();
-        AddChild(_runtimeRoot);
-        _director = _runtimeRoot.GetNodeOrNull<Node>("AnimationDirector");
-        if (_director is not null)
-            return true;
+        Node? mountedRoot = null;
+        try
+        {
+            mountedRoot = scene.Instantiate<Node>();
+            AddChild(mountedRoot);
+            Node? mountedDirector = mountedRoot.GetNodeOrNull<Node>("AnimationDirector");
+            if (mountedDirector is null ||
+                !mountedDirector.HasSignal("timeline_completed") ||
+                !mountedDirector.HasSignal("timeline_failed"))
+            {
+                mountedRoot.QueueFree();
+                return false;
+            }
 
-        _runtimeRoot.QueueFree();
-        _runtimeRoot = null;
-        return false;
+            mountedDirector.Connect(
+                "timeline_completed",
+                Callable.From<string>(OnTimelineCompleted)
+            );
+            mountedDirector.Connect(
+                "timeline_failed",
+                Callable.From<string, string>(OnTimelineFailed)
+            );
+
+            _runtimeRoot = mountedRoot;
+            _director = mountedDirector;
+            return true;
+        }
+        catch
+        {
+            mountedRoot?.QueueFree();
+            _runtimeRoot = null;
+            _director = null;
+            return false;
+        }
+    }
+
+    private void OnTimelineCompleted(string animationId)
+    {
+        RetireCompletedHandle(animationId);
+    }
+
+    private void OnTimelineFailed(string animationId, string reason)
+    {
+        _ = reason;
+        RetireCompletedHandle(animationId);
+    }
+
+    private void RetireCompletedHandle(string animationId)
+    {
+        AnimationPlaybackHandle? handle = _activeHandle;
+        if (handle is null ||
+            !string.Equals(handle.AnimationId, animationId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _activeHandle = null;
+        handle.MarkReleased();
+    }
+
+    private void ReleaseActiveHandle(bool cancelDirector)
+    {
+        AnimationPlaybackHandle? handle = _activeHandle;
+        _activeHandle = null;
+
+        try
+        {
+            if (cancelDirector)
+                TryCancelDirector();
+        }
+        finally
+        {
+            handle?.MarkReleased();
+        }
+    }
+
+    private void TryCancelDirector()
+    {
+        try
+        {
+            _director?.CallDeferred("cancel_current");
+        }
+        catch
+        {
+            // The caller has already retired the handle; gameplay must continue.
+        }
     }
 
     private static string ToVariantName(CardAnimationVariant variant) => variant switch
