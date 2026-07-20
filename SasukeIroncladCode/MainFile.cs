@@ -16,6 +16,10 @@ public partial class MainFile : Node
         VisualRegistry.Initialize();
         Harmony harmony = new(ModId);
         harmony.PatchAll();
-        GD.Print($"[{ModId}] initialized with {VisualRegistry.CardCount} card mappings and {VisualRegistry.ActionCount} action profiles.");
+        GD.Print(
+            $"[{ModId}] initialized with {VisualRegistry.CardCount} card mappings, " +
+            $"{VisualRegistry.ActionCount} action profiles, {VisualRegistry.TierCount} presentation tiers, " +
+            $"and {VisualRegistry.SurfaceCount} presentation surfaces."
+        );
     }
 }
