@@ -22,7 +22,9 @@ def select_variant(card: dict, **runtime_values: int | bool) -> str:
     variants = set(card["variants"])
     if runtime_values.get("low_flash") and "low_flash" in variants:
         return "low_flash"
-    if runtime_values.get("fast") and "fast" in variants:
+    # Fast mode is a global runtime policy. Released timelines must provide the
+    # override even when older manifest entries do not list a fast alias.
+    if runtime_values.get("fast"):
         return "fast"
     if runtime_values.get("lethal") and "lethal" in variants:
         return "lethal"
@@ -33,6 +35,8 @@ def select_variant(card: dict, **runtime_values: int | bool) -> str:
         card["card_id"] == "Whirlwind" and runtime_values.get("energy_spent", 0) > 1 and "x_energy" in variants
     ) or (
         card["card_id"] == "Fiend Fire" and runtime_values.get("exhausted_card_count", 0) > 1 and "hand_count" in variants
+    ) or (
+        card["card_id"] == "Limit Break" and runtime_values.get("strength", 0) >= 5 and "high_strength" in variants
     )
     if empowered:
         return "empowered"
@@ -68,7 +72,10 @@ def main() -> int:
     assert select_variant(cards["Heavy Blade"], strength=10) == "empowered"
     assert select_variant(cards["Whirlwind"], energy_spent=3) == "empowered"
     assert select_variant(cards["Fiend Fire"], exhausted_card_count=5) == "empowered"
+    assert select_variant(cards["Limit Break"], strength=8) == "empowered"
+    assert select_variant(cards["Limit Break"], strength=2) == "base"
     assert select_variant(cards["Strike"], strength=99, final_damage=999) == "base"
+    assert select_variant(cards["Flame Barrier"], fast=True) == "fast"
     assert select_variant(cards["Heavy Blade"], strength=10, low_flash=True) == "low_flash"
 
     print(f"OK: animation identity and card-local variant invariants hold for {len(cards)} timelines.")
