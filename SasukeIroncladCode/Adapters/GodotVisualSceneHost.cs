@@ -3,11 +3,6 @@ using SasukeIronclad.SasukeIroncladCode.Runtime;
 
 namespace SasukeIronclad.SasukeIroncladCode.Adapters;
 
-/// <summary>
-/// Bridges the card-specific C# runtime to the local-only Godot graybox scene.
-/// The mounted runtime owns one AnimationDirector and therefore one active card
-/// timeline. Completion and failure signals retire the matching handle.
-/// </summary>
 public partial class GodotVisualSceneHost : Node, IVisualSceneHost
 {
     private const string DefaultRuntimeScene = "res://SasukeIronclad/scenes/runtime/animation_director.tscn";
@@ -25,17 +20,13 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
     [Export(PropertyHint.Range, "0.25,5.0,0.25")]
     public float ImpactTimeoutSeconds { get; set; } = 1.5f;
 
-    public override void _Ready()
-    {
-        EnsureMounted();
-    }
+    public override void _Ready() => EnsureMounted();
 
     public bool CanPlay(CardAnimationSelection selection)
     {
         ArgumentNullException.ThrowIfNull(selection);
         if (!EnsureMounted() || _director is null)
             return false;
-
         try
         {
             return _director.Call("has_timeline", selection.AnimationId).AsBool();
@@ -50,16 +41,15 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
     {
         ArgumentNullException.ThrowIfNull(selection);
         ArgumentNullException.ThrowIfNull(context);
-
         if (!CanPlay(selection) || _director is null)
             throw new InvalidOperationException($"Timeline is unavailable: {selection.AnimationId}");
 
         ReleaseActiveHandle(cancelDirector: true);
-
         AnimationPlaybackHandle handle = new(selection.CardId, selection.AnimationId);
         Godot.Collections.Dictionary runtimeContext = new()
         {
-            ["low_flash"] = context.LowFlashMode,
+            ["low_flash"] = selection.LowFlashMode,
+            ["fast_mode"] = selection.FastMode,
             ["quality_scale"] = QualityScale,
             ["external_impact_sync"] = true,
             ["impact_timeout_seconds"] = ImpactTimeoutSeconds,
@@ -98,7 +88,6 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         ArgumentNullException.ThrowIfNull(handle);
         if (impactIndex < 0 || handle.IsReleased || _activeHandle?.Id != handle.Id || _director is null)
             return;
-
         try
         {
             _director.CallDeferred("notify_original_impact", impactIndex);
@@ -115,74 +104,40 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         ArgumentNullException.ThrowIfNull(request);
         if (!EnsureMounted() || _director is null)
             return;
-
-        Godot.Collections.Dictionary parameters = new()
-        {
-            ["intensity"] = Math.Clamp(request.Intensity, 0.4f, 2.0f),
-            ["force"] = request.Force
-        };
-
         try
         {
-            _director.CallDeferred("play_character_state", request.StateId, parameters);
+            _director.CallDeferred("play_character_state", request.StateId, new Godot.Collections.Dictionary
+            {
+                ["intensity"] = Math.Clamp(request.Intensity, 0.4f, 2.0f),
+                ["force"] = request.Force
+            });
         }
-        catch
-        {
-            // Character presentation is cosmetic and must not affect gameplay.
-        }
+        catch { }
     }
 
-    /// <summary>
-    /// Pulses a previously committed local-only visual state, for example when
-    /// Flame Barrier reacts to an authoritative enemy hit.
-    /// </summary>
     public void PulseVisualState(string stateId, Godot.Collections.Dictionary? parameters = null)
     {
         if (!EnsureMounted() || _director is null || string.IsNullOrWhiteSpace(stateId))
             return;
-
         try
         {
-            _director.CallDeferred(
-                "pulse_visual_state",
-                stateId,
-                parameters ?? new Godot.Collections.Dictionary()
-            );
+            _director.CallDeferred("pulse_visual_state", stateId, parameters ?? new Godot.Collections.Dictionary());
         }
-        catch
-        {
-            // State feedback is local-only.
-        }
+        catch { }
     }
 
     public void ClearVisualState(string stateId)
     {
         if (_director is null || string.IsNullOrWhiteSpace(stateId))
             return;
-
-        try
-        {
-            _director.CallDeferred("clear_visual_state", stateId);
-        }
-        catch
-        {
-            // State cleanup is best-effort and the combat release path also clears all nodes.
-        }
+        try { _director.CallDeferred("clear_visual_state", stateId); } catch { }
     }
 
     public void ClearVisualForm(string formId)
     {
         if (_director is null || string.IsNullOrWhiteSpace(formId))
             return;
-
-        try
-        {
-            _director.CallDeferred("clear_visual_form", formId);
-        }
-        catch
-        {
-            // Form cleanup is best-effort and the combat release path also clears all nodes.
-        }
+        try { _director.CallDeferred("clear_visual_form", formId); } catch { }
     }
 
     public void Release(AnimationPlaybackHandle handle)
@@ -190,13 +145,11 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         ArgumentNullException.ThrowIfNull(handle);
         if (handle.IsReleased)
             return;
-
         if (_activeHandle?.Id != handle.Id)
         {
             handle.MarkReleased();
             return;
         }
-
         ReleaseActiveHandle(cancelDirector: true);
     }
 
@@ -204,16 +157,11 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
     {
         AnimationPlaybackHandle? handle = _activeHandle;
         _activeHandle = null;
-
         try
         {
-            if (_director is not null)
-                _director.Call("release_combat_resources");
+            _director?.Call("release_combat_resources");
         }
-        catch
-        {
-            // Continue with node teardown even if a script cleanup call fails.
-        }
+        catch { }
         finally
         {
             handle?.MarkReleased();
@@ -246,15 +194,8 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
                 return false;
             }
 
-            mountedDirector.Connect(
-                "timeline_completed",
-                Callable.From<string>(OnTimelineCompleted)
-            );
-            mountedDirector.Connect(
-                "timeline_failed",
-                Callable.From<string, string>(OnTimelineFailed)
-            );
-
+            mountedDirector.Connect("timeline_completed", Callable.From<string>(OnTimelineCompleted));
+            mountedDirector.Connect("timeline_failed", Callable.From<string, string>(OnTimelineFailed));
             _runtimeRoot = mountedRoot;
             _director = mountedDirector;
             return true;
@@ -268,10 +209,7 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         }
     }
 
-    private void OnTimelineCompleted(string animationId)
-    {
-        RetireCompletedHandle(animationId);
-    }
+    private void OnTimelineCompleted(string animationId) => RetireCompletedHandle(animationId);
 
     private void OnTimelineFailed(string animationId, string reason)
     {
@@ -282,12 +220,8 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
     private void RetireCompletedHandle(string animationId)
     {
         AnimationPlaybackHandle? handle = _activeHandle;
-        if (handle is null ||
-            !string.Equals(handle.AnimationId, animationId, StringComparison.Ordinal))
-        {
+        if (handle is null || !string.Equals(handle.AnimationId, animationId, StringComparison.Ordinal))
             return;
-        }
-
         _activeHandle = null;
         handle.MarkReleased();
     }
@@ -296,7 +230,6 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
     {
         AnimationPlaybackHandle? handle = _activeHandle;
         _activeHandle = null;
-
         try
         {
             if (cancelDirector)
@@ -310,14 +243,7 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
 
     private void TryCancelDirector()
     {
-        try
-        {
-            _director?.CallDeferred("cancel_current");
-        }
-        catch
-        {
-            // The caller has already retired the handle; gameplay must continue.
-        }
+        try { _director?.CallDeferred("cancel_current"); } catch { }
     }
 
     private static string ToVariantName(CardAnimationVariant variant) => variant switch
@@ -325,8 +251,6 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost
         CardAnimationVariant.Upgraded => "upgraded",
         CardAnimationVariant.Empowered => "empowered",
         CardAnimationVariant.Lethal => "lethal",
-        CardAnimationVariant.Fast => "fast",
-        CardAnimationVariant.LowFlash => "low_flash",
         _ => "base"
     };
 }
