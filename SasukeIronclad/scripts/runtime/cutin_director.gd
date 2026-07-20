@@ -32,8 +32,14 @@ func play_cutin(style: String, duration_ms: int = 260) -> void:
             band.color = Color(0.055, 0.065, 0.11, 0.96)
             eye.color = Color(0.88, 0.08, 0.13, 0.92)
             slash.default_color = Color(0.45, 0.86, 1.0, 0.85)
+        "dragon_fire":
+            band.color = Color(0.11, 0.045, 0.025, 0.96)
+            eye.color = Color(0.92, 0.12, 0.08, 0.94)
+            slash.default_color = Color(1.0, 0.43, 0.12, 0.92)
         _:
             band.color = Color(0.08, 0.09, 0.14, 0.94)
+            eye.color = Color(0.80, 0.12, 0.16, 0.88)
+            slash.default_color = Color(0.72, 0.84, 1.0, 0.82)
 
     var duration := maxf(0.12, float(duration_ms) / 1000.0)
     var enter_duration := minf(0.11, duration * 0.32)
