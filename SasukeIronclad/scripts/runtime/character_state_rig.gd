@@ -102,6 +102,8 @@ const CHARACTER_STATE_POSES := {
     }
 }
 
+var _character_pose_generation := 0
+
 func resolve_character_state_pose(state_id: String) -> String:
     var demon := active_visual_form_id() == "curse_mark_stage_two"
     match state_id:
@@ -116,29 +118,57 @@ func resolve_character_state_pose(state_id: String) -> String:
         _: return state_id
 
 func set_pose_immediate(pose_name: String) -> void:
-    if CHARACTER_STATE_POSES.has(pose_name):
-        _apply_pose_values(CHARACTER_STATE_POSES[pose_name])
+    var pose := _find_character_pose(pose_name)
+    if pose.is_empty():
+        push_warning("Unknown graybox pose: %s" % pose_name)
         return
-    super.set_pose_immediate(pose_name)
+    _cancel_character_pose_tween()
+    _apply_pose_values(pose)
 
 func tween_pose(pose_name: String, duration: float = 0.18) -> void:
-    if not CHARACTER_STATE_POSES.has(pose_name):
-        await super.tween_pose(pose_name, duration)
+    var pose := _find_character_pose(pose_name)
+    if pose.is_empty():
+        push_warning("Unknown graybox pose: %s" % pose_name)
         return
-    if is_instance_valid(_pose_tween):
-        _pose_tween.kill()
-    var pose: Dictionary = CHARACTER_STATE_POSES[pose_name]
+
+    _cancel_character_pose_tween()
+    var generation := _character_pose_generation
+    var bounded_duration := maxf(0.01, duration)
     _pose_tween = create_tween().set_parallel(true)
     _pose_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-    _pose_tween.tween_property(visual_root, "position", pose.root_position, duration)
-    _pose_tween.tween_property(visual_root, "rotation", pose.root_rotation, duration)
-    _pose_tween.tween_property(torso, "rotation", pose.torso_rotation, duration)
-    _pose_tween.tween_property(head, "rotation", pose.head_rotation, duration)
-    _pose_tween.tween_property(left_arm, "rotation", pose.left_arm_rotation, duration)
-    _pose_tween.tween_property(right_arm, "rotation", pose.right_arm_rotation, duration)
-    _pose_tween.tween_property(left_leg, "rotation", pose.left_leg_rotation, duration)
-    _pose_tween.tween_property(right_leg, "rotation", pose.right_leg_rotation, duration)
-    _pose_tween.tween_property(sword, "rotation", pose.sword_rotation, duration)
-    _pose_tween.tween_property(sword, "position", pose.sword_position, duration)
-    await _pose_tween.finished
+    _pose_tween.tween_property(visual_root, "position", pose.root_position, bounded_duration)
+    _pose_tween.tween_property(visual_root, "rotation", pose.root_rotation, bounded_duration)
+    _pose_tween.tween_property(torso, "rotation", pose.torso_rotation, bounded_duration)
+    _pose_tween.tween_property(head, "rotation", pose.head_rotation, bounded_duration)
+    _pose_tween.tween_property(left_arm, "rotation", pose.left_arm_rotation, bounded_duration)
+    _pose_tween.tween_property(right_arm, "rotation", pose.right_arm_rotation, bounded_duration)
+    _pose_tween.tween_property(left_leg, "rotation", pose.left_leg_rotation, bounded_duration)
+    _pose_tween.tween_property(right_leg, "rotation", pose.right_leg_rotation, bounded_duration)
+    _pose_tween.tween_property(sword, "rotation", pose.sword_rotation, bounded_duration)
+    _pose_tween.tween_property(sword, "position", pose.sword_position, bounded_duration)
+
+    # A killed Tween does not reliably emit finished. A bounded timer guarantees
+    # that superseded coroutines resume and observe the changed generation.
+    await get_tree().create_timer(bounded_duration).timeout
+    if generation != _character_pose_generation:
+        return
+    _apply_pose_values(pose)
+    _pose_tween = null
     pose_finished.emit(pose_name)
+
+func _find_character_pose(pose_name: String) -> Dictionary:
+    if CHARACTER_STATE_POSES.has(pose_name):
+        return CHARACTER_STATE_POSES[pose_name]
+    if FORM_POSES.has(pose_name):
+        return FORM_POSES[pose_name]
+    if STATEFUL_POSES.has(pose_name):
+        return STATEFUL_POSES[pose_name]
+    if POSES.has(pose_name):
+        return POSES[pose_name]
+    return {}
+
+func _cancel_character_pose_tween() -> void:
+    _character_pose_generation += 1
+    if is_instance_valid(_pose_tween):
+        _pose_tween.kill()
+    _pose_tween = null
