@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "animation_id": "thunderclap_chidori_ring_burst",
+  "card_id": "Thunderclap",
+  "duration_ms": 1120,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.42},
+    "upgraded": {"speed_scale": 1.0},
+    "lethal": {"speed_scale": 0.93},
+    "low_flash": {"speed_scale": 0.96}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "thunder_charge", "duration_ms": 190},
+    {"time_ms": 65, "type": "eye", "active": true},
+    {"time_ms": 125, "type": "vfx", "effect": "minor_blue_sparks", "anchor": "right_hand", "params": {"count": 13}},
+    {"time_ms": 275, "type": "pose", "pose": "thunder_slam", "duration_ms": 130},
+    {"time_ms": 335, "type": "advanced_vfx", "effect": "chidori_ring_burst", "anchor": "ground", "params": {"radius": 150.0, "rings": 3, "branches": 10}, "param_bindings": {"branches": {"source": "target_count", "scale": 2.0, "offset": 6.0, "min": 8.0, "max": 16.0, "integer": true}}},
+    {"time_ms": 410, "type": "impact"},
+    {"time_ms": 425, "type": "camera", "effect": "shake_medium", "params": {"amplitude": 7.0, "duration": 0.18}},
+    {"time_ms": 440, "type": "camera", "effect": "impact_flash", "params": {"opacity": 0.20, "duration": 0.10}, "suppress_in_low_flash": true},
+    {"time_ms": 455, "type": "advanced_vfx", "effect": "vulnerable_marks", "anchor": "vfx", "params": {"count": 3, "spacing": 72.0}, "param_bindings": {"count": {"source": "target_count", "scale": 1.0, "offset": 0.0, "min": 1.0, "max": 6.0, "integer": true}}},
+    {"time_ms": 570, "type": "eye", "active": false},
+    {"time_ms": 730, "type": "return_idle", "duration_ms": 210}
+  ]
+}
