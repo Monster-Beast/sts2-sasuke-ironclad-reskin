@@ -1,6 +1,6 @@
 [gd_scene load_steps=8 format=3]
 
-[ext_resource type="Script" path="res://SasukeIronclad/scripts/runtime/animation_director.gd" id="1_director"]
+[ext_resource type="Script" path="res://SasukeIronclad/scripts/runtime/stateful_animation_director.gd" id="1_director"]
 [ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/sasuke_character_rig.tscn" id="2_rig"]
 [ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/vfx_director.tscn" id="3_vfx"]
 [ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/camera_effect_director.tscn" id="4_camera"]
