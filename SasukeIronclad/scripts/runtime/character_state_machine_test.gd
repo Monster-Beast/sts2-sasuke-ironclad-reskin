@@ -3,6 +3,7 @@ extends Node
 @onready var runtime: Node2D = $SasukeAnimationRuntime
 @onready var director: SasukeStatefulAnimationDirector = $SasukeAnimationRuntime/AnimationDirector
 @onready var rig: SasukeCharacterStateRig = $SasukeAnimationRuntime/CharacterRig
+@onready var camera_director: SasukeCameraEffectDirector = $SasukeAnimationRuntime/CameraEffectDirector
 
 var failures: Array[String] = []
 
@@ -41,7 +42,6 @@ func _ready() -> void:
     var rejected_after_victory := await director.play_character_state("hit_light")
     _expect(not rejected_after_victory, "lower-priority hit was accepted after victory")
 
-    # Death is the only non-forced request allowed to override a victory terminal.
     _expect(await director.play_character_state("death"), "death did not override victory without force")
     _expect(director.is_character_terminal(), "death did not retain terminal state")
     _expect(director.current_character_state_id() == "death", "death state id was not retained")
@@ -57,13 +57,15 @@ func _ready() -> void:
     _expect(rig.active_visual_form_id().is_empty(), "combat release left Demon Form active")
     _expect(director.active_visual_state_count() == 0, "combat release left persistent visual states")
     _expect(_count_transients(runtime) == 0, "combat release left transient VFX")
+    _expect(camera_director.is_clear(), "combat release left camera overlays or shake active")
+
+    runtime.queue_free()
+    await get_tree().process_frame
+    await get_tree().process_frame
+    await get_tree().create_timer(0.05).timeout
 
     if failures.is_empty():
-        print("CHAR_STATE_OK state='%s' terminal=%s form='%s'" % [
-            director.current_character_state_id(),
-            str(director.is_character_terminal()),
-            rig.active_visual_form_id()
-        ])
+        print("CHAR_STATE_OK state='' terminal=false form=''")
         get_tree().quit(0)
         return
 
