@@ -1,0 +1,128 @@
+extends Node
+class_name SasukeAnimationDirector
+
+signal timeline_started(animation_id: String, variant: String)
+signal impact(animation_id: String, impact_index: int)
+signal timeline_completed(animation_id: String)
+signal timeline_failed(animation_id: String, reason: String)
+
+@export_file("*.json") var catalog_path := "res://SasukeIronclad/data/timeline_catalog.json"
+@export var rig_path: NodePath
+@export var vfx_director_path: NodePath
+@export var camera_director_path: NodePath
+
+@onready var rig: SasukeGrayboxRig = get_node(rig_path)
+@onready var vfx_director: SasukeVfxDirector = get_node(vfx_director_path)
+@onready var camera_director: SasukeCameraEffectDirector = get_node(camera_director_path)
+
+var _catalog: Dictionary = {}
+var _play_generation := 0
+var _is_playing := false
+
+func _ready() -> void:
+    _catalog = _load_catalog()
+
+func has_timeline(animation_id: String) -> bool:
+    return _catalog.has(animation_id)
+
+func cancel_current() -> void:
+    _play_generation += 1
+    _is_playing = false
+    vfx_director.clear_all()
+    camera_director.reset_all()
+    rig.set_pose_immediate("idle_sword_ready")
+    rig.set_eye_active(false)
+
+func play_timeline(animation_id: String, variant: String = "base", context: Dictionary = {}) -> bool:
+    if _is_playing:
+        cancel_current()
+    if not _catalog.has(animation_id):
+        timeline_failed.emit(animation_id, "timeline_not_registered")
+        return false
+
+    var timeline_path: String = _catalog[animation_id]
+    var timeline := _load_json(timeline_path)
+    if timeline.is_empty():
+        timeline_failed.emit(animation_id, "timeline_load_failed")
+        return false
+
+    _play_generation += 1
+    var generation := _play_generation
+    _is_playing = true
+    var low_flash := variant == "low_flash" or bool(context.get("low_flash", false))
+    var speed_scale := _resolve_speed_scale(timeline, variant)
+    rig.set_low_flash(low_flash)
+    vfx_director.configure(low_flash, float(context.get("quality_scale", 1.0)))
+    camera_director.configure(rig, low_flash)
+    timeline_started.emit(animation_id, variant)
+
+    var elapsed_ms := 0
+    var impact_index := 0
+    for event in timeline.get("events", []):
+        if generation != _play_generation:
+            return false
+        var event_time := int(event.get("time_ms", elapsed_ms))
+        var wait_ms := maxi(0, event_time - elapsed_ms)
+        if wait_ms > 0:
+            await get_tree().create_timer(float(wait_ms) / 1000.0 / speed_scale).timeout
+        elapsed_ms = event_time
+        if generation != _play_generation:
+            return false
+        _execute_event(animation_id, event, variant, context, impact_index)
+        if String(event.get("type", "")) == "impact":
+            impact_index += 1
+
+    var duration_ms := int(timeline.get("duration_ms", elapsed_ms))
+    if duration_ms > elapsed_ms:
+        await get_tree().create_timer(float(duration_ms - elapsed_ms) / 1000.0 / speed_scale).timeout
+    if generation != _play_generation:
+        return false
+
+    _is_playing = false
+    await rig.reset_to_idle(0.12 if variant == "fast" else 0.18)
+    timeline_completed.emit(animation_id)
+    return true
+
+func _execute_event(animation_id: String, event: Dictionary, variant: String, context: Dictionary, impact_index: int) -> void:
+    var event_type := String(event.get("type", ""))
+    match event_type:
+        "pose":
+            rig.tween_pose(String(event.get("pose", "idle_sword_ready")), float(event.get("duration_ms", 120)) / 1000.0)
+        "eye":
+            rig.set_eye_active(bool(event.get("active", true)))
+        "vfx":
+            if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
+                return
+            var anchor := rig.get_anchor(String(event.get("anchor", "vfx")))
+            vfx_director.spawn_effect(String(event.get("effect", "")), anchor, event.get("params", {}))
+        "camera":
+            if variant == "fast" and bool(event.get("skip_in_fast", false)):
+                return
+            camera_director.apply_effect(String(event.get("effect", "")), event.get("params", {}))
+        "impact":
+            impact.emit(animation_id, impact_index)
+        "return_idle":
+            rig.reset_to_idle(float(event.get("duration_ms", 160)) / 1000.0)
+        _:
+            push_warning("Unknown timeline event type: %s" % event_type)
+
+func _resolve_speed_scale(timeline: Dictionary, variant: String) -> float:
+    var variants: Dictionary = timeline.get("variant_overrides", {})
+    var override: Dictionary = variants.get(variant, {})
+    return maxf(0.25, float(override.get("speed_scale", 1.0)))
+
+func _load_catalog() -> Dictionary:
+    var catalog := _load_json(catalog_path)
+    var result := {}
+    for entry in catalog.get("entries", []):
+        result[String(entry.get("animation_id", ""))] = String(entry.get("path", ""))
+    return result
+
+func _load_json(path: String) -> Dictionary:
+    if not FileAccess.file_exists(path):
+        return {}
+    var file := FileAccess.open(path, FileAccess.READ)
+    if file == null:
+        return {}
+    var parsed = JSON.parse_string(file.get_as_text())
+    return parsed if parsed is Dictionary else {}
