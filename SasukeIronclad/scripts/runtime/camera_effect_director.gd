@@ -8,6 +8,8 @@ var low_flash_mode := false
 var shake_target: Node2D
 var _base_position := Vector2.ZERO
 var _shake_generation := 0
+var _flash_tween: Tween
+var _dim_tween: Tween
 
 func configure(target: Node2D, low_flash: bool) -> void:
     shake_target = target
@@ -24,26 +26,42 @@ func apply_effect(effect_id: String, params: Dictionary = {}) -> void:
 
 func reset_all() -> void:
     _shake_generation += 1
-    flash_overlay.modulate.a = 0.0
-    dim_overlay.modulate.a = 0.0
+    _kill_tween(_flash_tween)
+    _kill_tween(_dim_tween)
+    _flash_tween = null
+    _dim_tween = null
+    if is_instance_valid(flash_overlay):
+        flash_overlay.modulate.a = 0.0
+    if is_instance_valid(dim_overlay):
+        dim_overlay.modulate.a = 0.0
     if is_instance_valid(shake_target):
         shake_target.position = _base_position
+
+func is_clear() -> bool:
+    return (
+        (not is_instance_valid(flash_overlay) or flash_overlay.modulate.a <= 0.001)
+        and (not is_instance_valid(dim_overlay) or dim_overlay.modulate.a <= 0.001)
+        and (not is_instance_valid(shake_target) or shake_target.position.is_equal_approx(_base_position))
+    )
 
 func _flash(opacity: float, duration: float) -> void:
     if low_flash_mode:
         opacity = minf(opacity, 0.08)
         duration = maxf(duration, 0.12)
+    _kill_tween(_flash_tween)
     flash_overlay.modulate.a = 0.0
-    var tween := create_tween()
-    tween.tween_property(flash_overlay, "modulate:a", opacity, duration * 0.35)
-    tween.tween_property(flash_overlay, "modulate:a", 0.0, duration * 0.65)
+    _flash_tween = create_tween()
+    _flash_tween.tween_property(flash_overlay, "modulate:a", opacity, duration * 0.35)
+    _flash_tween.tween_property(flash_overlay, "modulate:a", 0.0, duration * 0.65)
 
 func _dim(opacity: float, duration: float) -> void:
     opacity = minf(opacity, 0.12) if low_flash_mode else opacity
-    var tween := create_tween()
-    tween.tween_property(dim_overlay, "modulate:a", opacity, duration * 0.35)
-    tween.tween_interval(duration * 0.30)
-    tween.tween_property(dim_overlay, "modulate:a", 0.0, duration * 0.35)
+    _kill_tween(_dim_tween)
+    dim_overlay.modulate.a = 0.0
+    _dim_tween = create_tween()
+    _dim_tween.tween_property(dim_overlay, "modulate:a", opacity, duration * 0.35)
+    _dim_tween.tween_interval(duration * 0.30)
+    _dim_tween.tween_property(dim_overlay, "modulate:a", 0.0, duration * 0.35)
 
 func _shake(amplitude: float, duration: float) -> void:
     if not is_instance_valid(shake_target):
@@ -61,3 +79,7 @@ func _shake(amplitude: float, duration: float) -> void:
         await get_tree().create_timer(duration / steps).timeout
     if generation == _shake_generation and is_instance_valid(shake_target):
         shake_target.position = _base_position
+
+func _kill_tween(tween: Tween) -> void:
+    if tween != null and tween.is_valid():
+        tween.kill()
