@@ -133,3 +133,35 @@ public sealed class PresentationSurface
     [JsonPropertyName("target")] public string Target { get; init; } = string.Empty;
     [JsonPropertyName("fallback")] public string Fallback { get; init; } = string.Empty;
 }
+
+public sealed class CardNameOverrideMap
+{
+    [JsonPropertyName("schema_version")] public int SchemaVersion { get; init; }
+    [JsonPropertyName("gameplay_changes")] public bool GameplayChanges { get; init; }
+    [JsonPropertyName("policy")] public CardNameOverridePolicy Policy { get; init; } = new();
+    [JsonPropertyName("cards")] public List<CardNameOverrideSpec> Cards { get; init; } = [];
+}
+
+public sealed class CardNameOverridePolicy
+{
+    [JsonPropertyName("display_only")] public bool DisplayOnly { get; init; }
+    [JsonPropertyName("internal_card_id_unchanged")] public bool InternalCardIdUnchanged { get; init; }
+    [JsonPropertyName("preserve_rules_text")] public bool PreserveRulesText { get; init; }
+    [JsonPropertyName("preserve_upgrade_state")] public bool PreserveUpgradeState { get; init; }
+    [JsonPropertyName("fallback_to_original_name")] public bool FallbackToOriginalName { get; init; }
+    [JsonPropertyName("allow_derived_cards")] public bool AllowDerivedCards { get; init; }
+    [JsonPropertyName("supported_locales")] public List<string> SupportedLocales { get; init; } = [];
+    [JsonPropertyName("default_locale")] public string DefaultLocale { get; init; } = "zh-CN";
+}
+
+public sealed class CardNameOverrideSpec
+{
+    [JsonPropertyName("card_id")] public string CardId { get; init; } = string.Empty;
+    [JsonPropertyName("original_name")] public Dictionary<string, string> OriginalName { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    [JsonPropertyName("display_name")] public Dictionary<string, string> DisplayName { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    [JsonPropertyName("card_kind")] public string CardKind { get; init; } = "normal";
+    [JsonPropertyName("semantic_anchor")] public string SemanticAnchor { get; init; } = string.Empty;
+    [JsonPropertyName("art_concept")] public string ArtConcept { get; init; } = string.Empty;
+    [JsonPropertyName("rename_status")] public string RenameStatus { get; init; } = string.Empty;
+    [JsonPropertyName("game_id_verified")] public bool GameIdVerified { get; init; }
+}
