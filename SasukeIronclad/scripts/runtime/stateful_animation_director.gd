@@ -8,29 +8,53 @@ class_name SasukeStatefulAnimationDirector
 @onready var form_visual_director: SasukeFormVisualDirector = get_node(form_visual_director_path)
 @onready var character_state_director: SasukeCharacterStateDirector = get_node(character_state_director_path)
 
+var _transaction_counter := 0
+var _active_transaction := -1
+
 func play_timeline(animation_id: String, variant: String = "base", context: Dictionary = {}) -> bool:
     if character_state_director.is_terminal():
         timeline_failed.emit(animation_id, "character_terminal")
         return false
 
+    # Retire the old transaction before allocating the new one. The base
+    # director also owns a generation counter, but state/Form lifetime must not
+    # use it because a superseded coroutine may resume after a newer timeline
+    # has already started.
+    if _is_playing:
+        cancel_current()
+
+    _transaction_counter += 1
+    var transaction := _transaction_counter
+    _active_transaction = transaction
+
     character_state_director.set_card_animation_active(true)
     var low_flash := variant == "low_flash" or bool(context.get("low_flash", false))
     state_visual_director.configure(low_flash, float(context.get("quality_scale", 1.0)))
+
     var completed := await super.play_timeline(animation_id, variant, context)
-    character_state_director.set_card_animation_active(false)
     if completed:
-        state_visual_director.commit_generation(_play_generation)
-        form_visual_director.commit_generation(_play_generation)
+        state_visual_director.commit_generation(transaction)
+        form_visual_director.commit_generation(transaction)
     else:
-        state_visual_director.rollback_generation(_play_generation)
-        form_visual_director.rollback_generation(_play_generation)
+        state_visual_director.rollback_generation(transaction)
+        form_visual_director.rollback_generation(transaction)
+
+    if _active_transaction == transaction:
+        _active_transaction = -1
+        character_state_director.set_card_animation_active(false)
     return completed
 
 func cancel_current() -> void:
-    state_visual_director.rollback_generation(_play_generation)
-    form_visual_director.rollback_generation(_play_generation)
+    var transaction := _active_transaction
+    _active_transaction = -1
+    if transaction >= 0:
+        state_visual_director.rollback_generation(transaction)
+        form_visual_director.rollback_generation(transaction)
     character_state_director.set_card_animation_active(false)
     super.cancel_current()
+    # Preserve the active Form's idle after cancellation instead of forcing the
+    # normal base-form pose.
+    rig.set_pose_immediate(rig.resolve_character_state_pose("idle_sword_ready"))
 
 func play_character_state(state_id: String, params: Dictionary = {}) -> bool:
     var normalized := state_id.strip_edges().to_lower()
@@ -92,12 +116,15 @@ func _execute_event(event: Dictionary, variant: String, context: Dictionary) -> 
     var event_type := String(event.get("type", ""))
     match event_type:
         "state_install":
+            if _active_transaction < 0:
+                push_warning("Ignoring state_install without an active visual transaction")
+                return
             state_visual_director.install_state(
                 String(event.get("state_id", "")),
                 String(event.get("style", "curse_channel")),
                 rig.get_anchor(String(event.get("anchor", "vfx"))),
                 _resolve_event_params(event, context),
-                _play_generation
+                _active_transaction
             )
         "state_pulse":
             state_visual_director.pulse_state(
@@ -107,10 +134,13 @@ func _execute_event(event: Dictionary, variant: String, context: Dictionary) -> 
         "state_clear":
             state_visual_director.clear_state(String(event.get("state_id", "")))
         "form_install":
+            if _active_transaction < 0:
+                push_warning("Ignoring form_install without an active visual transaction")
+                return
             form_visual_director.install_form(
                 String(event.get("form_id", "")),
                 _resolve_event_params(event, context),
-                _play_generation
+                _active_transaction
             )
         "form_clear":
             clear_visual_form(String(event.get("form_id", "")))
