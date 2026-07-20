@@ -1,6 +1,8 @@
 extends SasukeAnimationDirector
 class_name SasukeStatefulAnimationDirector
 
+signal playback_committed(animation_id: String)
+
 @export var state_visual_director_path: NodePath
 @export var form_visual_director_path: NodePath
 @export var character_state_director_path: NodePath
@@ -16,10 +18,6 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
         timeline_failed.emit(animation_id, "character_terminal")
         return false
 
-    # Retire the old transaction before allocating the new one. The base
-    # director also owns a generation counter, but state/Form lifetime must not
-    # use it because a superseded coroutine may resume after a newer timeline
-    # has already started.
     if _is_playing:
         cancel_current()
 
@@ -35,6 +33,10 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
     if completed:
         state_visual_director.commit_generation(transaction)
         form_visual_director.commit_generation(transaction)
+        # The base timeline_completed signal is intentionally not used by the
+        # C# host for this derived director. This signal is emitted only after
+        # persistent visual transactions are committed.
+        playback_committed.emit(animation_id)
     else:
         state_visual_director.rollback_generation(transaction)
         form_visual_director.rollback_generation(transaction)
@@ -52,8 +54,6 @@ func cancel_current() -> void:
         form_visual_director.rollback_generation(transaction)
     character_state_director.set_card_animation_active(false)
     super.cancel_current()
-    # Preserve the active Form's idle after cancellation instead of forcing the
-    # normal base-form pose.
     rig.set_pose_immediate(rig.resolve_character_state_pose("idle_sword_ready"))
 
 func play_character_state(state_id: String, params: Dictionary = {}) -> bool:
