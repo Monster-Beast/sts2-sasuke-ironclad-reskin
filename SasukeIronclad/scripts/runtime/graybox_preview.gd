@@ -4,11 +4,14 @@ extends Node2D
 @onready var director: SasukeAnimationDirector = $SasukeAnimationRuntime/AnimationDirector
 @onready var status_label: Label = $Interface/Panel/Margin/VBox/Status
 @onready var low_flash_toggle: CheckButton = $Interface/Panel/Margin/VBox/LowFlash
+@onready var empowered_toggle: CheckButton = $Interface/Panel/Margin/VBox/Empowered
 
 func _ready() -> void:
     $Interface/Panel/Margin/VBox/Strike.pressed.connect(_play.bind("strike_kusanagi_draw_slash"))
     $Interface/Panel/Margin/VBox/Defend.pressed.connect(_play.bind("defend_wire_parry_guard"))
     $Interface/Panel/Margin/VBox/Bash.pressed.connect(_play.bind("bash_sharingan_breaker"))
+    $Interface/Panel/Margin/VBox/Cleave.pressed.connect(_play.bind("cleave_chidori_ground_arc"))
+    $Interface/Panel/Margin/VBox/HeavyBlade.pressed.connect(_play.bind("heavy_blade_lightning_execution"))
     $Interface/Panel/Margin/VBox/Cancel.pressed.connect(_cancel)
     director.timeline_started.connect(_on_started)
     director.impact.connect(_on_impact)
@@ -17,11 +20,17 @@ func _ready() -> void:
     status_label.text = "Ready — choose a card timeline"
 
 func _play(animation_id: String) -> void:
-    var variant := "low_flash" if low_flash_toggle.button_pressed else "base"
+    var variant := "base"
+    if low_flash_toggle.button_pressed:
+        variant = "low_flash"
+    elif empowered_toggle.button_pressed:
+        variant = "empowered"
     status_label.text = "Loading %s (%s)…" % [animation_id, variant]
     director.play_timeline(animation_id, variant, {
         "low_flash": low_flash_toggle.button_pressed,
-        "quality_scale": 1.0
+        "quality_scale": 1.0,
+        "strength": 10 if empowered_toggle.button_pressed else 0,
+        "target_count": 3
     })
 
 func _cancel() -> void:
