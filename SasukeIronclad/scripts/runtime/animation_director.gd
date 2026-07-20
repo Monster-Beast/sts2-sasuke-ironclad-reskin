@@ -32,6 +32,8 @@ func has_timeline(animation_id: String) -> bool:
     return _catalog.has(animation_id)
 
 func notify_original_impact(impact_index: int) -> void:
+    if impact_index < 0:
+        return
     _latest_original_impact = maxi(_latest_original_impact, impact_index)
 
 func cancel_current() -> void:
@@ -91,8 +93,9 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
             if _external_impact_sync:
                 var timeout_seconds := float(context.get("impact_timeout_seconds", 1.5))
                 if not await _wait_for_original_impact(impact_index, generation, timeout_seconds):
-                    _is_playing = false
-                    timeline_failed.emit(animation_id, "original_impact_timeout")
+                    if generation != _play_generation:
+                        return false
+                    _fail_active_timeline(animation_id, "original_impact_timeout", generation)
                     return false
             impact.emit(animation_id, impact_index)
             impact_index += 1
@@ -111,8 +114,7 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
             if consumed == -2:
                 return false
             if consumed < 0:
-                _is_playing = false
-                timeline_failed.emit(animation_id, "original_impact_timeout")
+                _fail_active_timeline(animation_id, "original_impact_timeout", generation)
                 return false
             impact_index += consumed
             continue
@@ -129,6 +131,10 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
     _external_impact_sync = false
     cutin_director.clear_all()
     await rig.reset_to_idle(0.12 if variant == "fast" else 0.18)
+    # A same-card request can start while the old coroutine is returning to idle.
+    # Never emit completion for a superseded generation.
+    if generation != _play_generation:
+        return false
     timeline_completed.emit(animation_id)
     return true
 
@@ -166,7 +172,7 @@ func _execute_impact_loop(
         if _external_impact_sync:
             var timeout_seconds := float(context.get("impact_timeout_seconds", 1.5))
             if not await _wait_for_original_impact(absolute_impact_index, generation, timeout_seconds):
-                return -1
+                return -2 if generation != _play_generation else -1
 
         if not poses.is_empty():
             rig.tween_pose(String(poses[loop_index % poses.size()]), pose_duration)
@@ -206,6 +212,12 @@ func _wait_for_original_impact(impact_index: int, generation: int, timeout_secon
         await get_tree().create_timer(step).timeout
         elapsed += step
     return true
+
+func _fail_active_timeline(animation_id: String, reason: String, generation: int) -> void:
+    if generation != _play_generation:
+        return
+    cancel_current()
+    timeline_failed.emit(animation_id, reason)
 
 func _execute_event(event: Dictionary, variant: String, context: Dictionary) -> void:
     var event_type := String(event.get("type", ""))
