@@ -66,3 +66,44 @@ jobs:
           fi
           grep -E "GODOT_PARSE_OK scripts=[1-9][0-9]* scenes=[1-9][0-9]*" godot-parse.log
           test "${{ steps.parse.outcome }}" = "success"
+      - id: runtime_tests
+        continue-on-error: true
+        name: Execute runtime test scenes
+        run: |
+          set -u
+          PROJECT="${GITHUB_WORKSPACE}/.godot-ci/project"
+          status=0
+          run_scene() {
+            name="$1"
+            scene="$2"
+            marker="$3"
+            log="godot-${name}.log"
+            set +e
+            timeout 240s "$GODOT_BIN" --headless --path "$PROJECT" "$scene" >"$log" 2>&1
+            code=$?
+            set -e
+            cat "$log"
+            if [ "$code" -ne 0 ] || ! grep -q "$marker" "$log"; then
+              status=1
+            fi
+          }
+          run_scene stress res://SasukeIronclad/scenes/runtime/runtime_stress_test.tscn STRESS_OK
+          run_scene release res://SasukeIronclad/scenes/runtime/combat_resource_release_test.tscn RELEASE_OK
+          run_scene form res://SasukeIronclad/scenes/runtime/form_lifecycle_test.tscn FORM_OK
+          run_scene character res://SasukeIronclad/scenes/runtime/character_state_machine_test.tscn CHAR_STATE_OK
+          exit "$status"
+      - name: Upload runtime scene logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-runtime-test-logs
+          path: godot-*.log
+          if-no-files-found: error
+      - name: Enforce runtime scene success
+        if: always()
+        run: |
+          test "${{ steps.runtime_tests.outcome }}" = "success"
+          grep -q "STRESS_OK" godot-stress.log
+          grep -q "RELEASE_OK" godot-release.log
+          grep -q "FORM_OK" godot-form.log
+          grep -q "CHAR_STATE_OK" godot-character.log
