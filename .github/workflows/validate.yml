@@ -10,6 +10,7 @@ jobs:
           python-version: "3.12"
       - run: python tools/validate_repo.py
       - run: python tools/test_card_animation_policy.py
+      - run: python tools/test_card_name_overrides.py
       - run: python tools/test_graybox_timelines.py
       - run: python tools/test_demon_form_contract.py
       - run: python tools/test_character_state_contract.py
