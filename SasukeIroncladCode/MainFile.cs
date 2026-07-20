@@ -18,8 +18,9 @@ public partial class MainFile : Node
         harmony.PatchAll();
         GD.Print(
             $"[{ModId}] initialized with {VisualRegistry.CardCount} card mappings, " +
-            $"{VisualRegistry.CardAnimationCount} card-owned timelines, {VisualRegistry.ActionCount} reusable action primitives, " +
-            $"{VisualRegistry.TierCount} presentation tiers, and {VisualRegistry.SurfaceCount} presentation surfaces."
+            $"{VisualRegistry.CardAnimationCount} card-owned timelines, {VisualRegistry.CardNameCount} display-name overrides, " +
+            $"{VisualRegistry.ActionCount} reusable action primitives, {VisualRegistry.TierCount} presentation tiers, " +
+            $"and {VisualRegistry.SurfaceCount} presentation surfaces."
         );
     }
 }
