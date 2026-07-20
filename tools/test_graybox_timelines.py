@@ -10,7 +10,7 @@ MANIFEST = ROOT / "SasukeIronclad/data/card_animation_manifest.json"
 ALLOWED_EVENTS = {
     "pose", "eye", "vfx", "advanced_vfx", "camera", "cutin",
     "impact", "impact_loop", "state_install", "state_pulse",
-    "state_clear", "return_idle",
+    "state_clear", "form_install", "form_clear", "return_idle",
 }
 ALLOWED_BINDING_SOURCES = {
     "final_damage", "hit_count", "target_count", "energy_spent",
@@ -19,7 +19,7 @@ ALLOWED_BINDING_SOURCES = {
 REQUIRED_GRAYBOX = {
     "Strike", "Defend", "Bash", "Anger", "Cleave", "Thunderclap",
     "Heavy Blade", "Flame Barrier", "Whirlwind", "Burning Pact",
-    "Limit Break", "Fiend Fire",
+    "Demon Form", "Limit Break", "Fiend Fire",
 }
 
 
@@ -80,7 +80,8 @@ def main() -> int:
                 assert binding["source"] in ALLOWED_BINDING_SOURCES
                 assert float(binding.get("min", -1e12)) <= float(binding.get("max", 1e12))
                 assert event["type"] in {
-                    "vfx", "advanced_vfx", "camera", "impact_loop", "state_install"
+                    "vfx", "advanced_vfx", "camera", "impact_loop",
+                    "state_install", "form_install",
                 }
             if event["type"] == "impact_loop":
                 assert event["count_source"] == "hit_count"
@@ -90,6 +91,8 @@ def main() -> int:
                 assert event.get("effect")
             if event["type"].startswith("state_"):
                 assert event.get("state_id"), f"missing state_id in {entry['animation_id']}"
+            if event["type"].startswith("form_"):
+                assert event.get("form_id"), f"missing form_id in {entry['animation_id']}"
 
     assert {
         "afterimage_split", "shuriken_fan_launch", "shuriken_cross_impact"
@@ -134,6 +137,16 @@ def main() -> int:
     }.issubset(event_effects(pact))
     assert {binding["source"] for binding in bindings(pact)} == {"exhausted_card_count"}
 
+    demon = timelines["Demon Form"]
+    demon_form_install = next(event for event in demon["events"] if event["type"] == "form_install")
+    demon_state_install = next(event for event in demon["events"] if event["type"] == "state_install")
+    assert demon_form_install["form_id"] == "curse_mark_stage_two"
+    assert demon_state_install["state_id"] == "demon_form_stage_two_aura"
+    assert demon_state_install["style"] == "curse_stage_two_aura"
+    assert any(event["type"] == "cutin" and event.get("style") == "curse_stage_two" for event in demon["events"])
+    assert not any(event["type"] == "form_clear" for event in demon["events"])
+    assert {"curse_mark_spread", "curse_mark_consume"}.issubset(event_effects(demon))
+
     limit_break = timelines["Limit Break"]
     limit_install = next(event for event in limit_break["events"] if event["type"] == "state_install")
     assert limit_install["state_id"] == "limit_break_overdrive"
@@ -156,20 +169,29 @@ def main() -> int:
         "SasukeIronclad/scenes/runtime/vfx_director.tscn",
         "SasukeIronclad/scenes/runtime/advanced_vfx_director.tscn",
         "SasukeIronclad/scenes/runtime/state_visual_director.tscn",
+        "SasukeIronclad/scenes/runtime/form_visual_director.tscn",
         "SasukeIronclad/scenes/runtime/camera_effect_director.tscn",
         "SasukeIronclad/scenes/runtime/cutin_director.tscn",
         "SasukeIronclad/scenes/runtime/graybox_preview.tscn",
         "SasukeIronclad/scenes/runtime/runtime_stress_test.tscn",
         "SasukeIronclad/scenes/runtime/combat_resource_release_test.tscn",
+        "SasukeIronclad/scenes/runtime/form_lifecycle_test.tscn",
         "SasukeIronclad/scripts/runtime/sasuke_character_rig.gd",
         "SasukeIronclad/scripts/runtime/sasuke_stateful_character_rig.gd",
+        "SasukeIronclad/scripts/runtime/transformable_character_rig.gd",
         "SasukeIronclad/scripts/runtime/animation_director.gd",
         "SasukeIronclad/scripts/runtime/stateful_animation_director.gd",
+        "SasukeIronclad/scripts/runtime/form_visual_director.gd",
         "SasukeIronclad/scripts/runtime/vfx_director.gd",
         "SasukeIronclad/scripts/runtime/advanced_vfx_director.gd",
         "SasukeIronclad/scripts/runtime/stateful_advanced_vfx_director.gd",
         "SasukeIronclad/scripts/runtime/state_visual_director.gd",
+        "SasukeIronclad/scripts/runtime/transform_state_visual_director.gd",
         "SasukeIronclad/scripts/runtime/combat_resource_release_test.gd",
+        "SasukeIronclad/scripts/runtime/form_lifecycle_test.gd",
+        "SasukeIroncladCode/Adapters/ICombatVisualLifecycleSource.cs",
+        "SasukeIroncladCode/Adapters/VisualRemovalRequest.cs",
+        "SasukeIroncladCode/Runtime/CombatVisualLifecycleCoordinator.cs",
     ]
     assert all((ROOT / path).exists() for path in required_files)
 
@@ -180,22 +202,36 @@ def main() -> int:
     state_director = (ROOT / "SasukeIronclad/scripts/runtime/stateful_animation_director.gd").read_text(encoding="utf-8")
     for contract in [
         "commit_generation", "rollback_generation", "release_combat_resources",
-        "state_install", "state_pulse", "state_clear",
+        "state_install", "state_pulse", "state_clear", "form_install",
+        "form_clear", "clear_visual_form", "form_visual_director.clear_all",
     ]:
         assert contract in state_director
 
-    state_runtime = (ROOT / "SasukeIronclad/scripts/runtime/state_visual_director.gd").read_text(encoding="utf-8")
-    for contract in ["active_state_count", "clear_all", "queue_free", "committed"]:
-        assert contract in state_runtime
+    form_runtime = (ROOT / "SasukeIronclad/scripts/runtime/form_visual_director.gd").read_text(encoding="utf-8")
+    for contract in ["install_form", "commit_generation", "rollback_generation", "clear_form", "active_form_id"]:
+        assert contract in form_runtime
 
-    release_test = (ROOT / "SasukeIronclad/scripts/runtime/combat_resource_release_test.gd").read_text(encoding="utf-8")
+    rig_runtime = (ROOT / "SasukeIronclad/scripts/runtime/transformable_character_rig.gd").read_text(encoding="utf-8")
+    for contract in ["curse_mark_stage_two", "demon_transform_reveal", "demon_idle", "reset_to_idle"]:
+        assert contract in rig_runtime
+
+    form_test = (ROOT / "SasukeIronclad/scripts/runtime/form_lifecycle_test.gd").read_text(encoding="utf-8")
     for contract in [
-        "flame_barrier_guard", "limit_break_overdrive", "burning_pact_channel",
-        "release_combat_resources", "RELEASE_OK", "get_tree().quit(0)", "get_tree().quit(1)",
+        "demon_form_curse_mark_stage_two", "curse_mark_stage_two",
+        "demon_form_stage_two_aura", "release_combat_resources",
+        "FORM_OK", "get_tree().quit(0)", "get_tree().quit(1)",
     ]:
-        assert contract in release_test
+        assert contract in form_test
 
-    print("OK: 12 graybox timelines, persistent-state lifecycle, impact loops, and release contracts validated.")
+    lifecycle_interface = (ROOT / "SasukeIroncladCode/Adapters/ICombatVisualLifecycleSource.cs").read_text(encoding="utf-8")
+    lifecycle_coordinator = (ROOT / "SasukeIroncladCode/Runtime/CombatVisualLifecycleCoordinator.cs").read_text(encoding="utf-8")
+    host_interface = (ROOT / "SasukeIroncladCode/Adapters/IVisualSceneHost.cs").read_text(encoding="utf-8")
+    for contract in ["VisualRemovalRequested", "CombatEnded"]:
+        assert contract in lifecycle_interface
+    for contract in ["ClearVisualState", "ClearVisualForm", "ReleaseCombatResources"]:
+        assert contract in lifecycle_coordinator and contract in host_interface
+
+    print("OK: 13 graybox timelines, Demon Form lifecycle, impact loops, and cleanup adapters validated.")
     return 0
 
 
