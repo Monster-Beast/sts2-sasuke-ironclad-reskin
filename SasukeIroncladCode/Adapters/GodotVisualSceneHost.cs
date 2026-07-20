@@ -189,15 +189,22 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost, IVisualScene
             mountedRoot = scene.Instantiate<Node>();
             AddChild(mountedRoot);
             Node? mountedDirector = mountedRoot.GetNodeOrNull<Node>("AnimationDirector");
-            if (mountedDirector is null ||
-                !mountedDirector.HasSignal("timeline_completed") ||
-                !mountedDirector.HasSignal("timeline_failed"))
+            if (mountedDirector is null || !mountedDirector.HasSignal("timeline_failed"))
             {
                 mountedRoot.QueueFree();
                 return false;
             }
 
-            mountedDirector.Connect("timeline_completed", Callable.From<string>(OnTimelineCompleted));
+            string completionSignal = mountedDirector.HasSignal("playback_committed")
+                ? "playback_committed"
+                : "timeline_completed";
+            if (!mountedDirector.HasSignal(completionSignal))
+            {
+                mountedRoot.QueueFree();
+                return false;
+            }
+
+            mountedDirector.Connect(completionSignal, Callable.From<string>(OnTimelineCompleted));
             mountedDirector.Connect("timeline_failed", Callable.From<string, string>(OnTimelineFailed));
             _runtimeRoot = mountedRoot;
             _director = mountedDirector;
