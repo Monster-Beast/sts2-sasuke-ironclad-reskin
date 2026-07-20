@@ -7,7 +7,7 @@ extends Node2D
 
 func _ready() -> void:
     $Interface/Panel/Margin/VBox/Strike.pressed.connect(_play.bind("strike_kusanagi_draw_slash"))
-    $Interface/Panel/Margin/VBox/Defend.pressed.connect(_play.bind("defend_wire_parry_stance"))
+    $Interface/Panel/Margin/VBox/Defend.pressed.connect(_play.bind("defend_wire_parry_guard"))
     $Interface/Panel/Margin/VBox/Bash.pressed.connect(_play.bind("bash_sharingan_breaker"))
     $Interface/Panel/Margin/VBox/Cancel.pressed.connect(_cancel)
     director.timeline_started.connect(_on_started)
