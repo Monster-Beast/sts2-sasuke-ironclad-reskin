@@ -1,4 +1,4 @@
-extends SasukeGrayboxRig
+extends SasukeStatefulGrayboxRig
 class_name SasukeTransformableRig
 
 @onready var curse_mark_overlay: Line2D = $VisualRoot/CurseMarkOverlay
