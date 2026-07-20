@@ -66,8 +66,9 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
     _is_playing = true
     _external_impact_sync = bool(context.get("external_impact_sync", false))
     _latest_original_impact = -1
-    var low_flash := variant == "low_flash" or bool(context.get("low_flash", false))
-    var speed_scale := _resolve_speed_scale(timeline, variant)
+    var low_flash := _is_low_flash_mode(variant, context)
+    var fast_mode := _is_fast_mode(variant, context)
+    var speed_scale := _resolve_speed_scale(timeline, variant, fast_mode)
     rig.set_low_flash(low_flash)
     vfx_director.configure(low_flash, float(context.get("quality_scale", 1.0)))
     advanced_vfx_director.configure(low_flash, float(context.get("quality_scale", 1.0)))
@@ -130,9 +131,7 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
     _is_playing = false
     _external_impact_sync = false
     cutin_director.clear_all()
-    await rig.reset_to_idle(0.12 if variant == "fast" else 0.18)
-    # A same-card request can start while the old coroutine is returning to idle.
-    # Never emit completion for a superseded generation.
+    await rig.reset_to_idle(0.12 if fast_mode else 0.18)
     if generation != _play_generation:
         return false
     timeline_completed.emit(animation_id)
@@ -159,7 +158,7 @@ func _execute_impact_loop(
     var camera_effect := String(event.get("camera_effect", ""))
     var camera_every := maxi(1, int(event.get("camera_every", 3)))
     var base_interval_ms := int(event.get("interval_ms", 90))
-    if variant == "fast":
+    if _is_fast_mode(variant, context):
         base_interval_ms = int(event.get("fast_interval_ms", maxi(25, base_interval_ms / 2)))
     if _external_impact_sync:
         base_interval_ms = mini(base_interval_ms, int(event.get("external_interval_cap_ms", 40)))
@@ -221,13 +220,15 @@ func _fail_active_timeline(animation_id: String, reason: String, generation: int
 
 func _execute_event(event: Dictionary, variant: String, context: Dictionary) -> void:
     var event_type := String(event.get("type", ""))
+    var low_flash := _is_low_flash_mode(variant, context)
+    var fast_mode := _is_fast_mode(variant, context)
     match event_type:
         "pose":
             rig.tween_pose(String(event.get("pose", "idle_sword_ready")), float(event.get("duration_ms", 120)) / 1000.0)
         "eye":
             rig.set_eye_active(bool(event.get("active", true)))
         "vfx":
-            if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
+            if low_flash and bool(event.get("suppress_in_low_flash", false)):
                 return
             vfx_director.spawn_effect(
                 String(event.get("effect", "")),
@@ -235,7 +236,7 @@ func _execute_event(event: Dictionary, variant: String, context: Dictionary) -> 
                 _resolve_event_params(event, context)
             )
         "advanced_vfx":
-            if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
+            if low_flash and bool(event.get("suppress_in_low_flash", false)):
                 return
             advanced_vfx_director.spawn_effect(
                 String(event.get("effect", "")),
@@ -243,15 +244,15 @@ func _execute_event(event: Dictionary, variant: String, context: Dictionary) -> 
                 _resolve_event_params(event, context)
             )
         "camera":
-            if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
+            if low_flash and bool(event.get("suppress_in_low_flash", false)):
                 return
-            if variant == "fast" and bool(event.get("skip_in_fast", false)):
+            if fast_mode and bool(event.get("skip_in_fast", false)):
                 return
             camera_director.apply_effect(String(event.get("effect", "")), _resolve_event_params(event, context))
         "cutin":
-            if variant == "low_flash" and bool(event.get("suppress_in_low_flash", true)):
+            if low_flash and bool(event.get("suppress_in_low_flash", true)):
                 return
-            if variant == "fast" and bool(event.get("skip_in_fast", true)):
+            if fast_mode and bool(event.get("skip_in_fast", true)):
                 return
             cutin_director.play_cutin(String(event.get("style", "sharingan_side")), int(event.get("duration_ms", 260)))
         "return_idle":
@@ -273,10 +274,21 @@ func _resolve_event_params(event: Dictionary, context: Dictionary) -> Dictionary
         params[param_name] = int(round(value)) if bool(binding.get("integer", false)) else value
     return params
 
-func _resolve_speed_scale(timeline: Dictionary, variant: String) -> float:
+func _is_fast_mode(variant: String, context: Dictionary) -> bool:
+    return variant == "fast" or bool(context.get("fast_mode", false))
+
+func _is_low_flash_mode(variant: String, context: Dictionary) -> bool:
+    return variant == "low_flash" or bool(context.get("low_flash", false))
+
+func _resolve_speed_scale(timeline: Dictionary, variant: String, fast_mode: bool) -> float:
     var variants: Dictionary = timeline.get("variant_overrides", {})
-    var override: Dictionary = variants.get(variant, {})
-    return maxf(0.25, float(override.get("speed_scale", 1.0)))
+    var content_override: Dictionary = variants.get(variant, {})
+    var content_scale := maxf(0.25, float(content_override.get("speed_scale", 1.0)))
+    if not fast_mode:
+        return content_scale
+    var fast_override: Dictionary = variants.get("fast", {})
+    var fast_scale := maxf(1.0, float(fast_override.get("speed_scale", 1.35)))
+    return content_scale * fast_scale
 
 func _load_catalog() -> Dictionary:
     var catalog := _load_json(catalog_path)
