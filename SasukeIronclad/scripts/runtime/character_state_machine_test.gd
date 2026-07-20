@@ -19,8 +19,9 @@ func _ready() -> void:
     _expect(await director.play_character_state("hit_heavy", {"intensity": 1.3}), "base heavy hit failed")
     _expect(director.current_character_state_id() == "idle_sword_ready", "base heavy hit did not recover")
 
-    var demon_ok := await director.play_timeline("demon_form_curse_mark_stage_two", "fast", {
+    var demon_ok := await director.play_timeline("demon_form_curse_mark_stage_two", "base", {
         "low_flash": true,
+        "fast_mode": true,
         "quality_scale": 0.5,
         "hit_count": 1,
         "strength": 8
@@ -40,20 +41,9 @@ func _ready() -> void:
     var rejected_after_victory := await director.play_character_state("hit_light")
     _expect(not rejected_after_victory, "lower-priority hit was accepted after victory")
 
-    director.reset_character_state_machine()
-    director.clear_visual_form("curse_mark_stage_two")
-    director.clear_all_visual_states()
-    await get_tree().process_frame
-
-    demon_ok = await director.play_timeline("demon_form_curse_mark_stage_two", "fast", {
-        "low_flash": true,
-        "quality_scale": 0.5,
-        "hit_count": 1,
-        "strength": 8
-    })
-    _expect(demon_ok, "second Demon Form setup failed")
-    _expect(await director.play_character_state("death", {"force": true}), "demon death failed")
-    _expect(director.is_character_terminal(), "death did not lock terminal state")
+    # Death is the only non-forced request allowed to override a victory terminal.
+    _expect(await director.play_character_state("death"), "death did not override victory without force")
+    _expect(director.is_character_terminal(), "death did not retain terminal state")
     _expect(director.current_character_state_id() == "death", "death state id was not retained")
     var rejected_after_death := await director.play_character_state("victory")
     _expect(not rejected_after_death, "victory was accepted after death")
