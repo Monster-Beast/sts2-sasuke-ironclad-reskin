@@ -10,6 +10,7 @@ func _ready() -> void:
     await get_tree().process_frame
     var context := {
         "low_flash": false,
+        "fast_mode": true,
         "quality_scale": 0.5,
         "strength": 10,
         "target_count": 3,
@@ -18,12 +19,23 @@ func _ready() -> void:
         "hit_count": 1
     }
 
-    var flame_completed := await director.play_timeline("flame_barrier_uchiha_fire_guard", "fast", context)
+    var flame_completed := await director.play_timeline("flame_barrier_uchiha_fire_guard", "base", context)
     _expect(flame_completed, "Flame Barrier did not complete")
     _expect(director.has_visual_state("flame_barrier_guard"), "Flame Barrier state was not committed")
     _expect(director.active_visual_state_count() == 1, "unexpected state count after Flame Barrier")
 
-    var strike_completed := await director.play_timeline("strike_kusanagi_draw_slash", "fast", context)
+    # Reinstall the same state, then cancel after state_install. The previous
+    # committed guard must be restored instead of being lost with the pending
+    # replacement.
+    director.play_timeline("flame_barrier_uchiha_fire_guard", "base", context)
+    await get_tree().create_timer(0.32).timeout
+    director.cancel_current()
+    await get_tree().process_frame
+    await get_tree().process_frame
+    _expect(director.has_visual_state("flame_barrier_guard"), "cancelled replacement removed the previous Flame Barrier state")
+    _expect(director.active_visual_state_count() == 1, "cancelled replacement duplicated or lost Flame Barrier state")
+
+    var strike_completed := await director.play_timeline("strike_kusanagi_draw_slash", "base", context)
     _expect(strike_completed, "Strike did not complete after persistent state installation")
     _expect(director.has_visual_state("flame_barrier_guard"), "a later card incorrectly cleared Flame Barrier")
     _expect(director.pulse_visual_state("flame_barrier_guard", {"scale": 1.12, "duration": 0.12}), "Flame Barrier pulse failed")
@@ -33,18 +45,18 @@ func _ready() -> void:
     await get_tree().process_frame
     _expect(director.active_visual_state_count() == 0, "explicit state clear did not release Flame Barrier")
 
-    director.play_timeline("limit_break_sharingan_curse_overdrive", "fast", context)
+    director.play_timeline("limit_break_sharingan_curse_overdrive", "base", context)
     await get_tree().create_timer(0.46).timeout
     director.cancel_current()
     await get_tree().process_frame
     await get_tree().process_frame
     _expect(not director.has_visual_state("limit_break_overdrive"), "cancelled Limit Break left a pending state")
 
-    var limit_completed := await director.play_timeline("limit_break_sharingan_curse_overdrive", "fast", context)
+    var limit_completed := await director.play_timeline("limit_break_sharingan_curse_overdrive", "base", context)
     _expect(limit_completed, "Limit Break did not complete")
     _expect(director.has_visual_state("limit_break_overdrive"), "Limit Break state was not committed")
 
-    var pact_completed := await director.play_timeline("burning_pact_curse_seal_consumption", "fast", context)
+    var pact_completed := await director.play_timeline("burning_pact_curse_seal_consumption", "base", context)
     _expect(pact_completed, "Burning Pact did not complete")
     _expect(not director.has_visual_state("burning_pact_channel"), "Burning Pact temporary channel state remained")
     _expect(director.has_visual_state("limit_break_overdrive"), "Burning Pact incorrectly cleared committed Limit Break state")
