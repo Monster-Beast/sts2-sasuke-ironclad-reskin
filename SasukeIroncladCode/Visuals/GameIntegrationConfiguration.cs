@@ -24,6 +24,7 @@ public sealed class GameIntegrationPolicy
 public sealed class GameIntegrationProfile
 {
     [JsonPropertyName("id")] public string Id { get; init; } = string.Empty;
+    [JsonPropertyName("status")] public string Status { get; init; } = string.Empty;
     [JsonPropertyName("branch")] public string Branch { get; init; } = string.Empty;
     [JsonPropertyName("fingerprint")] public GameBuildFingerprintSpec Fingerprint { get; init; } = new();
     [JsonPropertyName("visual_bindings")] public List<GameVisualBindingSpec> VisualBindings { get; init; } = [];
