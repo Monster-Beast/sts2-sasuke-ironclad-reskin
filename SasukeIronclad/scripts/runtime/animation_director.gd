@@ -93,7 +93,7 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
             impact_index += 1
             continue
 
-        _execute_event(event, variant)
+        _execute_event(event, variant, context)
 
     var duration_ms := int(timeline.get("duration_ms", elapsed_ms))
     if duration_ms > elapsed_ms:
@@ -120,7 +120,7 @@ func _wait_for_original_impact(impact_index: int, generation: int, timeout_secon
         elapsed += step
     return true
 
-func _execute_event(event: Dictionary, variant: String) -> void:
+func _execute_event(event: Dictionary, variant: String, context: Dictionary) -> void:
     var event_type := String(event.get("type", ""))
     match event_type:
         "pose":
@@ -131,13 +131,13 @@ func _execute_event(event: Dictionary, variant: String) -> void:
             if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
                 return
             var anchor := rig.get_anchor(String(event.get("anchor", "vfx")))
-            vfx_director.spawn_effect(String(event.get("effect", "")), anchor, event.get("params", {}))
+            vfx_director.spawn_effect(String(event.get("effect", "")), anchor, _resolve_event_params(event, context))
         "camera":
             if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
                 return
             if variant == "fast" and bool(event.get("skip_in_fast", false)):
                 return
-            camera_director.apply_effect(String(event.get("effect", "")), event.get("params", {}))
+            camera_director.apply_effect(String(event.get("effect", "")), _resolve_event_params(event, context))
         "cutin":
             if variant == "low_flash" and bool(event.get("suppress_in_low_flash", true)):
                 return
@@ -148,6 +148,20 @@ func _execute_event(event: Dictionary, variant: String) -> void:
             rig.reset_to_idle(float(event.get("duration_ms", 160)) / 1000.0)
         _:
             push_warning("Unknown timeline event type: %s" % event_type)
+
+func _resolve_event_params(event: Dictionary, context: Dictionary) -> Dictionary:
+    var params: Dictionary = event.get("params", {}).duplicate(true)
+    var bindings: Dictionary = event.get("param_bindings", {})
+    for param_name in bindings.keys():
+        var binding: Dictionary = bindings[param_name]
+        var source := String(binding.get("source", ""))
+        if source.is_empty() or not context.has(source):
+            continue
+        var value := float(context[source])
+        value = value * float(binding.get("scale", 1.0)) + float(binding.get("offset", 0.0))
+        value = clampf(value, float(binding.get("min", -INF)), float(binding.get("max", INF)))
+        params[param_name] = int(round(value)) if bool(binding.get("integer", false)) else value
+    return params
 
 func _resolve_speed_scale(timeline: Dictionary, variant: String) -> float:
     var variants: Dictionary = timeline.get("variant_overrides", {})
