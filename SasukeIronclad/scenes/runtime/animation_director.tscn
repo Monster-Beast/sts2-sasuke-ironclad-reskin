@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://SasukeIronclad/scripts/runtime/stateful_animation_director.gd" id="1_director"]
 [ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/sasuke_character_rig.tscn" id="2_rig"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/cutin_director.tscn" id="5_cutin"]
 [ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/advanced_vfx_director.tscn" id="6_advanced_vfx"]
 [ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/state_visual_director.tscn" id="7_state_vfx"]
+[ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/form_visual_director.tscn" id="8_form"]
 
 [node name="SasukeAnimationRuntime" type="Node2D"]
 
@@ -18,6 +19,8 @@
 
 [node name="StateVisualDirector" parent="." instance=ExtResource("7_state_vfx")]
 
+[node name="FormVisualDirector" parent="." instance=ExtResource("8_form")]
+
 [node name="CameraEffectDirector" parent="." instance=ExtResource("4_camera")]
 
 [node name="CutinDirector" parent="." instance=ExtResource("5_cutin")]
@@ -28,5 +31,6 @@ rig_path = NodePath("../CharacterRig")
 vfx_director_path = NodePath("../VfxDirector")
 advanced_vfx_director_path = NodePath("../AdvancedVfxDirector")
 state_visual_director_path = NodePath("../StateVisualDirector")
+form_visual_director_path = NodePath("../FormVisualDirector")
 camera_director_path = NodePath("../CameraEffectDirector")
 cutin_director_path = NodePath("../CutinDirector")
