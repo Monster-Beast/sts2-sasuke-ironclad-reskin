@@ -35,6 +35,17 @@ jobs:
             --configuration Release --no-build -- \
             self-test --output audit-output/self-test | tee audit-self-test.log
           grep -q "GAME_AUDIT_SELF_TEST_OK" audit-self-test.log
+      - name: Generate pending-review profile template
+        run: |
+          set -o pipefail
+          python tools/create_integration_profile.py \
+            --report audit-output/self-test/first/audit-report.json \
+            --comparison audit-output/self-test/comparison/audit-comparison.json \
+            --output audit-output/self-test/integration-profile-template.json \
+            | tee profile-template.log
+          grep -q "INTEGRATION_PROFILE_TEMPLATE_OK" profile-template.log
+          grep -q '"status": "pending_review"' audit-output/self-test/integration-profile-template.json
+          if grep -q '"status": "verified"' audit-output/self-test/integration-profile-template.json; then exit 1; fi
       - name: Upload metadata-only self-test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -43,10 +54,12 @@ jobs:
           path: |
             integration-gate-test.log
             audit-self-test.log
+            profile-template.log
             audit-output/self-test/first/audit-report.json
             audit-output/self-test/first/audit-report.md
             audit-output/self-test/first/audit-fingerprint.json
             audit-output/self-test/second/audit-report.json
             audit-output/self-test/comparison/audit-comparison.json
             audit-output/self-test/comparison/audit-comparison.md
+            audit-output/self-test/integration-profile-template.json
           if-no-files-found: error
