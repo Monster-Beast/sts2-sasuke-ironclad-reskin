@@ -26,15 +26,42 @@ def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def resolve(data: dict, card_id: str, locale: str, upgraded: bool = False, fallback: str | None = None) -> str:
+def normalize_locale(policy: dict, locale: str | None) -> str | None:
+    if not locale:
+        return policy["default_locale"]
+    normalized = locale.replace("_", "-")
+    if normalized.casefold().startswith("zh"):
+        return "zh-CN"
+    if normalized.casefold().startswith("en"):
+        return "en-US"
+    return None
+
+
+def remove_upgrade_suffix(name: str | None) -> str | None:
+    if name and name.endswith("+"):
+        return name[:-1]
+    return name
+
+
+def apply_upgrade_suffix(name: str, upgraded: bool) -> str:
+    if not upgraded or not name or name.endswith("+"):
+        return name
+    return f"{name}+"
+
+
+def resolve(data: dict, card_id: str, locale: str | None, upgraded: bool = False, fallback: str | None = None) -> str:
     policy = data["policy"]
     cards = {item["card_id"]: item for item in data["cards"]}
     item = cards.get(card_id)
-    name = fallback or card_id
-    if item:
+    normalized_locale = normalize_locale(policy, locale)
+    fallback_name = remove_upgrade_suffix(fallback) or card_id
+
+    if item and normalized_locale:
         names = item["display_name"]
-        name = names.get(locale) or names.get(policy["default_locale"]) or fallback or card_id
-    return f"{name}+" if upgraded and policy["preserve_upgrade_state"] else name
+        name = names.get(normalized_locale) or fallback_name
+    else:
+        name = fallback_name
+    return apply_upgrade_suffix(name, upgraded)
 
 
 def walk_keys(value):
@@ -96,8 +123,21 @@ def main() -> int:
     assert by_id["GIANT_ROCK"]["display_name"]["en-US"] == "Chidori Spear"
 
     assert resolve(data, "Strike", "zh-CN") == "草薙·瞬斩"
-    assert resolve(data, "Strike", "en-US", upgraded=True) == "Kusanagi Flash+"
+    assert resolve(data, "Strike", "en-GB", upgraded=True) == "Kusanagi Flash+"
+    assert resolve(data, "Strike", "ja-JP", fallback="ストライク") == "ストライク"
+    assert resolve(data, "Strike", "ko-KR", upgraded=True, fallback="타격+") == "타격+"
     assert resolve(data, "UNKNOWN_CARD", "zh-CN", fallback="原始名称") == "原始名称"
+    assert resolve(data, "UNKNOWN_CARD", "zh-CN", upgraded=True, fallback="原始名称+") == "原始名称+"
+
+    resolver_source = (ROOT / "SasukeIroncladCode/Runtime/CardDisplayNameResolver.cs").read_text(encoding="utf-8")
+    assert "TryNormalizeSupportedLocale" in resolver_source
+    assert "RemoveUpgradeSuffix" in resolver_source
+    assert "EndsWith('+')" in resolver_source
+
+    title_service = (ROOT / "SasukeIroncladCode/Runtime/CardTitlePresentationService.cs").read_text(encoding="utf-8")
+    assert "localeSupported" in title_service
+    assert "originalDisplay" in title_service
+    assert "catch" in title_service and "return false;" in title_service
 
     all_keys = set(walk_keys(data))
     assert not (all_keys & FORBIDDEN_GAMEPLAY_FIELDS), all_keys & FORBIDDEN_GAMEPLAY_FIELDS
