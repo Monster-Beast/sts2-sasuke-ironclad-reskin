@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "animation_id": "flame_barrier_uchiha_fire_guard",
+  "card_id": "Flame Barrier",
+  "duration_ms": 1240,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.42},
+    "upgraded": {"speed_scale": 1.0},
+    "low_flash": {"speed_scale": 0.96}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "flame_seal", "duration_ms": 190},
+    {"time_ms": 75, "type": "advanced_vfx", "effect": "fire_seal_sparks", "anchor": "left_hand", "params": {"count": 9}},
+    {"time_ms": 160, "type": "camera", "effect": "scene_dim", "params": {"opacity": 0.18, "duration": 0.24}, "skip_in_fast": true},
+    {"time_ms": 255, "type": "pose", "pose": "flame_guard_hold", "duration_ms": 180},
+    {"time_ms": 305, "type": "advanced_vfx", "effect": "fire_half_ring", "anchor": "vfx", "params": {"radius": 108.0, "layers": 3}},
+    {
+      "time_ms": 350,
+      "type": "state_install",
+      "state_id": "flame_barrier_guard",
+      "style": "fire_guard",
+      "anchor": "vfx",
+      "params": {"radius": 96.0, "layers": 2, "embers": 8, "pulse": 0.018, "pulse_speed": 2.8}
+    },
+    {"time_ms": 430, "type": "impact"},
+    {"time_ms": 455, "type": "state_pulse", "state_id": "flame_barrier_guard", "params": {"scale": 1.14, "opacity": 0.92, "duration": 0.22}},
+    {"time_ms": 600, "type": "eye", "active": false},
+    {"time_ms": 760, "type": "return_idle", "duration_ms": 210}
+  ]
+}
