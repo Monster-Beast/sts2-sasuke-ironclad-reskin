@@ -179,6 +179,54 @@ const POSES := {
         "right_leg_rotation": 0.18,
         "sword_rotation": 0.84,
         "sword_position": Vector2(48, 20)
+    },
+    "anger_throw_windup": {
+        "root_position": Vector2(-16, -2),
+        "root_rotation": -0.09,
+        "torso_rotation": -0.16,
+        "head_rotation": 0.08,
+        "left_arm_rotation": 0.52,
+        "right_arm_rotation": -1.35,
+        "left_leg_rotation": 0.24,
+        "right_leg_rotation": -0.18,
+        "sword_rotation": -0.92,
+        "sword_position": Vector2(12, -34)
+    },
+    "anger_throw_release": {
+        "root_position": Vector2(20, -4),
+        "root_rotation": 0.07,
+        "torso_rotation": 0.18,
+        "head_rotation": -0.10,
+        "left_arm_rotation": -0.15,
+        "right_arm_rotation": 0.92,
+        "left_leg_rotation": -0.14,
+        "right_leg_rotation": 0.22,
+        "sword_rotation": -0.48,
+        "sword_position": Vector2(24, -18)
+    },
+    "thunder_charge": {
+        "root_position": Vector2(-12, 8),
+        "root_rotation": -0.08,
+        "torso_rotation": -0.20,
+        "head_rotation": 0.12,
+        "left_arm_rotation": -0.80,
+        "right_arm_rotation": -1.10,
+        "left_leg_rotation": 0.30,
+        "right_leg_rotation": -0.24,
+        "sword_rotation": -0.54,
+        "sword_position": Vector2(18, -20)
+    },
+    "thunder_slam": {
+        "root_position": Vector2(18, 12),
+        "root_rotation": 0.15,
+        "torso_rotation": 0.28,
+        "head_rotation": -0.12,
+        "left_arm_rotation": 1.15,
+        "right_arm_rotation": 0.95,
+        "left_leg_rotation": -0.20,
+        "right_leg_rotation": 0.28,
+        "sword_rotation": 0.20,
+        "sword_position": Vector2(40, 12)
     }
 }
 
