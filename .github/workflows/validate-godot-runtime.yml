@@ -35,7 +35,7 @@ jobs:
         name: Import and parse GDScript resources
         run: |
           set -o pipefail
-          GODOT="${GITHUB_WORKSPACE}/.godot-ci/bin/Godot_v4.5.1-stable_linux.x86_64"
+          GODOT="${GITHUB_WORKSPACE}/.godot-ci/bin/Godot_v4.5.1-stable_linux_x86_64"
           "$GODOT" --headless --editor \
             --path "${GITHUB_WORKSPACE}/.godot-ci/project" \
             --quit-after 30 2>&1 | tee godot-import.log
@@ -51,8 +51,11 @@ jobs:
             godot-import.log
             godot-parse.log
           if-no-files-found: error
-      - name: Fail on Godot parser errors
-        if: steps.parse.outcome == 'failure'
+      - name: Enforce clean Godot parser logs
+        if: always()
         run: |
-          grep -E "SCRIPT ERROR|Parse Error|ERROR:" godot-import.log godot-parse.log || true
-          exit 1
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR: Failed to load" godot-import.log godot-parse.log; then
+            exit 1
+          fi
+          grep -E "GODOT_PARSE_OK scripts=[1-9][0-9]* scenes=[1-9][0-9]*" godot-parse.log
+          test "${{ steps.parse.outcome }}" = "success"
