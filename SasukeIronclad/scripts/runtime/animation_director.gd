@@ -10,10 +10,12 @@ signal timeline_failed(animation_id: String, reason: String)
 @export var rig_path: NodePath
 @export var vfx_director_path: NodePath
 @export var camera_director_path: NodePath
+@export var cutin_director_path: NodePath
 
 @onready var rig: SasukeGrayboxRig = get_node(rig_path)
 @onready var vfx_director: SasukeVfxDirector = get_node(vfx_director_path)
 @onready var camera_director: SasukeCameraEffectDirector = get_node(camera_director_path)
+@onready var cutin_director: SasukeCutinDirector = get_node(cutin_director_path)
 
 var _catalog: Dictionary = {}
 var _play_generation := 0
@@ -37,6 +39,7 @@ func cancel_current() -> void:
     _latest_original_impact = -1
     vfx_director.clear_all()
     camera_director.reset_all()
+    cutin_director.clear_all()
     rig.set_pose_immediate("idle_sword_ready")
     rig.set_eye_active(false)
 
@@ -63,6 +66,7 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
     rig.set_low_flash(low_flash)
     vfx_director.configure(low_flash, float(context.get("quality_scale", 1.0)))
     camera_director.configure(rig, low_flash)
+    cutin_director.configure(low_flash)
     timeline_started.emit(animation_id, variant)
 
     var elapsed_ms := 0
@@ -99,6 +103,7 @@ func play_timeline(animation_id: String, variant: String = "base", context: Dict
 
     _is_playing = false
     _external_impact_sync = false
+    cutin_director.clear_all()
     await rig.reset_to_idle(0.12 if variant == "fast" else 0.18)
     timeline_completed.emit(animation_id)
     return true
@@ -128,9 +133,17 @@ func _execute_event(event: Dictionary, variant: String) -> void:
             var anchor := rig.get_anchor(String(event.get("anchor", "vfx")))
             vfx_director.spawn_effect(String(event.get("effect", "")), anchor, event.get("params", {}))
         "camera":
+            if variant == "low_flash" and bool(event.get("suppress_in_low_flash", false)):
+                return
             if variant == "fast" and bool(event.get("skip_in_fast", false)):
                 return
             camera_director.apply_effect(String(event.get("effect", "")), event.get("params", {}))
+        "cutin":
+            if variant == "low_flash" and bool(event.get("suppress_in_low_flash", true)):
+                return
+            if variant == "fast" and bool(event.get("skip_in_fast", true)):
+                return
+            cutin_director.play_cutin(String(event.get("style", "sharingan_side")), int(event.get("duration_ms", 260)))
         "return_idle":
             rig.reset_to_idle(float(event.get("duration_ms", 160)) / 1000.0)
         _:
