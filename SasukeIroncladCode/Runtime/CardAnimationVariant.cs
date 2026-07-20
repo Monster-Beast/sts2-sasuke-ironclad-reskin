@@ -16,4 +16,8 @@ public sealed record CardAnimationSelection(
     CardAnimationVariant Variant,
     bool UsesCutin,
     string Fallback
-);
+)
+{
+    public bool FastMode { get; init; }
+    public bool LowFlashMode { get; init; }
+}
