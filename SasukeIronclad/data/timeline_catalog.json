@@ -2,7 +2,7 @@
   "schema_version": 1,
   "entries": [
     {"animation_id":"strike_kusanagi_draw_slash","card_id":"Strike","path":"res://SasukeIronclad/data/timelines/strike_kusanagi_draw_slash.json","status":"graybox"},
-    {"animation_id":"defend_wire_parry_guard","card_id":"Defend","path":"res://SasukeIronclad/data/timelines/defend_wire_parry_stance.json","status":"graybox"},
+    {"animation_id":"defend_wire_parry_guard","card_id":"Defend","path":"res://SasukeIronclad/data/timelines/defend_wire_parry_guard.json","status":"graybox"},
     {"animation_id":"bash_sharingan_breaker","card_id":"Bash","path":"res://SasukeIronclad/data/timelines/bash_sharingan_breaker.json","status":"graybox"},
     {"animation_id":"anger_shuriken_afterimage","card_id":"Anger","path":"res://SasukeIronclad/data/timelines/anger_shuriken_afterimage.json","status":"graybox"},
     {"animation_id":"cleave_chidori_ground_arc","card_id":"Cleave","path":"res://SasukeIronclad/data/timelines/cleave_chidori_ground_arc.json","status":"graybox"},
