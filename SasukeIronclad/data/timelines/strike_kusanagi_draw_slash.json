@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "animation_id": "strike_kusanagi_draw_slash",
+  "card_id": "Strike",
+  "duration_ms": 620,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.45},
+    "upgraded": {"speed_scale": 1.0},
+    "empowered": {"speed_scale": 1.0},
+    "lethal": {"speed_scale": 0.92},
+    "low_flash": {"speed_scale": 1.0}
+  },
+  "events": [
+    {"time_ms": 0, "type": "eye", "active": true},
+    {"time_ms": 20, "type": "pose", "pose": "draw_windup", "duration_ms": 150},
+    {"time_ms": 120, "type": "vfx", "effect": "red_target_line", "anchor": "eye", "suppress_in_low_flash": true},
+    {"time_ms": 205, "type": "pose", "pose": "slash_impact", "duration_ms": 120},
+    {"time_ms": 265, "type": "vfx", "effect": "silver_arc", "anchor": "weapon", "params": {"width": 12.0, "radius": 96.0}},
+    {"time_ms": 285, "type": "vfx", "effect": "minor_blue_sparks", "anchor": "weapon", "params": {"count": 8}},
+    {"time_ms": 300, "type": "impact"},
+    {"time_ms": 305, "type": "camera", "effect": "impact_flash", "params": {"opacity": 0.18, "duration": 0.08}},
+    {"time_ms": 315, "type": "camera", "effect": "shake_light", "params": {"amplitude": 2.5, "duration": 0.10}},
+    {"time_ms": 430, "type": "eye", "active": false},
+    {"time_ms": 455, "type": "return_idle", "duration_ms": 145}
+  ]
+}
