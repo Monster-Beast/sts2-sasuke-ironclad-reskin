@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://SasukeIronclad/scripts/runtime/runtime_stress_test.gd" id="1_stress"]
+[ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/animation_director.tscn" id="2_runtime"]
+
+[node name="RuntimeStressTest" type="Node"]
+script = ExtResource("1_stress")
+
+[node name="SasukeAnimationRuntime" parent="." instance=ExtResource("2_runtime")]
+position = Vector2(360, 400)
