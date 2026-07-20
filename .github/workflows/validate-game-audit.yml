@@ -1,0 +1,14 @@
+name: Validate game audit
+on: [push, pull_request]
+
+jobs:
+  audit-self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - run: dotnet restore tools/game_audit/SasukeIronclad.GameAudit.csproj
+      - run: dotnet build tools/game_audit/SasukeIronclad.GameAudit.csproj --configuration Release --no-restore
+      - run: dotnet run --project tools/game_audit/SasukeIronclad.GameAudit.csproj --configuration Release --no-build -- self-test --output audit-output/self-test
