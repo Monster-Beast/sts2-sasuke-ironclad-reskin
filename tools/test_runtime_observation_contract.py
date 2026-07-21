@@ -13,6 +13,7 @@ CONTRACT_PATH = ROOT / "SasukeIronclad/data/game_integration_contract.json"
 CONTROL_SCRIPT_PATH = ROOT / "tools/runtime-observation.ps1"
 MAIN_FILE_PATH = ROOT / "SasukeIroncladCode/MainFile.cs"
 BOOTSTRAP_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeObservationBootstrap.cs"
+GATE_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeObservationGate.cs"
 METHOD_TOKEN_RE = re.compile(r"^0x06[0-9A-Fa-f]{6}$")
 
 
@@ -109,15 +110,18 @@ def main() -> int:
     script_text = script_bytes.decode("ascii")
     main_text = MAIN_FILE_PATH.read_text(encoding="utf-8")
     bootstrap_text = BOOTSTRAP_PATH.read_text(encoding="utf-8")
+    gate_text = GATE_PATH.read_text(encoding="utf-8")
     require("runtime-observation-status.json" in script_text, "control script does not expose startup status")
     require("Previous startup status was cleared" in script_text, "enable action can leave stale startup status")
     require("RuntimeObservationLocalFiles.WriteStatus" in main_text, "Mod initializer does not persist observation status")
     require("mod_initializer_reached" in bootstrap_text, "startup status lacks initializer evidence")
     require("Path.GetFileName(status.OutputPath)" in bootstrap_text, "startup status may expose an absolute output path")
+    require("GeneratedRegex" not in gate_text, "source-generated regexes are unsafe in the game runtime")
+    require("RegexOptions.Compiled" not in gate_text, "runtime observation regexes must not require dynamic compilation")
 
     print(
         f"RUNTIME_OBSERVATION_CONTRACT_OK targets={len(target_ids)} bindings={len(required_bindings)} "
-        "cards=10 default_enabled=false read_only=true startup_status=true"
+        "cards=10 default_enabled=false read_only=true startup_status=true generated_regex=false"
     )
     return 0
 
