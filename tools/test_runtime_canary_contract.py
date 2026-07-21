@@ -125,7 +125,10 @@ def main() -> int:
     animations = animation_manifest["animations"]
     require(sum(1 for item in animations if item["is_damage_card"]) == 8, "damage-card animation inventory changed")
     require(sum(1 for item in animations if not item["is_damage_card"]) == 5, "non-damage animation inventory changed")
-    require(all(item["hit_sync"] == "original_hit_events" for item in animations), "reviewed hit-sync manifest schema changed")
+    require(all(
+        item["hit_sync"] == ("original_hit_events" if item["is_damage_card"] else "timeline_local_events")
+        for item in animations
+    ), "damage and non-damage impact synchronization policies diverged")
 
     script_bytes = SCRIPT_PATH.read_bytes()
     require(all(byte < 128 for byte in script_bytes), "runtime-canary.ps1 must remain ASCII-only")
