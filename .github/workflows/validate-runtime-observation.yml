@@ -126,8 +126,28 @@ jobs:
           if ($canaryMarker.anchor_to_local_player -ne $true -or
               [double]$canaryMarker.anchor_scale -ne 1.25 -or
               [double]$canaryMarker.anchor_offset_x -ne 12 -or
-              [double]$canaryMarker.anchor_offset_y -ne -8) {
-            throw "canary local-player anchor controls are incorrect"
+              [double]$canaryMarker.anchor_offset_y -ne -8 -or
+              $canaryMarker.hide_original_visual -ne $false -or
+              -not [string]::IsNullOrEmpty([string]$canaryMarker.replacement_acknowledgement)) {
+            throw "overlay canary controls are incorrect"
+          }
+
+          powershell -NoProfile -ExecutionPolicy Bypass -File $canaryPath `
+            -Action enable `
+            -GamePath $game `
+            -ModDirectory $mod `
+            -AnimationsOnly `
+            -ReplaceOriginal
+
+          $replacementMarker = Get-Content -LiteralPath $canaryMarkerPath -Raw | ConvertFrom-Json
+          if ($replacementMarker.enable_animations -ne $true -or
+              $replacementMarker.enable_titles -ne $false -or
+              $replacementMarker.hide_original_visual -ne $true -or
+              $replacementMarker.replacement_acknowledgement -ne "public-beta-24251656-local-ironclad-replacement" -or
+              [double]$replacementMarker.anchor_scale -ne 1.2 -or
+              [double]$replacementMarker.anchor_offset_x -ne 0 -or
+              [double]$replacementMarker.anchor_offset_y -ne -150) {
+            throw "replacement canary acknowledgement or approved calibration is incorrect"
           }
 
           powershell -NoProfile -ExecutionPolicy Bypass -File $canaryPath `
@@ -142,4 +162,4 @@ jobs:
             throw "canary marker was not removed"
           }
 
-          Write-Output "RUNTIME_CONTROLS_POWERSHELL_OK observation=true canary=true anchor=true status=true disable=true"
+          Write-Output "RUNTIME_CONTROLS_POWERSHELL_OK observation=true canary=true anchor=true replacement=true status=true disable=true"
