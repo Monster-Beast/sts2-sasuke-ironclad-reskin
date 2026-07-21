@@ -10,24 +10,27 @@ param(
     [switch]$AnimationsOnly,
     [switch]$NoLowFlash,
     [switch]$FastMode,
+    [switch]$ReplaceOriginal,
 
     [ValidateRange(0.25, 3.0)]
-    [double]$AnchorScale = 1.0,
+    [double]$AnchorScale = 1.2,
 
     [ValidateRange(-1000.0, 1000.0)]
     [double]$AnchorOffsetX = 0.0,
 
     [ValidateRange(-1000.0, 1000.0)]
-    [double]$AnchorOffsetY = 0.0
+    [double]$AnchorOffsetY = -150.0
 )
 
 $ErrorActionPreference = "Stop"
 $AppId = "2868840"
 $RequiredBranch = "public-beta"
 $RequiredBuildId = "24251656"
+$ReplacementAcknowledgement = "public-beta-24251656-local-ironclad-replacement"
 $MarkerFileName = "SasukeIronclad.canary.json"
 $StatusFileName = "runtime-canary-status.json"
 $AnchorStatusFileName = "runtime-canary-anchor-status.json"
+$ReplacementStatusFileName = "runtime-canary-replacement-status.json"
 $ObservationMarkerFileName = "SasukeIronclad.observe.json"
 
 function Resolve-Sts2GamePath {
@@ -101,6 +104,9 @@ function Write-Utf8NoBom {
 if ($TitlesOnly -and $AnimationsOnly) {
     throw "-TitlesOnly and -AnimationsOnly cannot be used together."
 }
+if ($TitlesOnly -and $ReplaceOriginal) {
+    throw "-ReplaceOriginal requires the animation layer and cannot be combined with -TitlesOnly."
+}
 
 $resolvedGamePath = Resolve-Sts2GamePath -ExplicitPath $GamePath
 $resolvedModDirectory = Resolve-ModDirectory `
@@ -109,6 +115,7 @@ $resolvedModDirectory = Resolve-ModDirectory `
 $markerPath = Join-Path $resolvedModDirectory $MarkerFileName
 $statusPath = Join-Path $resolvedModDirectory $StatusFileName
 $anchorStatusPath = Join-Path $resolvedModDirectory $AnchorStatusFileName
+$replacementStatusPath = Join-Path $resolvedModDirectory $ReplacementStatusFileName
 $observationMarkerPath = Join-Path $resolvedModDirectory $ObservationMarkerFileName
 
 Write-Host "Game path: $resolvedGamePath" -ForegroundColor Cyan
@@ -118,6 +125,10 @@ switch ($Action) {
     "enable" {
         if (Test-Path -LiteralPath $observationMarkerPath -PathType Leaf) {
             throw "Runtime observation is still enabled. Disable it before enabling the presentation canary."
+        }
+        $replacementAck = ""
+        if ($ReplaceOriginal.IsPresent) {
+            $replacementAck = $ReplacementAcknowledgement
         }
         $marker = [ordered]@{
             schema_version = 1
@@ -133,10 +144,12 @@ switch ($Action) {
             anchor_scale = $AnchorScale
             anchor_offset_x = $AnchorOffsetX
             anchor_offset_y = $AnchorOffsetY
+            hide_original_visual = $ReplaceOriginal.IsPresent
+            replacement_acknowledgement = $replacementAck
         }
         $json = ($marker | ConvertTo-Json -Depth 4) + [Environment]::NewLine
         Write-Utf8NoBom -Path $markerPath -Content $json
-        foreach ($oldStatus in @($statusPath, $anchorStatusPath)) {
+        foreach ($oldStatus in @($statusPath, $anchorStatusPath, $replacementStatusPath)) {
             if (Test-Path -LiteralPath $oldStatus -PathType Leaf) {
                 Remove-Item -LiteralPath $oldStatus -Force
             }
@@ -151,9 +164,17 @@ switch ($Action) {
         Write-Host "Anchor to local player: True"
         Write-Host "Anchor scale: $AnchorScale"
         Write-Host "Anchor offset: ($AnchorOffsetX, $AnchorOffsetY)"
-        Write-Host "Previous canary startup and anchor status were cleared."
+        Write-Host "Replace original Ironclad visual: $($ReplaceOriginal.IsPresent)"
+        Write-Host "Previous canary startup, anchor and replacement status were cleared."
         Write-Host "The overlay remains hidden until a unique local-player combat anchor is found."
-        Write-Host "This canary leaves the original Ironclad visual visible and unchanged."
+        if ($ReplaceOriginal.IsPresent) {
+            Write-Host "The exact local Ironclad NCreatureVisuals node will be hidden only after a reviewed Sasuke timeline starts." -ForegroundColor Yellow
+            Write-Host "Playback fallback, anchor loss, combat end and Mod disposal request restoration of the captured original visibility." -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "This overlay canary leaves the original Ironclad visual visible and unchanged."
+        }
+        Write-Host "Changing the marker requires a complete game restart."
     }
     "disable" {
         if (Test-Path -LiteralPath $markerPath -PathType Leaf) {
@@ -165,6 +186,8 @@ switch ($Action) {
         }
         Write-Host "Existing startup status was preserved at: $statusPath"
         Write-Host "Existing anchor status was preserved at: $anchorStatusPath"
+        Write-Host "Existing replacement status was preserved at: $replacementStatusPath"
+        Write-Host "A running game must be exited before the installed patches are reset."
     }
     "status" {
         if (Test-Path -LiteralPath $markerPath -PathType Leaf) {
@@ -189,6 +212,14 @@ switch ($Action) {
         }
         else {
             Write-Host "No anchor status has been written. Enable animations and launch the game, then play a reviewed local Ironclad card." -ForegroundColor Yellow
+        }
+
+        Write-Host "Last original-visual replacement status: $replacementStatusPath"
+        if (Test-Path -LiteralPath $replacementStatusPath -PathType Leaf) {
+            Get-Content -LiteralPath $replacementStatusPath -Raw
+        }
+        else {
+            Write-Host "No replacement status has been written. Use -ReplaceOriginal, restart the game and play a reviewed local Ironclad card." -ForegroundColor Yellow
         }
     }
 }
