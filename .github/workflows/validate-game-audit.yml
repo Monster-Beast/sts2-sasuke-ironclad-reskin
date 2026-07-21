@@ -134,7 +134,7 @@ jobs:
           set -o pipefail
           dotnet run --project tools/game_audit/SasukeIronclad.GameAudit.csproj \
             --configuration Release --no-build -- \
-            self-test --output audit-output/self-test | tee audit-self-test.log
+            self-test --output audit-output/self-test 2>&1 | tee audit-self-test.log
           grep -q "GAME_AUDIT_SELF_TEST_OK" audit-self-test.log
           grep -q '"kind": "field"' audit-output/self-test/first/audit-report.json
           grep -q '"constantValue": "STRIKE"' audit-output/self-test/first/audit-report.json
