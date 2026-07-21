@@ -20,6 +20,7 @@ $AppId = "2868840"
 $RequiredBranch = "public-beta"
 $RequiredBuildId = "24251656"
 $MarkerFileName = "SasukeIronclad.observe.json"
+$StatusFileName = "runtime-observation-status.json"
 $OutputDirectoryName = "observation-output"
 
 function Resolve-Sts2GamePath {
@@ -96,6 +97,7 @@ $resolvedModDirectory = Resolve-ObservationModDirectory `
     -ResolvedGamePath $resolvedGamePath `
     -ExplicitModDirectory $ModDirectory
 $markerPath = Join-Path $resolvedModDirectory $MarkerFileName
+$statusPath = Join-Path $resolvedModDirectory $StatusFileName
 $outputDirectory = Join-Path $resolvedModDirectory $OutputDirectoryName
 
 Write-Host "Game path: $resolvedGamePath" -ForegroundColor Cyan
@@ -115,10 +117,14 @@ switch ($Action) {
         }
         $json = ($marker | ConvertTo-Json -Depth 4) + [Environment]::NewLine
         Write-Utf8NoBom -Path $markerPath -Content $json
+        if (Test-Path -LiteralPath $statusPath -PathType Leaf) {
+            Remove-Item -LiteralPath $statusPath -Force
+        }
         Write-Host "Runtime observation enabled for the next game launch." -ForegroundColor Green
         Write-Host "Marker: $markerPath"
         Write-Host "Expected build: $RequiredBranch / $RequiredBuildId"
         Write-Host "Session label: $SessionLabel"
+        Write-Host "Previous startup status was cleared."
         Write-Host "No gameplay values, method arguments or return values are modified."
     }
     "disable" {
@@ -129,6 +135,7 @@ switch ($Action) {
         else {
             Write-Host "Runtime observation was already disabled." -ForegroundColor Yellow
         }
+        Write-Host "Existing startup status was preserved at: $statusPath"
         Write-Host "Existing JSONL evidence was preserved at: $outputDirectory"
     }
     "status" {
@@ -138,6 +145,14 @@ switch ($Action) {
         }
         else {
             Write-Host "Runtime observation marker: DISABLED" -ForegroundColor Green
+        }
+
+        Write-Host "Last game-start observation status: $statusPath"
+        if (Test-Path -LiteralPath $statusPath -PathType Leaf) {
+            Get-Content -LiteralPath $statusPath -Raw
+        }
+        else {
+            Write-Host "No startup status has been written. The Mod initializer has not run since the marker was enabled, or the DLL was not loaded." -ForegroundColor Yellow
         }
 
         Write-Host "Evidence directory: $outputDirectory"
