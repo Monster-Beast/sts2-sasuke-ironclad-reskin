@@ -13,6 +13,10 @@ recovered_project/
 game_assets/
 local-audit/
 audit-output/
+observation-output/
+runtime-observation-review/
+SasukeIronclad.observe.json
+runtime-observation-*.jsonl
 *.autosave
 *.bak
 .idea/
