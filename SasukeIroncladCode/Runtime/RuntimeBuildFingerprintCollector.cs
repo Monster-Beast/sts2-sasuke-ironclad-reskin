@@ -33,9 +33,9 @@ public sealed class CurrentProcessRuntimeBuildFingerprintProvider : IRuntimeBuil
 
 public static class RuntimeBuildFingerprintCollector
 {
-    private static readonly Regex SteamBuildIdPattern = new(
-        "\"buildid\"\\s+\"(?<value>[0-9]+)\"",
-        RegexOptions.CultureInvariant | RegexOptions.Compiled
+    private static readonly Regex AcfValuePattern = new(
+        "\"(?<key>[^\"]+)\"\\s+\"(?<value>[^\"]*)\"",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled | RegexOptions.IgnoreCase
     );
 
     public static RuntimeBuildFingerprintCollectionResult CollectCurrentProcess(string? branch = null)
@@ -50,22 +50,18 @@ public static class RuntimeBuildFingerprintCollector
         if (string.IsNullOrWhiteSpace(gamePath))
             return Failure("The game root could not be derived from the loaded sts2 assembly; bindings remain disabled.");
 
-        string resolvedBranch = branch
-            ?? Environment.GetEnvironmentVariable("STS2_BRANCH")
-            ?? "unknown";
-        return Collect(assembly.Location, gamePath, resolvedBranch);
+        string? requestedBranch = branch ?? Environment.GetEnvironmentVariable("STS2_BRANCH");
+        return Collect(assembly.Location, gamePath, requestedBranch);
     }
 
     public static RuntimeBuildFingerprintCollectionResult Collect(
         string sts2AssemblyPath,
         string gamePath,
-        string branch)
+        string? branch)
     {
         List<string> reasons = [];
         try
         {
-            if (string.IsNullOrWhiteSpace(branch))
-                reasons.Add("The game branch is unknown.");
             if (!File.Exists(sts2AssemblyPath))
                 reasons.Add("The sts2 assembly file is unavailable.");
             if (!Directory.Exists(gamePath))
@@ -75,21 +71,22 @@ public static class RuntimeBuildFingerprintCollector
 
             string assemblySha256 = ComputeSha256(sts2AssemblyPath);
             string moduleMvid = ReadModuleMvid(sts2AssemblyPath);
-            string? steamBuildId = ReadSteamBuildId(gamePath);
-            string? baseLibVersion = ReadBaseLibVersion(gamePath);
+            SteamRuntimeMetadata steam = ReadSteamMetadata(gamePath);
+            string resolvedBranch = NormalizeBranch(branch, steam.BetaBranch, steam.ManifestFound);
+            string? baseLibVersion = ReadBaseLibVersion(gamePath, steam.SteamAppsPath);
 
-            if (string.IsNullOrWhiteSpace(steamBuildId))
+            if (string.IsNullOrWhiteSpace(steam.BuildId))
                 reasons.Add("Steam buildid could not be detected.");
             if (string.IsNullOrWhiteSpace(baseLibVersion))
-                reasons.Add("BaseLib version could not be detected.");
-            if (string.Equals(branch, "unknown", StringComparison.OrdinalIgnoreCase))
-                reasons.Add("The STS2 branch is unknown.");
+                reasons.Add("BaseLib version could not be detected in local mods or Workshop content.");
+            if (string.Equals(resolvedBranch, "unknown", StringComparison.OrdinalIgnoreCase))
+                reasons.Add("The STS2 branch is unknown; set STS2_BRANCH or provide a Steam appmanifest.");
             if (reasons.Count > 0)
                 return new(false, null, reasons);
 
             RuntimeBuildFingerprint fingerprint = new(
-                branch.Trim(),
-                steamBuildId!,
+                resolvedBranch,
+                steam.BuildId!,
                 assemblySha256,
                 moduleMvid,
                 baseLibVersion!
@@ -122,45 +119,104 @@ public static class RuntimeBuildFingerprintCollector
         return reader.GetGuid(module.Mvid).ToString("D").ToLowerInvariant();
     }
 
-    private static string? ReadSteamBuildId(string gamePath)
+    private static SteamRuntimeMetadata ReadSteamMetadata(string gamePath)
     {
         DirectoryInfo? current = new(Path.GetFullPath(gamePath));
-        for (int depth = 0; current is not null && depth < 6; depth++, current = current.Parent)
+        for (int depth = 0; current is not null && depth < 7; depth++, current = current.Parent)
         {
             string manifest = Path.Combine(current.FullName, "appmanifest_2868840.acf");
             if (!File.Exists(manifest))
                 continue;
             string text = File.ReadAllText(manifest);
-            Match match = SteamBuildIdPattern.Match(text);
-            return match.Success ? match.Groups["value"].Value : null;
+            Dictionary<string, string> values = ParseAcfValues(text);
+            values.TryGetValue("buildid", out string? buildId);
+            values.TryGetValue("betakey", out string? betaKey);
+            return new(true, current.FullName, buildId, betaKey);
+        }
+        return new(false, null, null, null);
+    }
+
+    private static Dictionary<string, string> ParseAcfValues(string text)
+    {
+        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in AcfValuePattern.Matches(text))
+        {
+            string key = match.Groups["key"].Value;
+            if (!values.ContainsKey(key))
+                values[key] = match.Groups["value"].Value;
+        }
+        return values;
+    }
+
+    private static string NormalizeBranch(string? explicitBranch, string? betaBranch, bool manifestFound)
+    {
+        string? candidate = string.IsNullOrWhiteSpace(explicitBranch) ? betaBranch : explicitBranch;
+        if (!string.IsNullOrWhiteSpace(candidate) &&
+            !string.Equals(candidate, "public", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(candidate, "none", StringComparison.OrdinalIgnoreCase))
+        {
+            return candidate.Trim().ToLowerInvariant();
+        }
+        return manifestFound ? "stable" : "unknown";
+    }
+
+    private static string? ReadBaseLibVersion(string gamePath, string? steamAppsPath)
+    {
+        List<string> roots =
+        [
+            Path.Combine(gamePath, "mods"),
+            Path.Combine(gamePath, "SlayTheSpire2.app", "Contents", "MacOS", "mods"),
+        ];
+        if (!string.IsNullOrWhiteSpace(steamAppsPath))
+            roots.Add(Path.Combine(steamAppsPath, "workshop", "content", "2868840"));
+
+        foreach (string root in roots.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (string manifest in EnumerateBaseLibManifestCandidates(root))
+            {
+                try
+                {
+                    using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifest));
+                    if (!LooksLikeBaseLib(document.RootElement, manifest))
+                        continue;
+                    if (TryReadProperty(document.RootElement, "version", out string? version) && !string.IsNullOrWhiteSpace(version))
+                        return version;
+                }
+                catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+                {
+                    // Continue to another BaseLib manifest candidate.
+                }
+            }
         }
         return null;
     }
 
-    private static string? ReadBaseLibVersion(string gamePath)
+    private static IEnumerable<string> EnumerateBaseLibManifestCandidates(string root)
     {
-        string modsPath = Path.Combine(gamePath, "mods");
-        if (!Directory.Exists(modsPath))
-            return null;
-
-        IEnumerable<string> manifests = Directory.EnumerateFiles(modsPath, "*.json", SearchOption.AllDirectories)
+        IEnumerable<string> files;
+        try
+        {
+            files = Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories).Take(10000).ToArray();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+        return files
             .Where(path => Path.GetFileName(path).Contains("BaseLib", StringComparison.OrdinalIgnoreCase) ||
                            path.Contains($"{Path.DirectorySeparatorChar}BaseLib{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Order(StringComparer.OrdinalIgnoreCase);
-        foreach (string manifest in manifests)
+    }
+
+    private static bool LooksLikeBaseLib(JsonElement element, string path)
+    {
+        if (Path.GetFileName(path).Contains("BaseLib", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains($"{Path.DirectorySeparatorChar}BaseLib{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
         {
-            try
-            {
-                using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifest));
-                if (TryReadProperty(document.RootElement, "version", out string? version) && !string.IsNullOrWhiteSpace(version))
-                    return version;
-            }
-            catch (JsonException)
-            {
-                // Continue to another BaseLib manifest candidate.
-            }
+            return true;
         }
-        return null;
+        return (TryReadProperty(element, "id", out string? id) && string.Equals(id, "BaseLib", StringComparison.OrdinalIgnoreCase)) ||
+               (TryReadProperty(element, "name", out string? name) && name?.Contains("BaseLib", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     private static bool TryReadProperty(JsonElement element, string propertyName, out string? value)
@@ -179,4 +235,11 @@ public static class RuntimeBuildFingerprintCollector
         }
         return false;
     }
+
+    private sealed record SteamRuntimeMetadata(
+        bool ManifestFound,
+        string? SteamAppsPath,
+        string? BuildId,
+        string? BetaBranch
+    );
 }
