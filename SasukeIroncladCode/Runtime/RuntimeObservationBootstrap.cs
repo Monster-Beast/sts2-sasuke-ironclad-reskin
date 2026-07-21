@@ -1,5 +1,7 @@
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using SasukeIronclad.SasukeIroncladCode.Adapters;
 using SasukeIronclad.SasukeIroncladCode.Visuals;
 
@@ -11,6 +13,17 @@ public sealed record RuntimeObservationBootstrapResult(
     string? OutputPath,
     IReadOnlyList<string> Reasons
 );
+
+public sealed class RuntimeObservationStartupStatus
+{
+    [JsonPropertyName("schema_version")] public int SchemaVersion { get; init; } = 1;
+    [JsonPropertyName("generated_at_utc")] public string GeneratedAtUtc { get; init; } = string.Empty;
+    [JsonPropertyName("mod_initializer_reached")] public bool ModInitializerReached { get; init; } = true;
+    [JsonPropertyName("enabled")] public bool Enabled { get; init; }
+    [JsonPropertyName("session_id")] public string? SessionId { get; init; }
+    [JsonPropertyName("output_file")] public string? OutputFile { get; init; }
+    [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
+}
 
 public static class RuntimeObservationBootstrap
 {
@@ -124,10 +137,18 @@ public sealed record RuntimeObservationOptInLoadResult(
 
 public static class RuntimeObservationLocalFiles
 {
+    public const string StatusFileName = "runtime-observation-status.json";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = false,
         ReadCommentHandling = JsonCommentHandling.Skip,
+    };
+
+    private static readonly JsonSerializerOptions StatusJsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        WriteIndented = true,
     };
 
     public static RuntimeObservationOptInLoadResult LoadOptIn(
@@ -158,6 +179,40 @@ public static class RuntimeObservationLocalFiles
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
             return new(true, null, [$"Observation opt-in marker could not be read: {exception.GetType().Name}."]);
+        }
+    }
+
+    public static void WriteStatus(
+        string modAssemblyPath,
+        RuntimeObservationBootstrapResult status)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(modAssemblyPath);
+        ArgumentNullException.ThrowIfNull(status);
+        try
+        {
+            string? modDirectory = Path.GetDirectoryName(Path.GetFullPath(modAssemblyPath));
+            if (string.IsNullOrWhiteSpace(modDirectory))
+                return;
+
+            RuntimeObservationStartupStatus document = new()
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+                Enabled = status.Enabled,
+                SessionId = status.SessionId,
+                OutputFile = string.IsNullOrWhiteSpace(status.OutputPath)
+                    ? null
+                    : Path.GetFileName(status.OutputPath),
+                Reasons = status.Reasons.ToArray(),
+            };
+            string destination = Path.Combine(modDirectory, StatusFileName);
+            string temporary = destination + ".tmp";
+            string json = JsonSerializer.Serialize(document, StatusJsonOptions) + Environment.NewLine;
+            File.WriteAllText(temporary, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            File.Move(temporary, destination, overwrite: true);
+        }
+        catch
+        {
+            // Diagnostic output must never affect Mod or game startup.
         }
     }
 
