@@ -55,7 +55,7 @@ function Invoke-SteamCmdBetaQuery {
     $process.StartInfo = $startInfo
     try {
         if (-not $process.Start()) {
-            throw "无法启动 SteamCMD：$SteamCmdPath"
+            throw "Could not start SteamCMD: $SteamCmdPath"
         }
 
         $stdoutTask = $process.StandardOutput.ReadToEndAsync()
@@ -82,15 +82,16 @@ function Invoke-SteamCmdBetaQuery {
     $remoteBuildId = Get-SteamCmdBranchBuildId -Content $combinedOutput -Branch $Branch
     if ($remoteBuildId -notmatch '^[0-9]+$') {
         if ($steamExitCode -ne 0) {
-            throw "SteamCMD 返回退出码 $steamExitCode，且输出中未找到有效的 $Branch buildid。"
+            throw "SteamCMD returned exit code $steamExitCode and no valid $Branch buildid was found in its output."
         }
-        throw "SteamCMD 输出中未找到有效的 $Branch buildid。"
+        throw "No valid $Branch buildid was found in SteamCMD output."
     }
 
     if ($steamExitCode -ne 0) {
         Write-Warning (
-            "SteamCMD 返回退出码 $steamExitCode，但输出已完整包含 $Branch buildid=$remoteBuildId。" +
-            "这通常发生在 SteamCMD 自更新并重启原进程时；继续执行本机版本校验。"
+            "SteamCMD returned exit code $steamExitCode, but its output contains a complete " +
+            "$Branch buildid=$remoteBuildId. This can occur when SteamCMD self-updates and restarts; " +
+            "continuing with local build validation."
         )
     }
 
