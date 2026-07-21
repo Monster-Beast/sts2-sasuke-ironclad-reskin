@@ -4,21 +4,13 @@ using SasukeIronclad.SasukeIroncladCode.Runtime;
 
 namespace SasukeIronclad.SasukeIroncladCode.Adapters;
 
-public interface IRuntimeObservationPatcher
-{
-    string? OutputPath { get; }
-    void Reset();
-    void Install(
-        RuntimeObservationSession session,
-        IReadOnlyList<ResolvedRuntimeObservationTarget> targets);
-}
-
 public sealed class HarmonyRuntimeObservationPatcher : IRuntimeObservationPatcher
 {
     private const string HarmonyId = "Monster-Beast.SasukeIronclad.RuntimeObservation";
     private Harmony? _harmony;
     private RuntimeObservationSession? _session;
 
+    public string? SessionId => _session?.SessionId;
     public string? OutputPath => _session?.OutputPath;
 
     public void Install(
