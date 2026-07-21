@@ -41,6 +41,7 @@ jobs:
         run: |
           python tools/test_game_integration_startup.py
           python tools/test_latest_beta_guard.py
+          python tools/test_latest_beta_profiles.py
           python tools/test_audit_review_pipeline.py
       - name: Execute exact-build integration gate matrix
         run: |
@@ -50,6 +51,7 @@ jobs:
           grep -q "INTEGRATION_GATE_OK" integration-gate-test.log
           grep -q "stable=false" integration-gate-test.log
           grep -q "stale=false" integration-gate-test.log
+          grep -q "superseded=false" integration-gate-test.log
           grep -q "bootstrap=true" integration-gate-test.log
           grep -q "collector=true" integration-gate-test.log
           grep -q "fail_closed=true" integration-gate-test.log
