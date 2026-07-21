@@ -8,6 +8,8 @@ namespace SasukeIronclad.GameAudit;
 
 internal static partial class AuditScanner
 {
+    private const string SteamAppId = "2868840";
+
     private static readonly HashSet<string> ExcludedDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
     {
         ".git", ".godot", "logs", "saves", "crash", "crashes", "screenshots", "workshop", "shader_cache"
@@ -32,8 +34,9 @@ internal static partial class AuditScanner
         string dataDirectoryRelative = ToPortableRelativePath(gamePath, dataDirectoryPath);
         string assemblyRelative = ToPortableRelativePath(gamePath, assemblyPath);
 
+        List<string> warnings = [];
         (string? steamBuildId, string? steamLastUpdated) = ReadSteamBuildMetadata(gamePath);
-        (string? baseLibVersion, string? baseLibHash) = ReadBaseLibMetadata(gamePath);
+        (string? baseLibVersion, string? baseLibHash) = ReadBaseLibMetadata(gamePath, warnings);
 
         (GameBuildMetadata build, List<SymbolCandidate> symbols) = MetadataScanner.Scan(
             assemblyPath,
@@ -58,7 +61,6 @@ internal static partial class AuditScanner
                 roots.Add(($"asset-root-{index + 1}", "recovered-assets", fullPath));
         }
 
-        List<string> warnings = [];
         if (options.AssetRoots.Count == 0)
             warnings.Add("No recovered asset root was supplied; resource candidates are limited to the installed game tree.");
         if (string.IsNullOrWhiteSpace(baseLibVersion))
@@ -289,7 +291,7 @@ internal static partial class AuditScanner
         DirectoryInfo? steamApps = Directory.GetParent(gamePath)?.Parent;
         if (steamApps is null)
             return (null, null);
-        string manifestPath = Path.Combine(steamApps.FullName, "appmanifest_2868840.acf");
+        string manifestPath = Path.Combine(steamApps.FullName, $"appmanifest_{SteamAppId}.acf");
         if (!File.Exists(manifestPath))
             return (null, null);
 
@@ -309,28 +311,125 @@ internal static partial class AuditScanner
         return null;
     }
 
-    private static (string? Version, string? Hash) ReadBaseLibMetadata(string gamePath)
+    private static (string? Version, string? Hash) ReadBaseLibMetadata(string gamePath, List<string> warnings)
     {
-        string[] candidates =
+        List<BaseLibManifestCandidate> candidates = [];
+        string[] localManifestPaths =
         [
             Path.Combine(gamePath, "mods", "BaseLib", "BaseLib.json"),
             Path.Combine(gamePath, "SlayTheSpire2.app", "Contents", "MacOS", "mods", "BaseLib", "BaseLib.json"),
         ];
-        string? manifestPath = candidates.FirstOrDefault(File.Exists);
-        if (manifestPath is null)
+        foreach (string path in localManifestPaths)
+            AddBaseLibCandidate(path, sourceRank: 0, candidates, warnings);
+
+        DirectoryInfo? steamApps = Directory.GetParent(gamePath)?.Parent;
+        if (steamApps is not null)
+        {
+            string workshopRoot = Path.Combine(steamApps.FullName, "workshop", "content", SteamAppId);
+            foreach (string path in EnumerateBaseLibManifests(workshopRoot, warnings))
+                AddBaseLibCandidate(path, sourceRank: 1, candidates, warnings);
+        }
+
+        if (candidates.Count == 0)
             return (null, null);
+
+        int selectedRank = candidates.Min(candidate => candidate.SourceRank);
+        List<BaseLibManifestCandidate> selected = candidates
+            .Where(candidate => candidate.SourceRank == selectedRank)
+            .OrderBy(candidate => candidate.Path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        string[] distinctFingerprints = selected
+            .Select(candidate => $"{candidate.Version}|{candidate.Hash}")
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (distinctFingerprints.Length != 1)
+        {
+            string source = selectedRank == 0 ? "game mods" : "Steam Workshop";
+            warnings.Add($"Multiple conflicting BaseLib manifests were detected in {source}; exact runtime metadata is ambiguous.");
+            return (null, null);
+        }
+
+        BaseLibManifestCandidate match = selected[0];
+        if (selectedRank == 1)
+            warnings.Add("BaseLib metadata was detected from the Steam Workshop content tree.");
+        return (match.Version, match.Hash);
+    }
+
+    private static IEnumerable<string> EnumerateBaseLibManifests(string workshopRoot, List<string> warnings)
+    {
+        if (!Directory.Exists(workshopRoot))
+            yield break;
+
+        Stack<string> pending = new();
+        pending.Push(workshopRoot);
+        while (pending.Count > 0)
+        {
+            string current = pending.Pop();
+            IEnumerable<string> files;
+            try
+            {
+                files = Directory.EnumerateFiles(current).ToArray();
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                warnings.Add("Unable to inspect one Steam Workshop directory while searching for BaseLib.");
+                continue;
+            }
+
+            foreach (string file in files)
+            {
+                if (Path.GetFileName(file).Equals("BaseLib.json", StringComparison.OrdinalIgnoreCase))
+                    yield return file;
+            }
+
+            IEnumerable<string> directories;
+            try
+            {
+                directories = Directory.EnumerateDirectories(current).ToArray();
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                continue;
+            }
+
+            foreach (string directory in directories)
+                pending.Push(directory);
+        }
+    }
+
+    private static void AddBaseLibCandidate(
+        string path,
+        int sourceRank,
+        List<BaseLibManifestCandidate> candidates,
+        List<string> warnings)
+    {
+        if (!File.Exists(path))
+            return;
 
         try
         {
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifestPath));
-            string? version = document.RootElement.TryGetProperty("version", out JsonElement value)
-                ? value.GetString()
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
+            JsonElement root = document.RootElement;
+            string? id = root.TryGetProperty("id", out JsonElement idElement) ? idElement.GetString() : null;
+            if (!string.IsNullOrWhiteSpace(id) && !id.Equals("BaseLib", StringComparison.OrdinalIgnoreCase))
+                return;
+            string? version = root.TryGetProperty("version", out JsonElement versionElement)
+                ? versionElement.GetString()
                 : null;
-            return (version, ComputeSha256(manifestPath));
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                warnings.Add("A BaseLib manifest was found but its version field is missing.");
+                return;
+            }
+            candidates.Add(new BaseLibManifestCandidate(path, version.Trim(), ComputeSha256(path), sourceRank));
         }
         catch (JsonException)
         {
-            return (null, ComputeSha256(manifestPath));
+            warnings.Add("A BaseLib manifest was found but could not be parsed as JSON.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            warnings.Add("A BaseLib manifest was found but could not be read.");
         }
     }
 
@@ -393,4 +492,6 @@ internal static partial class AuditScanner
 
     [GeneratedRegex("\\bheight=\\\"([0-9]+)")]
     private static partial Regex SvgHeightRegex();
+
+    private sealed record BaseLibManifestCandidate(string Path, string Version, string Hash, int SourceRank);
 }
