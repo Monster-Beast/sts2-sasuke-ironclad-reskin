@@ -3,13 +3,16 @@ using SasukeIronclad.SasukeIroncladCode.Runtime;
 
 namespace SasukeIronclad.SasukeIroncladCode.Adapters;
 
-public partial class GodotVisualSceneHost : Node, IVisualSceneHost, IVisualSceneHostNotifications
+public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSceneHostNotifications
 {
     private const string DefaultRuntimeScene = "res://SasukeIronclad/scenes/runtime/animation_director.tscn";
 
     private AnimationPlaybackHandle? _activeHandle;
     private Node? _runtimeRoot;
     private Node? _director;
+    private Node2D? _anchor;
+    private Vector2 _anchorOffset;
+    private float _anchorScale = 1.0f;
 
     public event Action<AnimationPlaybackHandle>? PlaybackCompleted;
     public event Action<AnimationPlaybackHandle, string>? PlaybackFailed;
@@ -23,12 +26,58 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost, IVisualScene
     [Export(PropertyHint.Range, "0.25,5.0,0.25")]
     public float ImpactTimeoutSeconds { get; set; } = 1.5f;
 
-    public override void _Ready() => EnsureMounted();
+    public bool IsAnchorBound => HasValidAnchor();
+    public string? AnchorType => HasValidAnchor() ? _anchor!.GetType().FullName : null;
+    public string? AnchorName => HasValidAnchor() ? _anchor!.Name.ToString() : null;
+    public Vector2? AnchorGlobalPosition => HasValidAnchor() ? _anchor!.GlobalPosition : null;
+
+    public override void _Ready()
+    {
+        Visible = false;
+        SetProcess(true);
+    }
+
+    public override void _Process(double delta)
+    {
+        _ = delta;
+        SyncAnchorTransform();
+    }
+
+    public bool BindToAnchor(Node2D anchor, Vector2 offset, float scale)
+    {
+        ArgumentNullException.ThrowIfNull(anchor);
+        if (!GodotObject.IsInstanceValid(anchor) || !anchor.IsInsideTree() ||
+            !float.IsFinite(scale) || scale is < 0.25f or > 3.0f)
+        {
+            ClearAnchor();
+            return false;
+        }
+
+        _anchor = anchor;
+        _anchorOffset = offset;
+        _anchorScale = scale;
+        if (!EnsureMounted())
+        {
+            ClearAnchor();
+            return false;
+        }
+        SyncAnchorTransform();
+        return Visible;
+    }
+
+    public void ClearAnchor()
+    {
+        _anchor = null;
+        Visible = false;
+        Position = Vector2.Zero;
+        Rotation = 0.0f;
+        Scale = Vector2.One;
+    }
 
     public bool CanPlay(CardAnimationSelection selection)
     {
         ArgumentNullException.ThrowIfNull(selection);
-        if (!EnsureMounted() || _director is null)
+        if (!HasValidAnchor() || !EnsureMounted() || _director is null)
             return false;
         try
         {
@@ -105,7 +154,7 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost, IVisualScene
     public void PlayCharacterState(CharacterVisualRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (!EnsureMounted() || _director is null)
+        if (!HasValidAnchor() || !EnsureMounted() || _director is null)
             return;
         try
         {
@@ -120,7 +169,7 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost, IVisualScene
 
     public void PulseVisualState(string stateId, Godot.Collections.Dictionary? parameters = null)
     {
-        if (!EnsureMounted() || _director is null || string.IsNullOrWhiteSpace(stateId))
+        if (!HasValidAnchor() || !EnsureMounted() || _director is null || string.IsNullOrWhiteSpace(stateId))
             return;
         try
         {
@@ -171,6 +220,7 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost, IVisualScene
             _runtimeRoot?.QueueFree();
             _runtimeRoot = null;
             _director = null;
+            ClearAnchor();
         }
     }
 
@@ -216,6 +266,34 @@ public partial class GodotVisualSceneHost : Node, IVisualSceneHost, IVisualScene
             _runtimeRoot = null;
             _director = null;
             return false;
+        }
+    }
+
+    private bool HasValidAnchor() =>
+        _anchor is not null && GodotObject.IsInstanceValid(_anchor) && _anchor.IsInsideTree();
+
+    private void SyncAnchorTransform()
+    {
+        if (!HasValidAnchor())
+        {
+            Visible = false;
+            return;
+        }
+
+        try
+        {
+            Node2D anchor = _anchor!;
+            Transform2D canvasTransform = anchor.GetGlobalTransformWithCanvas();
+            GlobalPosition = canvasTransform.Origin + _anchorOffset;
+            GlobalRotation = anchor.GlobalRotation;
+            GlobalScale = anchor.GlobalScale * _anchorScale;
+            ZAsRelative = false;
+            ZIndex = anchor.ZIndex + 1;
+            Visible = true;
+        }
+        catch
+        {
+            Visible = false;
         }
     }
 
