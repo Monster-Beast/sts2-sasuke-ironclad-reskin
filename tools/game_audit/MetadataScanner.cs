@@ -10,6 +10,8 @@ namespace SasukeIronclad.GameAudit;
 
 internal static class MetadataScanner
 {
+    private const int PriorityExactTypeScore = 100_000;
+
     public static (GameBuildMetadata Build, List<SymbolCandidate> Symbols) Scan(
         string assemblyPath,
         string assemblyRelativePath,
@@ -264,38 +266,62 @@ internal static class MetadataScanner
         List<(string Category, int Score)> matches = [];
         foreach (AuditQuery query in queries.Queries)
         {
-            int hits = query.TypeContains.Count(keyword => Contains(typeName, keyword));
-            if (hits > 0)
-                matches.Add((query.Id, hits * 5));
+            int exactHits = query.ExactTypeNames.Count(exact => IsExactTypeOrNested(typeName, exact));
+            int containsHits = query.TypeContains.Count(keyword => Contains(typeName, keyword));
+            if (exactHits + containsHits == 0)
+                continue;
+            int exactScore = exactHits * (query.Priority ? PriorityExactTypeScore : 20);
+            matches.Add((query.Id, exactScore + containsHits * 5));
         }
         return matches;
     }
 
-    private static List<(string Category, int Score)> MatchMember(string typeName, string memberName, AuditQuerySet queries)
+    private static List<(string Category, int Score)> MatchMember(
+        string typeName,
+        string memberName,
+        AuditQuerySet queries)
     {
         List<(string Category, int Score)> matches = [];
         foreach (AuditQuery query in queries.Queries)
         {
+            int exactHits = query.ExactTypeNames.Count(exact => IsExactTypeOrNested(typeName, exact));
             int typeHits = query.TypeContains.Count(keyword => Contains(typeName, keyword));
             IEnumerable<string> memberTerms = query.MethodContains.Concat(query.MemberContains);
             int memberHits = memberTerms.Distinct(StringComparer.OrdinalIgnoreCase)
                 .Count(keyword => Contains(memberName, keyword));
-            if (typeHits + memberHits > 0)
-                matches.Add((query.Id, typeHits * 2 + memberHits * 6));
+            if (exactHits + typeHits + memberHits == 0)
+                continue;
+            int exactScore = exactHits * (query.Priority ? PriorityExactTypeScore : 20);
+            matches.Add((query.Id, exactScore + typeHits * 2 + memberHits * 6));
         }
         return matches;
+    }
+
+    private static bool IsExactTypeOrNested(string typeName, string exactTypeName)
+    {
+        if (string.IsNullOrWhiteSpace(exactTypeName))
+            return false;
+        return typeName.Equals(exactTypeName, StringComparison.OrdinalIgnoreCase) ||
+               typeName.StartsWith(exactTypeName + "+", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool Contains(string value, string keyword) =>
         !string.IsNullOrWhiteSpace(keyword) && value.Contains(keyword, StringComparison.OrdinalIgnoreCase);
 
-    private static string FormatTypeSignature(MetadataReader reader, TypeDefinition type, string typeName, TypeNameProvider provider)
+    private static string FormatTypeSignature(
+        MetadataReader reader,
+        TypeDefinition type,
+        string typeName,
+        TypeNameProvider provider)
     {
         string baseType = type.BaseType.IsNil ? string.Empty : FormatEntityType(reader, provider, type.BaseType);
         return string.IsNullOrEmpty(baseType) ? typeName : $"{typeName} : {baseType}";
     }
 
-    private static string FormatEntityType(MetadataReader reader, TypeNameProvider provider, EntityHandle handle) => handle.Kind switch
+    private static string FormatEntityType(
+        MetadataReader reader,
+        TypeNameProvider provider,
+        EntityHandle handle) => handle.Kind switch
     {
         HandleKind.TypeDefinition => provider.GetTypeFromDefinition(reader, (TypeDefinitionHandle)handle, 0),
         HandleKind.TypeReference => provider.GetTypeFromReference(reader, (TypeReferenceHandle)handle, 0),
