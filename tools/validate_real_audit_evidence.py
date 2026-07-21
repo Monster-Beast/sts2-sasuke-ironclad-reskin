@@ -9,24 +9,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_SCOPE_PATH = ROOT / "SasukeIronclad/data/current_beta_card_scope.json"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 METHOD_TOKEN_RE = re.compile(r"^0x06[0-9a-fA-F]{6}$")
-
-TARGET_CARDS: dict[str, tuple[str, ...]] = {
-    "strike": ("StrikeIronclad",),
-    "defend": ("DefendIronclad",),
-    "bash": ("Bash", "BashIronclad"),
-    "anger": ("Anger", "AngerIronclad"),
-    "cleave": ("Cleave", "CleaveIronclad"),
-    "thunderclap": ("Thunderclap", "ThunderClap"),
-    "heavy_blade": ("HeavyBlade", "HeavyBladeIronclad"),
-    "flame_barrier": ("FlameBarrier", "FlameBarrierIronclad"),
-    "whirlwind": ("Whirlwind", "WhirlwindIronclad"),
-    "burning_pact": ("BurningPact", "BurningPactIronclad"),
-    "demon_form": ("DemonForm", "DemonFormIronclad"),
-    "limit_break": ("LimitBreak", "LimitBreakIronclad"),
-    "fiend_fire": ("FiendFire", "FiendFireIronclad"),
-}
 
 REQUIRED_BINDINGS = {
     "card_visual_request",
@@ -56,8 +42,12 @@ def normalized(value: object) -> str:
     return str(value or "").strip()
 
 
-def target_card_coverage(report: dict[str, Any]) -> dict[str, Any]:
-    searchable_types: set[str] = set()
+def card_key(card_id: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", card_id.casefold()).strip("_")
+
+
+def searchable_card_types(report: dict[str, Any]) -> set[str]:
+    values: set[str] = set()
     for symbol in report.get("symbols", []):
         kind = normalized(symbol.get("kind")).lower()
         declaring = normalized(symbol.get("declaringType"))
@@ -65,31 +55,55 @@ def target_card_coverage(report: dict[str, Any]) -> dict[str, Any]:
         if "MegaCrit.Sts2.Core.Models.Cards." not in declaring:
             continue
         if kind == "type":
-            searchable_types.add(declaring)
+            values.add(declaring.split("+", 1)[0])
         else:
-            searchable_types.add(declaring.split("+", 1)[0])
+            values.add(declaring.split("+", 1)[0])
         if name.startswith("MegaCrit.Sts2.Core.Models.Cards."):
-            searchable_types.add(name.split("+", 1)[0])
+            values.add(name.split("+", 1)[0])
+    return values
 
+
+def target_card_coverage(report: dict[str, Any], scope: dict[str, Any]) -> dict[str, Any]:
+    searchable = searchable_card_types(report)
     found: dict[str, list[str]] = {}
     missing: list[str] = []
-    for card_id, aliases in TARGET_CARDS.items():
-        matches = sorted(
-            type_name
-            for type_name in searchable_types
-            if any(type_name.rsplit(".", 1)[-1].casefold() == alias.casefold() for alias in aliases)
-        )
+
+    active_cards = scope.get("active_cards", [])
+    for card in active_cards:
+        card_id = normalized(card.get("card_id"))
+        model_type = normalized(card.get("model_type"))
+        key = card_key(card_id)
+        matches = sorted(type_name for type_name in searchable if type_name == model_type)
         if matches:
-            found[card_id] = matches
+            found[key] = matches
         else:
-            missing.append(card_id)
+            missing.append(key)
+
+    design_only: list[dict[str, Any]] = []
+    unexpectedly_present: list[str] = []
+    for card in scope.get("design_only_absent_cards", []):
+        card_id = normalized(card.get("card_id"))
+        model_type = normalized(card.get("expected_model_type"))
+        present = model_type in searchable
+        if present:
+            unexpectedly_present.append(card_key(card_id))
+        design_only.append(
+            {
+                "card_id": card_id,
+                "expected_model_type": model_type,
+                "present_in_report": present,
+                "reason": normalized(card.get("reason")),
+            }
+        )
 
     return {
-        "required_count": len(TARGET_CARDS),
+        "required_count": len(active_cards),
         "found_count": len(found),
         "complete": not missing,
         "found": found,
         "missing": missing,
+        "design_only_absent_cards": design_only,
+        "unexpectedly_present_design_cards": unexpectedly_present,
     }
 
 
@@ -118,18 +132,75 @@ def validate_hash_linkage(
     return blockers
 
 
+def validate_scope(
+    scope: dict[str, Any],
+    branch: str,
+    build_id: str,
+    assembly_hash: str,
+    mvid: str,
+    baselib_version: str,
+    baselib_hash: str,
+) -> list[dict[str, str]]:
+    blockers: list[dict[str, str]] = []
+    if scope.get("schema_version") != 1:
+        return [{"id": "card_scope_schema", "detail": "unsupported current beta card scope schema"}]
+    if scope.get("status") != "pending_review":
+        blockers.append({"id": "card_scope_status", "detail": "current beta card scope must remain pending_review"})
+    if scope.get("gameplay_changes") is not False:
+        blockers.append({"id": "card_scope_gameplay", "detail": "current beta card scope enables gameplay changes"})
+
+    expected = {
+        "branch": normalized(scope.get("branch")),
+        "steam_build_id": normalized(scope.get("steam_build_id")),
+        "sts2_sha256": normalized(scope.get("fingerprint", {}).get("sts2_sha256")).lower(),
+        "module_mvid": normalized(scope.get("fingerprint", {}).get("module_mvid")).lower(),
+        "baselib_version": normalized(scope.get("fingerprint", {}).get("baselib_version")),
+        "baselib_manifest_sha256": normalized(
+            scope.get("fingerprint", {}).get("baselib_manifest_sha256")
+        ).lower(),
+    }
+    actual = {
+        "branch": branch,
+        "steam_build_id": build_id,
+        "sts2_sha256": assembly_hash,
+        "module_mvid": mvid,
+        "baselib_version": baselib_version,
+        "baselib_manifest_sha256": baselib_hash,
+    }
+    for key, expected_value in expected.items():
+        if expected_value != actual[key]:
+            blockers.append(
+                {
+                    "id": f"card_scope_{key}_mismatch",
+                    "detail": f"audited current beta card scope {key} does not match the supplied report",
+                }
+            )
+
+    active_ids = [normalized(item.get("card_id")) for item in scope.get("active_cards", [])]
+    design_ids = [normalized(item.get("card_id")) for item in scope.get("design_only_absent_cards", [])]
+    if not active_ids or len(active_ids) != len(set(active_ids)):
+        blockers.append({"id": "card_scope_active_cards", "detail": "active card scope is empty or duplicated"})
+    if len(design_ids) != len(set(design_ids)):
+        blockers.append({"id": "card_scope_design_cards", "detail": "design-only card scope is duplicated"})
+    if set(active_ids).intersection(design_ids):
+        blockers.append({"id": "card_scope_overlap", "detail": "active and design-only card scopes overlap"})
+    return blockers
+
+
 def analyze(
     report_path: Path,
     second_report_path: Path,
     comparison_path: Path,
     attestation_path: Path,
     review_path: Path,
+    scope_path: Path = DEFAULT_SCOPE_PATH,
 ) -> dict[str, Any]:
     report = load(report_path)
     second = load(second_report_path)
     comparison = load(comparison_path)
     attestation = load(attestation_path)
     review = load(review_path)
+    scope = load(scope_path)
 
     blockers: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
@@ -204,14 +275,28 @@ def analyze(
             }
         )
 
-    coverage = target_card_coverage(report)
+    blockers.extend(
+        validate_scope(scope, branch, build_id, assembly_hash, mvid, baselib_version, baselib_hash)
+    )
+
+    coverage = target_card_coverage(report, scope)
     if not coverage["complete"]:
         blockers.append(
             {
                 "id": "target_card_coverage_incomplete",
                 "detail": (
-                    f"only {coverage['found_count']}/{coverage['required_count']} target card model types "
-                    "were present in the bounded symbol report"
+                    f"only {coverage['found_count']}/{coverage['required_count']} active current-beta card model "
+                    "types were present in the bounded symbol report"
+                ),
+            }
+        )
+    if coverage["unexpectedly_present_design_cards"]:
+        warnings.append(
+            {
+                "id": "design_only_card_became_available",
+                "detail": (
+                    "design-only cards appeared in the report and the audited current-beta scope should be refreshed: "
+                    + ", ".join(coverage["unexpectedly_present_design_cards"])
                 ),
             }
         )
@@ -270,17 +355,18 @@ def analyze(
             }
         )
 
+    active_count = len(scope.get("active_cards", []))
     card_candidates = review.get("card_id_candidates", [])
     reviewed_card_candidates = [
         item
         for item in card_candidates
         if normalized(item.get("review", {}).get("status")).lower() == "verified"
     ]
-    if len(reviewed_card_candidates) < len(TARGET_CARDS):
+    if len(reviewed_card_candidates) < active_count:
         warnings.append(
             {
                 "id": "card_id_review_pending",
-                "detail": f"{len(reviewed_card_candidates)}/{len(TARGET_CARDS)} target card IDs have verified review evidence",
+                "detail": f"{len(reviewed_card_candidates)}/{active_count} active card IDs have verified review evidence",
             }
         )
 
@@ -313,6 +399,12 @@ def analyze(
             "same_symbols": comparison.get("sameSymbols") is True,
             "same_assets": comparison.get("sameAssets") is True,
         },
+        "card_scope": {
+            "path": str(scope_path.relative_to(ROOT)).replace("\\", "/") if scope_path.is_relative_to(ROOT) else scope_path.name,
+            "status": normalized(scope.get("status")),
+            "active_count": active_count,
+            "design_only_count": len(scope.get("design_only_absent_cards", [])),
+        },
         "target_card_coverage": coverage,
         "binding_review": {
             "required_count": len(REQUIRED_BINDINGS),
@@ -329,6 +421,7 @@ def analyze(
             "comparison": digest(comparison_path),
             "attestation": digest(attestation_path),
             "review": digest(review_path),
+            "card_scope": digest(scope_path),
         },
     }
 
@@ -341,7 +434,8 @@ def markdown(result: dict[str, Any]) -> str:
         f"- Pending-review profile allowed: `{result['can_create_pending_review_profile']}`",
         f"- Runtime profile allowed: `{result['can_create_runtime_profile']}`",
         f"- Branch/build: `{result['fingerprint']['branch']} / {result['fingerprint']['steam_build_id']}`",
-        f"- Target card coverage: `{result['target_card_coverage']['found_count']}/{result['target_card_coverage']['required_count']}`",
+        f"- Active card coverage: `{result['target_card_coverage']['found_count']}/{result['target_card_coverage']['required_count']}`",
+        f"- Design-only unavailable cards: `{result['card_scope']['design_only_count']}`",
         f"- BaseLib: `{result['fingerprint']['baselib_version'] or 'missing'}`",
         "",
     ]
@@ -355,8 +449,16 @@ def markdown(result: dict[str, Any]) -> str:
         lines.append("")
     missing = result["target_card_coverage"]["missing"]
     if missing:
-        lines.extend(["## Missing target card coverage", ""])
+        lines.extend(["## Missing active card coverage", ""])
         lines.extend(f"- `{card_id}`" for card_id in missing)
+        lines.append("")
+    design_only = result["target_card_coverage"]["design_only_absent_cards"]
+    if design_only:
+        lines.extend(["## Preserved design-only cards", ""])
+        lines.extend(
+            f"- `{item['card_id']}`: absent from this audited beta; animation design remains preserved"
+            for item in design_only
+        )
         lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -368,6 +470,7 @@ def main() -> int:
     parser.add_argument("--comparison", type=Path, required=True)
     parser.add_argument("--latest-beta-attestation", type=Path, required=True)
     parser.add_argument("--review", type=Path, required=True)
+    parser.add_argument("--card-scope", type=Path, default=DEFAULT_SCOPE_PATH)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--strict", action="store_true")
     args = parser.parse_args()
@@ -378,6 +481,7 @@ def main() -> int:
         args.comparison,
         args.latest_beta_attestation,
         args.review,
+        args.card_scope,
     )
     args.output.mkdir(parents=True, exist_ok=True)
     json_path = args.output / "audit-readiness.json"
@@ -389,6 +493,7 @@ def main() -> int:
     print(
         f"{marker} status={result['status']} "
         f"cards={result['target_card_coverage']['found_count']}/{result['target_card_coverage']['required_count']} "
+        f"design_only={result['card_scope']['design_only_count']} "
         f"baselib={result['fingerprint']['baselib_version'] or 'missing'} output={json_path}"
     )
     if args.strict and result["status"] == "blocked":
