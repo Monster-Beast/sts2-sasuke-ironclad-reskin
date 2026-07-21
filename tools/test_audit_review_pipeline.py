@@ -85,11 +85,12 @@ def main() -> int:
         report_path = root / "audit-report.json"
         comparison_path = root / "audit-comparison.json"
         contract_path = root / "contract.json"
+        attestation_path = root / "latest-beta-attestation.json"
         review_path = root / "binding-review.json"
         report = {
             "schemaVersion": 1,
             "session": "run-1",
-            "branch": "stable",
+            "branch": "public-beta",
             "game": {
                 "steamBuildId": "123456",
                 "sts2AssemblySha256": "a" * 64,
@@ -109,15 +110,30 @@ def main() -> int:
             "required_visual_events": visual_ids,
             "required_title_surfaces": title_ids,
         }
+        attestation = {
+            "schema_version": 1,
+            "app_id": "2868840",
+            "required_branch": "public-beta",
+            "installed_branch": "public-beta",
+            "installed_build_id": "123456",
+            "remote_build_id": "123456",
+            "is_latest": True,
+            "status": "verified",
+            "checked_at_utc": "2026-07-21T00:00:00+00:00",
+            "source": "steamcmd_app_info_print",
+            "steamcmd_output_sha256": "b" * 64,
+        }
         report_path.write_text(json.dumps(report), encoding="utf-8")
         comparison_path.write_text(json.dumps(comparison), encoding="utf-8")
         contract_path.write_text(json.dumps(contract), encoding="utf-8")
+        attestation_path.write_text(json.dumps(attestation), encoding="utf-8")
 
         review = review_module.build_review(
             report_path,
             comparison_path,
             contract_path,
             ROOT / "tools/game_audit/binding-review-rules.json",
+            attestation_path,
         )
         assert len(review["bindings"]) == 12
         assert len(review["card_id_candidates"]) == 2
@@ -126,10 +142,13 @@ def main() -> int:
         assert all(candidate["kind"] == "method" for binding in review["bindings"] for candidate in binding["candidates"])
         assert all(binding["review"]["selected_candidate_id"] == "" for binding in review["bindings"])
         assert review["policy"]["auto_selection_forbidden"] is True
+        assert review["policy"]["latest_public_beta_required"] is True
+        assert review["latest_beta"]["remote_build_id"] == "123456"
+        assert review["fingerprint"]["branch"] == "public-beta"
 
         approve(review)
         review_path.write_text(json.dumps(review), encoding="utf-8")
-        compiled = compile_module.build_profile(review, review_path, "stable-fixture")
+        compiled = compile_module.build_profile(review, review_path, "public-beta-fixture")
         assert compiled["status"] == "pending_review"
         assert compiled["profile"]["status"] == "pending_review"
         assert len(compiled["profile"]["visual_bindings"]) == 6
@@ -172,7 +191,23 @@ def main() -> int:
         else:
             raise AssertionError("non-method metadata target was accepted")
 
-    print("AUDIT_REVIEW_PIPELINE_OK bindings=12 card_ids=2 methoddef_only=true status=pending_review")
+        stale_attestation = dict(attestation)
+        stale_attestation["remote_build_id"] = "123457"
+        attestation_path.write_text(json.dumps(stale_attestation), encoding="utf-8")
+        try:
+            review_module.build_review(
+                report_path,
+                comparison_path,
+                contract_path,
+                ROOT / "tools/game_audit/binding-review-rules.json",
+                attestation_path,
+            )
+        except SystemExit as exc:
+            assert "does not match" in str(exc)
+        else:
+            raise AssertionError("stale beta build was accepted")
+
+    print("AUDIT_REVIEW_PIPELINE_OK bindings=12 card_ids=2 methoddef_only=true latest_beta=true status=pending_review")
     return 0
 
 
