@@ -18,6 +18,15 @@
     "observed_global_x": 480,
     "observed_global_y": 740
   },
+  "additional_observations": {
+    "candidate_counts_seen": [2, 3],
+    "candidate_count_is_identity_invariant": false,
+    "stable_anchor_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals",
+    "stable_anchor_name": "Ironclad",
+    "stable_local_player_reference_count": 1,
+    "replacement_activation_confirmed": true,
+    "unsupported_card_restoration_confirmed": true
+  },
   "approved_calibration": {
     "anchor_scale": 1.2,
     "anchor_offset_x": 0.0,
@@ -36,6 +45,7 @@
   "limitations": [
     "The calibration was visually approved on one local display and UI-scale setup.",
     "Other resolutions and UI scales must retain explicit offset and scale overrides.",
+    "The scene-wide candidate count is diagnostic and may vary as transient combat nodes are created; anchor identity is established by the exact local Player reference, type and name instead.",
     "This review authorizes a replacement canary only; it does not authorize production bindings."
   ]
 }
