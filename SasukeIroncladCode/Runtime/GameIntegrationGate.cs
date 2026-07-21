@@ -76,6 +76,8 @@ public static class GameIntegrationGate
             return new(false, false, profile.Id, reasons);
         }
 
+        if (!IsNewestKnownBetaProfile(contract, profile, reasons))
+            return new(false, false, profile.Id, reasons);
         if (!IsFreshLatestBetaProfile(profile, contract.Policy, runtime, now, reasons))
             return new(false, false, profile.Id, reasons);
 
@@ -107,6 +109,38 @@ public static class GameIntegrationGate
         string.Equals(profile.Fingerprint.Sts2Sha256, runtime.Sts2Sha256, StringComparison.OrdinalIgnoreCase) &&
         string.Equals(profile.Fingerprint.ModuleMvid, runtime.ModuleMvid, StringComparison.OrdinalIgnoreCase) &&
         string.Equals(profile.Fingerprint.BaseLibVersion, runtime.BaseLibVersion, StringComparison.Ordinal);
+
+    private static bool IsNewestKnownBetaProfile(
+        GameIntegrationContractMap contract,
+        GameIntegrationProfile selected,
+        List<string> reasons)
+    {
+        ulong selectedBuild = ParseBuildId(selected.BetaAttestation.RemoteBuildId, selected.Id);
+        ulong newestBuild = contract.Profiles
+            .Where(profile => string.Equals(
+                profile.Branch,
+                contract.Policy.RequiredBranch,
+                StringComparison.OrdinalIgnoreCase))
+            .Select(profile => ParseBuildId(profile.BetaAttestation.RemoteBuildId, profile.Id))
+            .Max();
+
+        if (selectedBuild != newestBuild)
+        {
+            reasons.Add(
+                $"Profile {selected.Id} build {selectedBuild} is superseded by a newer known " +
+                $"{contract.Policy.RequiredBranch} build {newestBuild}."
+            );
+            return false;
+        }
+        return true;
+    }
+
+    private static ulong ParseBuildId(string value, string profileId)
+    {
+        if (!ulong.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out ulong buildId) || buildId == 0)
+            throw new InvalidOperationException($"Integration profile {profileId} has an invalid Steam buildid.");
+        return buildId;
+    }
 
     private static bool IsFreshLatestBetaProfile(
         GameIntegrationProfile profile,
@@ -234,6 +268,7 @@ public static class GameIntegrationGate
             {
                 throw new InvalidOperationException($"Integration profile {profile.Id} lacks a valid latest-beta fingerprint.");
             }
+            ParseBuildId(profile.Fingerprint.SteamBuildId, profile.Id);
             if (profile.BetaAttestation.Status is not ("verified" or "pending_review") ||
                 !string.Equals(profile.BetaAttestation.Branch, contract.Policy.RequiredBranch, StringComparison.Ordinal) ||
                 !string.Equals(profile.BetaAttestation.InstalledBuildId, profile.Fingerprint.SteamBuildId, StringComparison.Ordinal) ||
@@ -243,6 +278,7 @@ public static class GameIntegrationGate
             {
                 throw new InvalidOperationException($"Integration profile {profile.Id} lacks a valid latest-beta attestation.");
             }
+            ParseBuildId(profile.BetaAttestation.RemoteBuildId, profile.Id);
             if (!fingerprintKeys.Add(FingerprintKey(profile)))
                 throw new InvalidOperationException($"Duplicate build fingerprint in integration profile {profile.Id}.");
 
