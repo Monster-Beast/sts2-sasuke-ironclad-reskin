@@ -23,7 +23,8 @@
     "anchor_offset_x": 0.0,
     "anchor_offset_y": -150.0,
     "approval_source": "local_visual_review",
-    "approved_at_utc": "2026-07-21T20:55:00Z"
+    "approved_at_utc": null,
+    "approval_time_note": "The conversation recorded approval after iterative local adjustment but did not provide an exact UTC timestamp."
   },
   "safety": {
     "exact_build_only": true,
