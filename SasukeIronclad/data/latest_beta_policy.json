@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "app_id": "2868840",
+  "required_branch": "public-beta",
+  "tracking_mode": "rolling_latest",
+  "remote_build_source": "steamcmd_app_info_print",
+  "latest_known_patch": "0.108.0",
+  "latest_known_patch_date": "2026-07-02",
+  "max_attestation_age_hours": 72,
+  "profile_must_match_attested_build": true,
+  "stale_profiles_disabled": true,
+  "runtime_network_checks": false,
+  "status": "remote_build_attestation_required"
+}
