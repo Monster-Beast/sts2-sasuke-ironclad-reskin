@@ -2,11 +2,11 @@
 param(
     [string]$GamePath = "",
     [string]$AssetRoot = "",
-    [ValidateSet("stable", "beta", "unknown")]
     [string]$Branch = "stable",
     [string]$OutputRoot = "local-audit",
     [string]$MegaDotVersion = "4.5.1",
-    [switch]$SingleRun
+    [switch]$SingleRun,
+    [switch]$SkipReviewWorkbook
 )
 
 $ErrorActionPreference = "Stop"
@@ -72,10 +72,49 @@ function Invoke-GameAudit {
     }
 }
 
+function Invoke-AuditReviewWorkbook {
+    param(
+        [string]$ReportPath,
+        [string]$ComparisonPath,
+        [string]$OutputDirectory
+    )
+
+    $reviewScript = Join-Path $PSScriptRoot "build_audit_review.py"
+    $pythonCommand = $null
+    $pythonPrefix = @()
+    if (Get-Command python -ErrorAction SilentlyContinue) {
+        $pythonCommand = "python"
+    }
+    elseif (Get-Command py -ErrorAction SilentlyContinue) {
+        $pythonCommand = "py"
+        $pythonPrefix = @("-3")
+    }
+    elseif (Get-Command python3 -ErrorAction SilentlyContinue) {
+        $pythonCommand = "python3"
+    }
+
+    if (-not $pythonCommand) {
+        Write-Warning "未检测到 Python；跳过候选审阅表。可稍后手动运行 tools/build_audit_review.py。"
+        return
+    }
+
+    $arguments = @($pythonPrefix) + @(
+        $reviewScript,
+        "--report", $ReportPath,
+        "--comparison", $ComparisonPath,
+        "--output", $OutputDirectory
+    )
+    & $pythonCommand @arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "生成候选审阅表失败，退出码：$LASTEXITCODE"
+    }
+}
+
 $resolvedGamePath = Resolve-Sts2GamePath -ExplicitPath $GamePath
 $run1 = Join-Path $OutputRoot "run-1"
 $run2 = Join-Path $OutputRoot "run-2"
 $comparison = Join-Path $OutputRoot "comparison"
+$review = Join-Path $OutputRoot "review"
 
 Invoke-GameAudit -ResolvedGamePath $resolvedGamePath -Session "run-1" -OutputDirectory $run1
 Write-Host "第一次审计已完成：$run1" -ForegroundColor Green
@@ -88,9 +127,12 @@ Read-Host "请完整启动并退出一次游戏，确认相同 Mod/分支环境�
 Invoke-GameAudit -ResolvedGamePath $resolvedGamePath -Session "run-2" -OutputDirectory $run2
 
 $project = Join-Path $PSScriptRoot "game_audit\SasukeIronclad.GameAudit.csproj"
+$firstReport = Join-Path $run1 "audit-report.json"
+$secondReport = Join-Path $run2 "audit-report.json"
+$comparisonJson = Join-Path $comparison "audit-comparison.json"
 & dotnet run --project $project --configuration Release -- compare `
-    --first (Join-Path $run1 "audit-report.json") `
-    --second (Join-Path $run2 "audit-report.json") `
+    --first $firstReport `
+    --second $secondReport `
     --output $comparison
 
 if ($LASTEXITCODE -ne 0) {
@@ -98,4 +140,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "两次独立审计一致：$comparison\audit-comparison.md" -ForegroundColor Green
-Write-Host "不要提交 local-audit 目录；只把确认后的元数据填入 docs/technical/local-asset-audit.md。"
+if (-not $SkipReviewWorkbook) {
+    Invoke-AuditReviewWorkbook `
+        -ReportPath $firstReport `
+        -ComparisonPath $comparisonJson `
+        -OutputDirectory $review
+    if (Test-Path (Join-Path $review "binding-review.md")) {
+        Write-Host "候选审阅表已生成：$review\binding-review.md" -ForegroundColor Green
+    }
+}
+Write-Host "不要提交 $OutputRoot；审阅结果在真实游戏验证完成前必须保持 pending_review。" -ForegroundColor Yellow
