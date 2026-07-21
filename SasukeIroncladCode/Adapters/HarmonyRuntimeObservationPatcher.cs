@@ -51,7 +51,7 @@ public sealed class HarmonyRuntimeObservationPatcher : IRuntimeObservationPatche
             RuntimeObservationPatchBridge.Reset();
             try
             {
-                harmony.UnpatchSelf();
+                harmony.UnpatchAll(HarmonyId);
             }
             catch
             {
@@ -69,7 +69,7 @@ public sealed class HarmonyRuntimeObservationPatcher : IRuntimeObservationPatche
         RuntimeObservationSession? session = Interlocked.Exchange(ref _session, null);
         try
         {
-            harmony?.UnpatchSelf();
+            harmony?.UnpatchAll(HarmonyId);
         }
         catch
         {
