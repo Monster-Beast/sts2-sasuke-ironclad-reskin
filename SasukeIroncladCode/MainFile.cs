@@ -32,6 +32,7 @@ public partial class MainFile : Node
         VisualRegistry.Initialize();
         EnsureObservationResetHook();
         ObservationStatus = EvaluateRuntimeObservation();
+        RuntimeObservationLocalFiles.WriteStatus(typeof(MainFile).Assembly.Location, ObservationStatus);
         IntegrationStatus = EvaluateGameIntegration();
         GD.Print($"[{ModId}] mappings={VisualRegistry.CardCount}; timelines={VisualRegistry.CardAnimationCount}; names={VisualRegistry.CardNameCount}.");
         GD.Print(
