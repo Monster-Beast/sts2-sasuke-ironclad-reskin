@@ -11,7 +11,7 @@ releases/
 extracted/
 recovered_project/
 game_assets/
-local-audit/
+local-audit*/
 audit-output/
 observation-output/
 runtime-observation-review/
