@@ -2,7 +2,7 @@
 
 《杀戮尖塔 2》战士（Ironclad）的佐助主题**纯视觉美化 Mod**。
 
-> 当前阶段：可运行灰盒表现系统、显示名称重构与游戏接口审计。仓库不包含任何从《火影忍者》《杀戮尖塔 2》或其他 Mod 中提取的图片、音频、动画、字体、代码或游戏文件。
+> 当前阶段：可运行灰盒表现系统、显示名称重构、双次本地游戏审计与精确版本接口接入准备。仓库不包含任何从《火影忍者》《杀戮尖塔 2》或其他 Mod 中提取的图片、音频、动画、字体、代码或游戏文件。
 
 ## 不改变游戏效果
 
@@ -31,8 +31,10 @@ v0.1 默认采用疾风传前中期 / Hebi 时期佐助：草薙剑、写轮眼�
 - 13 张首批卡牌的独立灰盒时间轴；
 - 中英文佐助卡牌显示名、六种标题显示面和卡面生产 Brief；
 - 100 次播放/取消压力测试和战斗结束资源释放测试；
-- 不执行游戏程序集的本地版本、资源与方法签名审计工具；
-- 精确 build 指纹安全门：没有已验证 Profile 时所有真实游戏绑定保持关闭。
+- 两次独立本地扫描、卡牌 ID 元数据候选和接口候选审阅工作台；
+- 精确 Steam buildid、程序集 SHA-256、MVID、BaseLib 和分支安全门；
+- 正式 Binding 仅允许 MethodDef Token，并在安装前再次解析声明类型和签名；
+- 未审计版本、未审核 Profile 或未注册适配器默认完全禁用。
 
 ## 当前 13 张灰盒时间轴
 
@@ -85,15 +87,16 @@ CHAR_STATE_OK state='' terminal=false form=''
 
 ## 本地游戏审计
 
-审计工具位于 `tools/game_audit`，只读取托管元数据和文件元数据：
+审计器只读取托管元数据与文件元数据：
 
 - 不加载或执行 `sts2.dll`；
 - 不复制 PCK、DLL、贴图或恢复工程；
 - 输出程序集 SHA-256、MVID、Steam buildid、BaseLib 版本；
-- 输出候选类型/方法签名、Metadata Token；
+- 输出候选类型、方法、字段、属性、事件、Metadata Token 和安全的元数据常量；
 - 输出候选资源的相对路径、大小、图片尺寸和可选 SHA-256；
-- 自动比较两次独立运行，避免把一次性或错误结果当成已验证接口；
-- 报告不会包含本机游戏安装目录或恢复目录的绝对路径。
+- 自动比较两次独立运行；
+- 比较一致后自动生成不选择任何目标的候选审阅表；
+- 报告不包含本机游戏安装目录或恢复目录的绝对路径。
 
 Windows：
 
@@ -104,16 +107,27 @@ powershell -ExecutionPolicy Bypass -File .\tools\run-game-audit.ps1 `
   -Branch stable
 ```
 
-Linux / macOS：
+Linux/macOS：
 
 ```bash
 chmod +x tools/run-game-audit.sh
 ./tools/run-game-audit.sh \
-  "$HOME/.local/share/Steam/steamapps/common/Slay the Spire 2" \
-  "$HOME/STS2-recovered"
+  --game-path "$HOME/.local/share/Steam/steamapps/common/Slay the Spire 2" \
+  --asset-root "$HOME/STS2-recovered" \
+  --branch stable
 ```
 
-结果写入已被 Git 忽略的 `local-audit/`。详细规则与填写表见 [`docs/technical/local-asset-audit.md`](docs/technical/local-asset-audit.md)。
+脚本会执行：
+
+```text
+run-1
+→ 提示完整启动并退出一次游戏
+→ run-2
+→ equivalent 比较
+→ binding-review.json / binding-review.md
+```
+
+结果保存在已被 Git 忽略的 `local-audit/`。候选审阅、MethodDef 约束和 `pending_review` Profile 流程见 [`docs/technical/audit-binding-review.md`](docs/technical/audit-binding-review.md)。
 
 ## 游戏绑定安全门
 
@@ -124,13 +138,15 @@ chmod +x tools/run-game-audit.sh
 "profiles": []
 ```
 
-因此现在不会绑定任何猜测的 Harmony 目标。只有某个 Profile 同时精确匹配以下信息，且全部必需视觉事件与六种标题显示面均标记为 `verified`，运行时才允许启用对应适配器：
+`MainFile` 不再全局执行 `Harmony.PatchAll()`。只有同时满足以下条件才可能进入安装器：
 
-```text
-branch + Steam buildid + sts2.dll SHA-256 + Module MVID + BaseLib version
-```
+- Contract、Profile 和所需 Binding 均为 `verified`；
+- Steam buildid、`sts2.dll` SHA-256、MVID、BaseLib 和分支完全一致；
+- Binding 是 `0x06` MethodDef；
+- MethodDef 再次解析出的声明类型和完整签名与审阅结果一致；
+- 实际适配器已显式注册。
 
-任何不匹配、缺失或未验证项都会保留原游戏动画与原标题。
+当前默认适配器会拒绝安装。因此即使配置被误改为 `verified`，也不会安装未经开发和回归的游戏 Hook。任何不匹配、缺失或未验证项都会保留原游戏动画与原标题。
 
 ## 自动验证
 
@@ -144,6 +160,8 @@ python tools/test_demon_form_contract.py
 python tools/test_character_state_contract.py
 python tools/test_runtime_safety_contract.py
 python tools/test_game_integration_contract.py
+python tools/test_game_integration_startup.py
+python tools/test_audit_review_pipeline.py
 ```
 
 GitHub Actions 还会：
@@ -151,23 +169,24 @@ GitHub Actions 还会：
 - 使用独立 Godot.NET.Sdk 4.5.1 / .NET 9 工程编译 Runtime、Adapters 和 Visuals 层；
 - 使用 Godot 4.5.1 headless 导入全部 `.gd`、`.tscn`；
 - 真实执行四个运行时测试场景；
-- 编译并运行本地游戏审计工具的双扫描脱敏自测；
-- 将解析、编译和场景日志保存为 Artifact；
+- 编译并执行本地审计器、精确版本安全门和 MethodDef 解析行为矩阵；
+- 解析 Bash 与 PowerShell 审计脚本；
+- 生成不自动选择候选的审阅表；
 - 将脚本错误、运行期 `ERROR:` 和 ObjectDB 泄漏视为失败。
 
 ## 目录
 
 ```text
 SasukeIronclad/                 Godot 场景、脚本、时间轴和视觉配置
-SasukeIroncladCode/             C# 选择器、播放服务、Godot 适配器和未来 Hook
+SasukeIroncladCode/             C# 选择器、播放服务、精确版本安全门和未来 Hook
 SasukeIronclad/data/            卡牌动画、显示名、标题显示面、卡面 Brief 和集成契约
 docs/design                     动画、卡面、命名和完整表现矩阵
 docs/research                   外部项目和官方设定研究
-docs/technical                  架构、环境、资源和符号审计
+docs/technical                  架构、环境、资源、接口审计和复核流程
 art/                            原创美术源文件与导出目录
 animation/                      原创动画源文件、事件表与导出目录
 tools/game_audit                当前安装版本的元数据审计 CLI
-tools/                          仓库校验、Godot 和 .NET 契约测试
+tools/                          仓库校验、Godot/.NET 测试和本地审计工具
 ```
 
 ## 本地开发环境
@@ -176,7 +195,8 @@ tools/                          仓库校验、Godot 和 .NET 契约测试
 - .NET SDK 9；
 - MegaDot / Godot Mono 4.5.1；
 - BaseLib；
-- Rider 或 Visual Studio。
+- Rider 或 Visual Studio；
+- Python 3，用于自动生成审阅表；没有 Python 时两次 .NET 审计仍可完成。
 
 修改 `Directory.Build.props` 中的路径：
 
@@ -196,13 +216,14 @@ dotnet publish
 ## 仍需完成
 
 1. 在当前 Stable/Beta 安装版本执行两次本地审计；
-2. 核验原始 card_id、人物节点、命中、状态移除、战斗结束和卡牌标题 UI；
-3. 将确认结果手工写入集成 Profile，只对精确 build 启用绑定；
-4. 扩展完整 Ironclad 卡池名称、卡面和逐卡动画；
-5. 替换正式原创人物 Rig、卡面、VFX 和非战斗立绘；
-6. 完成真实游戏、多人和多 Mod 验证。
+2. 核验完整 Ironclad 卡牌 ID、资源路径与人物节点；
+3. 观察并审阅 impact、状态移除、战斗结束和六种标题 UI 方法；
+4. 为精确版本实现实际适配器，并通过 MethodDef 二次解析；
+5. 完成真实游戏、回退、多人和多 Mod 回归后，人工晋级 Profile；
+6. 扩展完整卡池名称、卡面和专属动画；
+7. 替换正式原创人物 Rig、卡面、VFX 和非战斗立绘。
 
-参见 [`ROADMAP.md`](ROADMAP.md)、[`docs/design/card-renaming-system.md`](docs/design/card-renaming-system.md) 和 [`docs/design/graybox-runtime.md`](docs/design/graybox-runtime.md)。
+参见 [`ROADMAP.md`](ROADMAP.md)、[`docs/design/card-renaming-system.md`](docs/design/card-renaming-system.md)、[`docs/design/graybox-runtime.md`](docs/design/graybox-runtime.md) 和 [`docs/technical/audit-binding-review.md`](docs/technical/audit-binding-review.md)。
 
 ## 非官方声明
 
