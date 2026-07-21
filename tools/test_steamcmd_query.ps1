@@ -4,8 +4,6 @@ Set-StrictMode -Version Latest
 $toolsDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $toolsDirectory "steamcmd-query.ps1")
 
-$pythonCommand = (Get-Command python -ErrorAction Stop).Source
-$guardScript = Join-Path $toolsDirectory "latest_beta_guard.py"
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("sasuke-steamcmd-query-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
@@ -39,8 +37,6 @@ exit 7
     $result = Invoke-SteamCmdBetaQuery `
         -SteamCmdPath $goodSteamCmd `
         -OutputPath $goodOutput `
-        -PythonCommand $pythonCommand `
-        -GuardScript $guardScript `
         -Branch "public-beta"
 
     if ($result.RemoteBuildId -ne "24251656") {
@@ -69,8 +65,6 @@ exit 7
         Invoke-SteamCmdBetaQuery `
             -SteamCmdPath $badSteamCmd `
             -OutputPath (Join-Path $tempRoot "bad-output.txt") `
-            -PythonCommand $pythonCommand `
-            -GuardScript $guardScript `
             -Branch "public-beta" | Out-Null
     }
     catch {
