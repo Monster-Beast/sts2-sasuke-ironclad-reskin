@@ -23,8 +23,9 @@ internal static class AdditionalSafetyTests
             "form_removed", "combat_ended", "character_state"
         ];
         string[] titleIds = ["card_art", "hand", "deck_list", "reward", "compendium", "tooltip"];
+        DateTimeOffset now = DateTimeOffset.UtcNow;
         RuntimeBuildFingerprint runtime = new(
-            "stable",
+            "public-beta",
             "654321",
             new string('c', 64),
             "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
@@ -41,6 +42,16 @@ internal static class AdditionalSafetyTests
                 Sts2Sha256 = runtime.Sts2Sha256,
                 ModuleMvid = runtime.ModuleMvid,
                 BaseLibVersion = runtime.BaseLibVersion,
+            },
+            BetaAttestation = new GameBetaAttestationSpec
+            {
+                Status = "verified",
+                Branch = "public-beta",
+                InstalledBuildId = runtime.SteamBuildId,
+                RemoteBuildId = runtime.SteamBuildId,
+                CheckedAtUtc = now.ToString("O"),
+                Source = "steamcmd_app_info_print",
+                SteamCmdOutputSha256 = new string('e', 64),
             },
             VisualBindings = visualIds.Select((id, index) => new GameVisualBindingSpec
             {
@@ -72,12 +83,17 @@ internal static class AdditionalSafetyTests
                 UnverifiedBindingsDisabled = true,
                 FallbackToOriginalOnMismatch = true,
                 MultiplayerLocalVisualsOnly = true,
+                RequiredBranch = "public-beta",
+                LatestBetaOnly = true,
+                RemoteBetaAttestationRequired = true,
+                StaleProfilesDisabled = true,
+                MaxBetaAttestationAgeHours = 72,
             },
             RequiredVisualEvents = visualIds.ToList(),
             RequiredTitleSurfaces = titleIds.ToList(),
             Profiles = [profile],
         };
-        GameIntegrationDecision decision = GameIntegrationGate.Evaluate(contract, runtime);
+        GameIntegrationDecision decision = GameIntegrationGate.Evaluate(contract, runtime, now);
         if (!decision.EnableVisualBindings || decision.EnableTitleBindings)
             throw new InvalidOperationException("A non-MethodDef title token was not rejected independently.");
     }
@@ -174,13 +190,23 @@ internal static class AdditionalSafetyTests
     {
         Id = $"resolver-{mvid:N}",
         Status = "verified",
-        Branch = "fixture",
+        Branch = "public-beta",
         Fingerprint = new GameBuildFingerprintSpec
         {
             SteamBuildId = "fixture",
             Sts2Sha256 = new string('d', 64),
             ModuleMvid = mvid.ToString("D"),
             BaseLibVersion = "fixture",
+        },
+        BetaAttestation = new GameBetaAttestationSpec
+        {
+            Status = "verified",
+            Branch = "public-beta",
+            InstalledBuildId = "fixture",
+            RemoteBuildId = "fixture",
+            CheckedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+            Source = "steamcmd_app_info_print",
+            SteamCmdOutputSha256 = new string('f', 64),
         },
         VisualBindings =
         [
