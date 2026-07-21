@@ -10,20 +10,24 @@ function Get-SteamCmdBranchBuildId {
     )
 
     $branchPattern = '(?s)"' + [Regex]::Escape($Branch) + '"\s*\{(?<body>.*?)\}'
-    $branchMatch = [Regex]::Match($Content, $branchPattern, [Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    if (-not $branchMatch.Success) {
-        return ""
-    }
-
-    $buildMatch = [Regex]::Match(
-        $branchMatch.Groups["body"].Value,
-        '"buildid"\s+"(?<build>[0-9]+)"',
+    $branchMatches = [Regex]::Matches(
+        $Content,
+        $branchPattern,
         [Text.RegularExpressions.RegexOptions]::IgnoreCase
     )
-    if (-not $buildMatch.Success) {
-        return ""
+
+    foreach ($branchMatch in $branchMatches) {
+        $buildMatch = [Regex]::Match(
+            $branchMatch.Groups["body"].Value,
+            '"buildid"\s+"(?<build>[0-9]+)"',
+            [Text.RegularExpressions.RegexOptions]::IgnoreCase
+        )
+        if ($buildMatch.Success) {
+            return $buildMatch.Groups["build"].Value
+        }
     }
-    return $buildMatch.Groups["build"].Value
+
+    return ""
 }
 
 function Invoke-SteamCmdBetaQuery {
