@@ -26,6 +26,7 @@ internal sealed class AuditQuery
     public string Id { get; init; } = string.Empty;
     public List<string> TypeContains { get; init; } = [];
     public List<string> MethodContains { get; init; } = [];
+    public List<string> MemberContains { get; init; } = [];
     public List<string> AssetContains { get; init; } = [];
 }
 
@@ -79,6 +80,7 @@ internal sealed class SymbolCandidate
     public string Signature { get; init; } = string.Empty;
     public string MetadataToken { get; init; } = string.Empty;
     public string Visibility { get; init; } = string.Empty;
+    public string? ConstantValue { get; init; }
     public int Score { get; init; }
     public List<string> Categories { get; init; } = [];
 }
