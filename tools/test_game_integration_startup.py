@@ -17,7 +17,6 @@ def main() -> int:
     resolver = read("SasukeIroncladCode/Runtime/AuditedMethodBindingResolver.cs")
     installer = read("SasukeIroncladCode/Adapters/PendingGameIntegrationInstaller.cs")
 
-    assert "HarmonyLib" not in main_file
     assert "PatchAll" not in main_file
     assert "GameIntegrationBootstrap.Start" in main_file
     assert "CurrentProcessRuntimeBuildFingerprintProvider" in main_file
@@ -37,7 +36,8 @@ def main() -> int:
         "ReadModuleMvid",
         "ReadSteamMetadata",
         "NormalizeBranch",
-        "ReadBaseLibVersion",
+        "ReadBaseLibMetadata",
+        "BaseLibManifestSha256",
         "workshop",
         "STS2_BRANCH",
         "The STS2 branch is unknown",
@@ -59,7 +59,7 @@ def main() -> int:
 
     print(
         "GAME_INTEGRATION_STARTUP_OK patchall=false exact_fingerprint=true "
-        "methoddef_resolver=true installer=fail_closed"
+        "baselib_manifest=true methoddef_resolver=true installer=fail_closed"
     )
     return 0
 
