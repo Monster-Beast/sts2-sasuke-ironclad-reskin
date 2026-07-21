@@ -103,7 +103,9 @@ def main():
         if animation['presentation_tier'] not in tier_ids: die(f"unknown tier for {animation['card_id']}")
         if animation.get('unique_timeline') is not True: die(f"card lacks unique timeline: {animation['card_id']}")
         if animation.get('damage_role')!='variant_parameter_only': die(f"damage selects base animation for {animation['card_id']}")
-        if animation.get('hit_sync')!='original_hit_events': die(f"hit timing is not original-bound for {animation['card_id']}")
+        expected_hit_sync='original_hit_events' if animation.get('is_damage_card') else 'timeline_local_events'
+        if animation.get('hit_sync')!=expected_hit_sync:
+            die(f"invalid impact synchronization for {animation['card_id']}: expected {expected_hit_sync}")
         if animation.get('fallback')!='original': die(f"invalid fallback for {animation['card_id']}")
         if len(animation.get('sequence',[]))<3: die(f"animation sequence is not rich enough: {animation['card_id']}")
         if animation.get('is_damage_card') and not required_damage_variants <= set(animation.get('variants',[])):
