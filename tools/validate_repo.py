@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import json, sys, xml.etree.ElementTree as ET
+import json, re, sys, xml.etree.ElementTree as ET
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
+
 
 def die(msg:str):
     print(f"ERROR: {msg}")
     raise SystemExit(1)
 
+
 def load(path:str):
     try: return json.loads((ROOT/path).read_text(encoding='utf-8'))
     except Exception as exc: die(f"invalid JSON {path}: {exc}")
+
 
 def unique(items, key, label):
     values=[item[key] for item in items]
     if len(values)!=len(set(values)): die(f"duplicate {label}")
     return set(values)
+
 
 def main():
     required=[
@@ -23,6 +27,7 @@ def main():
         'SasukeIronclad/data/card_visual_map.json','SasukeIronclad/data/card_animation_manifest.json',
         'SasukeIronclad/data/card_name_overrides.json','SasukeIronclad/data/action_profiles.json',
         'SasukeIronclad/data/presentation_tiers.json','SasukeIronclad/data/presentation_surfaces.json',
+        'SasukeIronclad/data/current_beta_card_scope.json',
         'docs/design/presentation-matrix.md','docs/design/card-specific-animation-system.md',
         'docs/design/card-renaming-system.md','docs/research/reference-chizuru-ironclad.md'
     ]
@@ -39,13 +44,15 @@ def main():
     actions=load('SasukeIronclad/data/action_profiles.json')
     tiers=load('SasukeIronclad/data/presentation_tiers.json')
     surfaces=load('SasukeIronclad/data/presentation_surfaces.json')
+    beta_scope=load('SasukeIronclad/data/current_beta_card_scope.json')
     if cards.get('schema_version')!=2: die('unsupported card schema')
     if card_animations.get('schema_version')!=1: die('unsupported card animation schema')
     if card_names.get('schema_version')!=1: die('unsupported card name schema')
     if actions.get('schema_version')!=2: die('unsupported action schema')
     if tiers.get('schema_version')!=2: die('unsupported tier schema')
     if surfaces.get('schema_version')!=1: die('unsupported surface schema')
-    if any(item.get('gameplay_changes') is not False for item in (cards,card_animations,card_names,tiers)):
+    if beta_scope.get('schema_version')!=1: die('unsupported current beta card scope schema')
+    if any(item.get('gameplay_changes') is not False for item in (cards,card_animations,card_names,tiers,beta_scope)):
         die('visual configuration declares gameplay changes')
     if actions.get('gameplay_timing_locked') is not True: die('action timing must remain locked')
 
@@ -117,6 +124,29 @@ def main():
             die(f"damage card does not require a special animation: {card['card_id']}")
         if card['legal_status']!='original_required': die(f"invalid legal status for {card['card_id']}")
 
+    if beta_scope.get('status')!='pending_review': die('current beta card scope must remain pending_review')
+    if beta_scope.get('branch')!='public-beta': die('current beta card scope must target public-beta')
+    if not str(beta_scope.get('steam_build_id','')).isdigit(): die('current beta card scope buildid is invalid')
+    fingerprint=beta_scope.get('fingerprint',{})
+    for key in ['sts2_sha256','baselib_manifest_sha256']:
+        if not re.fullmatch(r'[0-9a-f]{64}',str(fingerprint.get(key,''))): die(f'current beta card scope {key} is invalid')
+    if not fingerprint.get('module_mvid') or not fingerprint.get('baselib_version'):
+        die('current beta card scope fingerprint is incomplete')
+    active_ids=unique(beta_scope.get('active_cards',[]),'card_id','active beta card')
+    design_ids=unique(beta_scope.get('design_only_absent_cards',[]),'card_id','design-only beta card')
+    if active_ids & design_ids: die('active and design-only beta card scopes overlap')
+    if active_ids | design_ids != card_ids: die('current beta scope does not partition the card visual map')
+    for item in beta_scope.get('active_cards',[]):
+        if not str(item.get('model_type','')).startswith('MegaCrit.Sts2.Core.Models.Cards.'):
+            die(f"invalid active model type for {item['card_id']}")
+    for item in beta_scope.get('design_only_absent_cards',[]):
+        if not str(item.get('expected_model_type','')).startswith('MegaCrit.Sts2.Core.Models.Cards.') or not item.get('reason'):
+            die(f"invalid design-only evidence for {item['card_id']}")
+    evidence=beta_scope.get('evidence',{})
+    if evidence.get('two_runs_equivalent') is not True: die('current beta scope lacks equivalent two-run evidence')
+    for key in ['run_1_sha256','run_2_sha256','comparison_sha256','attestation_sha256','binding_review_sha256']:
+        if not re.fullmatch(r'[0-9a-f]{64}',str(evidence.get(key,''))): die(f'current beta scope evidence {key} is invalid')
+
     name_ids=unique(card_names['cards'],'card_id','card name override')
     normal_name_ids={item['card_id'] for item in card_names['cards'] if item.get('card_kind')=='normal'}
     if normal_name_ids != card_ids: die('normal card names do not cover current card map')
@@ -146,7 +176,12 @@ def main():
     damage_count=sum(1 for card in cards['cards'] if card['is_damage_card'])
     bespoke_count=sum(1 for animation in card_animations['animations'] if animation['animation_mode']=='bespoke')
     derived_names=sum(1 for item in card_names['cards'] if item.get('card_kind')=='derived')
-    print(f"OK: {len(card_ids)} card timelines ({damage_count} damage, {bespoke_count} bespoke), {len(name_ids)} display names ({derived_names} derived), {len(action_ids)} primitives, {len(tier_ids)} tiers, {len(surface_ids)} surfaces.")
+    print(
+        f"OK: {len(card_ids)} card timelines ({len(active_ids)} active beta, {len(design_ids)} design-only; "
+        f"{damage_count} damage, {bespoke_count} bespoke), {len(name_ids)} display names ({derived_names} derived), "
+        f"{len(action_ids)} primitives, {len(tier_ids)} tiers, {len(surface_ids)} surfaces."
+    )
     return 0
+
 
 if __name__=='__main__': sys.exit(main())
