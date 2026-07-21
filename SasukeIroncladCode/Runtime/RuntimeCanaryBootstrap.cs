@@ -87,7 +87,15 @@ public static class RuntimeCanaryBootstrap
             if (gate.AnimationsEnabled)
             {
                 reasons.Add("The Sasuke overlay remains hidden until a unique local-player combat visual anchor is resolved from a local card-play callback.");
-                reasons.Add("The original Ironclad visual remains visible during this anchor canary and is never hidden or modified.");
+                if (optIn.HideOriginalVisual)
+                {
+                    reasons.Add("Replacement mode hides only the exact reviewed local Ironclad NCreatureVisuals node after a Sasuke timeline starts successfully.");
+                    reasons.Add("Any playback fallback, anchor loss, combat teardown or Mod disposal requests immediate restoration of the captured original visibility.");
+                }
+                else
+                {
+                    reasons.Add("Overlay mode leaves the original Ironclad visual visible and unchanged.");
+                }
             }
             reasons.Add("Demon Form animation, form removal and character-state presentation remain disabled pending targeted evidence.");
             return new(
