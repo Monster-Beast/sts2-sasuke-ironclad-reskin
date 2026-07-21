@@ -6,7 +6,12 @@
     "exact_build_fingerprint_required": true,
     "unverified_bindings_disabled": true,
     "fallback_to_original_on_mismatch": true,
-    "multiplayer_local_visuals_only": true
+    "multiplayer_local_visuals_only": true,
+    "required_branch": "public-beta",
+    "latest_beta_only": true,
+    "remote_beta_attestation_required": true,
+    "stale_profiles_disabled": true,
+    "max_beta_attestation_age_hours": 72
   },
   "required_visual_events": [
     "card_visual_request",
