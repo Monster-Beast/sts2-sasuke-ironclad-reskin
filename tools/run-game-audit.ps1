@@ -8,6 +8,7 @@ param(
     [string]$MegaDotVersion = "4.5.1",
     [string]$SteamCmdPath = "",
     [string]$SteamCmdOutput = "",
+    [string]$PythonPath = "",
     [switch]$SingleRun,
     [switch]$SkipReviewWorkbook
 )
@@ -47,20 +48,6 @@ function Resolve-Sts2GamePath {
     }
 
     throw "Slay the Spire 2 was not found. Supply the installation directory with -GamePath."
-}
-
-function Resolve-PythonCommand {
-    foreach ($candidate in @(
-        @{ Name = "python"; Prefix = @() },
-        @{ Name = "py"; Prefix = @("-3") },
-        @{ Name = "python3"; Prefix = @() }
-    )) {
-        $command = Get-Command $candidate.Name -ErrorAction SilentlyContinue
-        if ($command -and $command.Source) {
-            return @{ Command = $command.Source; Prefix = $candidate.Prefix }
-        }
-    }
-    throw "Latest-beta validation requires Python 3, but python, py, and python3 were not found."
 }
 
 function Resolve-SteamCmd {
@@ -108,10 +95,10 @@ function Write-CapturedResult {
 function Invoke-LatestBetaGuard {
     param(
         [string]$ResolvedGamePath,
-        [string]$ResolvedOutputRoot
+        [string]$ResolvedOutputRoot,
+        [object]$Python
     )
 
-    $python = Resolve-PythonCommand
     $guardScript = Join-Path $PSScriptRoot "latest_beta_guard.py"
     $betaDirectory = Join-Path $ResolvedOutputRoot "latest-beta"
     New-Item -ItemType Directory -Force -Path $betaDirectory | Out-Null
@@ -133,7 +120,7 @@ function Invoke-LatestBetaGuard {
     }
 
     $attestation = Join-Path $betaDirectory "attestation.json"
-    $arguments = @($python.Prefix) + @(
+    $arguments = @($Python.Prefix) + @(
         $guardScript,
         "verify",
         "--game-path", $ResolvedGamePath,
@@ -141,7 +128,7 @@ function Invoke-LatestBetaGuard {
         "--output", $attestation,
         "--required-branch", "public-beta"
     )
-    $guardResult = Invoke-CapturedNativeProcess -FilePath $python.Command -Arguments $arguments
+    $guardResult = Invoke-CapturedNativeProcess -FilePath $Python.Command -Arguments $arguments
     Write-CapturedResult -Result $guardResult
 
     if ($guardResult.ExitCode -ne 0) {
@@ -165,7 +152,7 @@ function Invoke-LatestBetaGuard {
             $detail = ($capturedDetail | ForEach-Object { ([string]$_).Trim() }) -join " | "
         }
         if (-not $detail) {
-            $detail = "Python exited with code $($guardResult.ExitCode) without output; executable=$($python.Command)"
+            $detail = "Python exited with code $($guardResult.ExitCode) without output; executable=$($Python.Command)"
         }
         throw (
             "The local game is not the current Steam public-beta. " +
@@ -208,24 +195,22 @@ function Invoke-AuditReviewWorkbook {
         [string]$ReportPath,
         [string]$ComparisonPath,
         [string]$OutputDirectory,
-        [string]$LatestBetaAttestation
+        [string]$LatestBetaAttestation,
+        [object]$Python
     )
 
-    $python = Resolve-PythonCommand
     $reviewScript = Join-Path $PSScriptRoot "build_audit_review.py"
-    $arguments = @($python.Prefix) + @(
+    $arguments = @($Python.Prefix) + @(
         $reviewScript,
         "--report", $ReportPath,
         "--comparison", $ComparisonPath,
         "--latest-beta-attestation", $LatestBetaAttestation,
         "--output", $OutputDirectory
     )
-    $reviewResult = Invoke-CapturedNativeProcess -FilePath $python.Command -Arguments $arguments
+    $reviewResult = Invoke-CapturedNativeProcess -FilePath $Python.Command -Arguments $arguments
     Write-CapturedResult -Result $reviewResult
     if ($reviewResult.ExitCode -ne 0) {
-        $detail = @($reviewResult.StandardOutput, $reviewResult.StandardError) `
-            | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
-        throw "Audit review workbook generation failed with exit code $($reviewResult.ExitCode): $($detail -join ' | ')"
+        throw "Audit review workbook generation failed with exit code $($reviewResult.ExitCode)."
     }
 }
 
@@ -240,7 +225,17 @@ if (-not [string]::IsNullOrWhiteSpace($AssetRoot)) {
     }
     $AssetRoot = (Resolve-Path -LiteralPath $AssetRoot).Path
 }
+$resolvedPython = Resolve-Python3Command -ExplicitPath $PythonPath
+$pythonPrefixText = (@($resolvedPython.Prefix) -join " ").Trim()
+$pythonDisplay = if ($pythonPrefixText) {
+    "$($resolvedPython.Command) $pythonPrefixText"
+}
+else {
+    $resolvedPython.Command
+}
+
 Write-Host "Actual game audit path: $resolvedGamePath" -ForegroundColor Cyan
+Write-Host "Using Python $($resolvedPython.Version): $pythonDisplay" -ForegroundColor Cyan
 if ($AssetRoot) {
     Write-Host "Recovered asset path: $AssetRoot" -ForegroundColor Cyan
 }
@@ -248,7 +243,10 @@ else {
     Write-Host "No AssetRoot supplied; only resources visible in the installed game directory will be scanned." -ForegroundColor Yellow
 }
 
-$latestBetaAttestation = Invoke-LatestBetaGuard -ResolvedGamePath $resolvedGamePath -ResolvedOutputRoot $OutputRoot
+$latestBetaAttestation = Invoke-LatestBetaGuard `
+    -ResolvedGamePath $resolvedGamePath `
+    -ResolvedOutputRoot $OutputRoot `
+    -Python $resolvedPython
 $run1 = Join-Path $OutputRoot "run-1"
 $run2 = Join-Path $OutputRoot "run-2"
 $comparison = Join-Path $OutputRoot "comparison"
@@ -262,7 +260,10 @@ if ($SingleRun) {
 }
 
 Read-Host "Launch and fully exit the public-beta game once. Confirm Steam and the Mod environment did not change, then press Enter"
-Invoke-LatestBetaGuard -ResolvedGamePath $resolvedGamePath -ResolvedOutputRoot $OutputRoot | Out-Null
+Invoke-LatestBetaGuard `
+    -ResolvedGamePath $resolvedGamePath `
+    -ResolvedOutputRoot $OutputRoot `
+    -Python $resolvedPython | Out-Null
 Invoke-GameAudit -ResolvedGamePath $resolvedGamePath -Session "run-2" -OutputDirectory $run2
 
 $project = Join-Path $PSScriptRoot "game_audit\SasukeIronclad.GameAudit.csproj"
@@ -284,7 +285,8 @@ if (-not $SkipReviewWorkbook) {
         -ReportPath $firstReport `
         -ComparisonPath $comparisonJson `
         -OutputDirectory $review `
-        -LatestBetaAttestation $latestBetaAttestation
+        -LatestBetaAttestation $latestBetaAttestation `
+        -Python $resolvedPython
     if (Test-Path (Join-Path $review "binding-review.md")) {
         Write-Host "Candidate review workbook generated: $review\binding-review.md" -ForegroundColor Green
     }
