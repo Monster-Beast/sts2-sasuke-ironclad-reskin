@@ -37,9 +37,10 @@ jobs:
         run: dotnet build tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj --configuration Release --no-restore
       - name: Validate disabled-until-audited integration contract
         run: python tools/test_game_integration_contract.py
-      - name: Validate startup and review pipeline contracts
+      - name: Validate startup, latest-beta and review pipeline contracts
         run: |
           python tools/test_game_integration_startup.py
+          python tools/test_latest_beta_guard.py
           python tools/test_audit_review_pipeline.py
       - name: Execute exact-build integration gate matrix
         run: |
@@ -47,6 +48,8 @@ jobs:
           dotnet run --project tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj \
             --configuration Release --no-build | tee integration-gate-test.log
           grep -q "INTEGRATION_GATE_OK" integration-gate-test.log
+          grep -q "stable=false" integration-gate-test.log
+          grep -q "stale=false" integration-gate-test.log
           grep -q "bootstrap=true" integration-gate-test.log
           grep -q "collector=true" integration-gate-test.log
           grep -q "fail_closed=true" integration-gate-test.log
@@ -61,36 +64,98 @@ jobs:
           grep -q '"constantValue": "STRIKE"' audit-output/self-test/first/audit-report.json
           grep -q '"kind": "event"' audit-output/self-test/first/audit-report.json
           grep -q '"kind": "property"' audit-output/self-test/first/audit-report.json
+      - name: Build latest public-beta fixture attestation
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('audit-output/self-test')
+          manifest = root / 'fixture/steamapps/appmanifest_2868840.acf'
+          manifest.write_text('''"AppState"
+          {
+            "appid" "2868840"
+            "buildid" "999999"
+            "UserConfig"
+            {
+              "BetaKey" "public-beta"
+            }
+          }
+          ''', encoding='utf-8')
+          steamcmd = root / 'steamcmd-app-info.txt'
+          steamcmd.write_text('''AppID : 2868840
+          "2868840"
+          {
+            "depots"
+            {
+              "branches"
+              {
+                "public"
+                {
+                  "buildid" "888888"
+                }
+                "public-beta"
+                {
+                  "buildid" "999999"
+                }
+              }
+            }
+          }
+          ''', encoding='utf-8')
+          report_path = root / 'first/audit-report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8'))
+          report['branch'] = 'public-beta'
+          (root / 'first/latest-beta-audit-report.json').write_text(
+              json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          PY
+          python tools/latest_beta_guard.py verify \
+            --game-path "audit-output/self-test/fixture/steamapps/common/Slay the Spire 2" \
+            --steamcmd-output audit-output/self-test/steamcmd-app-info.txt \
+            --output audit-output/self-test/latest-beta-attestation.json \
+            --required-branch public-beta \
+            | tee latest-beta-guard.log
+          grep -q "LATEST_BETA_OK" latest-beta-guard.log
+          grep -q '"is_latest": true' audit-output/self-test/latest-beta-attestation.json
       - name: Generate pending-review profile template
         run: |
           set -o pipefail
           python tools/create_integration_profile.py \
-            --report audit-output/self-test/first/audit-report.json \
+            --report audit-output/self-test/first/latest-beta-audit-report.json \
             --comparison audit-output/self-test/comparison/audit-comparison.json \
+            --latest-beta-attestation audit-output/self-test/latest-beta-attestation.json \
             --output audit-output/self-test/integration-profile-template.json \
             | tee profile-template.log
           grep -q "INTEGRATION_PROFILE_TEMPLATE_OK" profile-template.log
-          grep -q '"status": "pending_review"' audit-output/self-test/integration-profile-template.json
-          if grep -q '"status": "verified"' audit-output/self-test/integration-profile-template.json; then exit 1; fi
+          python - <<'PY'
+          import json
+          data = json.load(open('audit-output/self-test/integration-profile-template.json', encoding='utf-8'))
+          assert data['profile']['status'] == 'pending_review'
+          assert data['profile']['branch'] == 'public-beta'
+          assert data['profile']['beta_attestation']['status'] == 'verified'
+          assert data['profile']['beta_attestation']['remote_build_id'] == '999999'
+          assert all(item['status'] == 'pending_review' for item in data['profile']['visual_bindings'])
+          assert all(item['status'] == 'pending_review' for item in data['profile']['title_bindings'])
+          PY
       - name: Generate no-auto-selection review workbook
         run: |
           set -o pipefail
           python tools/build_audit_review.py \
-            --report audit-output/self-test/first/audit-report.json \
+            --report audit-output/self-test/first/latest-beta-audit-report.json \
             --comparison audit-output/self-test/comparison/audit-comparison.json \
+            --latest-beta-attestation audit-output/self-test/latest-beta-attestation.json \
             --output audit-output/self-test/review \
             | tee audit-review.log
           grep -q "AUDIT_REVIEW_OK" audit-review.log
           grep -q '"auto_selection_forbidden": true' audit-output/self-test/review/binding-review.json
+          grep -q '"latest_public_beta_required": true' audit-output/self-test/review/binding-review.json
           grep -q '"selected_candidate_id": ""' audit-output/self-test/review/binding-review.json
           grep -q '"constant_value": "STRIKE"' audit-output/self-test/review/binding-review.json
-          if grep -q '"kind": "property"' audit-output/self-test/review/binding-review.json; then
-            python - <<'PY'
+          python - <<'PY'
           import json
           data = json.load(open('audit-output/self-test/review/binding-review.json', encoding='utf-8'))
+          assert data['latest_beta']['remote_build_id'] == '999999'
           assert all(c['kind'] == 'method' for b in data['bindings'] for c in b['candidates'])
           PY
-          fi
       - name: Upload metadata-only self-test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -99,14 +164,17 @@ jobs:
           path: |
             integration-gate-test.log
             audit-self-test.log
+            latest-beta-guard.log
             profile-template.log
             audit-review.log
             audit-output/self-test/first/audit-report.json
+            audit-output/self-test/first/latest-beta-audit-report.json
             audit-output/self-test/first/audit-report.md
             audit-output/self-test/first/audit-fingerprint.json
             audit-output/self-test/second/audit-report.json
             audit-output/self-test/comparison/audit-comparison.json
             audit-output/self-test/comparison/audit-comparison.md
+            audit-output/self-test/latest-beta-attestation.json
             audit-output/self-test/integration-profile-template.json
             audit-output/self-test/review/binding-review.json
             audit-output/self-test/review/binding-review.md
