@@ -5,30 +5,35 @@
       "id": "cards",
       "typeContains": ["Card", "Ironclad"],
       "methodContains": ["Card", "Model", "Id", "Upgrade", "Transform"],
+      "memberContains": ["Card", "Id", "Key", "Slug", "Strike", "Defend", "Bash", "Ironclad"],
       "assetContains": ["ironclad", "strike", "defend", "bash", "card"]
     },
     {
       "id": "visuals",
       "typeContains": ["Animation", "Player", "Combat", "Visual"],
       "methodContains": ["Play", "Animate", "Impact", "Visual", "Block"],
+      "memberContains": ["Animation", "Impact", "Hit", "Visual", "Character", "Player"],
       "assetContains": ["animation", "spine", "atlas", "character", "combat", "effect"]
     },
     {
       "id": "titles",
       "typeContains": ["Hand", "Deck", "Reward", "Compendium", "Tooltip", "Localization"],
       "methodContains": ["Name", "Title", "Text", "Local", "Render", "Refresh"],
+      "memberContains": ["Name", "Title", "Text", "Hand", "Deck", "Reward", "Compendium", "Tooltip"],
       "assetContains": ["localization", "hand", "deck", "reward", "compendium", "tooltip"]
     },
     {
       "id": "lifecycle",
       "typeContains": ["Combat", "Power", "Status", "Player"],
       "methodContains": ["End", "Remove", "Apply", "Dispose", "Victory", "Start", "Reset"],
+      "memberContains": ["End", "Remove", "Expire", "Dispose", "Victory", "Death", "State", "Form"],
       "assetContains": ["combat", "power", "status", "victory"]
     },
     {
       "id": "audit_fixture",
       "typeContains": ["Audit"],
       "methodContains": ["Scan", "Compare", "Write"],
+      "memberContains": ["Fixture", "Card", "Impact", "Title", "Removed", "Ended", "State"],
       "assetContains": ["audit_fixture"]
     }
   ]
