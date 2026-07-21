@@ -57,11 +57,16 @@ def main() -> int:
         empowered = select_animation_id(card, final_damage=999, hit_count=99, strength=99)
         assert base == high_damage == many_hits == empowered, card_id
 
+        assert card["unique_timeline"] is True, card_id
+        assert card["hit_sync"] == "original_hit_events", card_id
+        assert card["damage_role"] == "variant_parameter_only", card_id
         if card["is_damage_card"]:
-            assert card["unique_timeline"] is True, card_id
             assert {"base", "low_flash"}.issubset(card["variants"]), card_id
-            assert card["hit_sync"] == "original_hit_events", card_id
-            assert card["damage_role"] == "variant_parameter_only", card_id
+
+    non_damage_cards = {
+        "Defend", "Flame Barrier", "Burning Pact", "Demon Form", "Limit Break"
+    }
+    assert {card_id for card_id, card in cards.items() if not card["is_damage_card"]} == non_damage_cards
 
     animation_ids = [card["animation_id"] for card in cards.values()]
     assert len(animation_ids) == len(set(animation_ids)), "animation_id values must be unique"
@@ -94,18 +99,24 @@ def main() -> int:
     assert "SelectContentVariant" in selector_source
     assert "FastMode = context.FastMode" in selector_source
     assert "LowFlashMode = context.LowFlashMode" in selector_source
+    assert "RequiresOriginalImpactSync = spec.IsDamageCard && string.Equals" in selector_source
+    assert '"original_hit_events"' in selector_source
     assert "return CardAnimationVariant.LowFlash" not in selector_source
     assert "return CardAnimationVariant.Fast" not in selector_source
 
     host_source = (ROOT / "SasukeIroncladCode/Adapters/GodotVisualSceneHost.cs").read_text(encoding="utf-8")
     assert '["fast_mode"] = selection.FastMode' in host_source
     assert '["low_flash"] = selection.LowFlashMode' in host_source
+    assert '["external_impact_sync"] = selection.RequiresOriginalImpactSync' in host_source
+    assert '["external_impact_sync"] = true' not in host_source
 
     director_source = (ROOT / "SasukeIronclad/scripts/runtime/animation_director.gd").read_text(encoding="utf-8")
     for contract in ["_is_fast_mode", "_is_low_flash_mode", "content_scale * fast_scale"]:
         assert contract in director_source
 
-    print(f"OK: animation identity and layered card-local presentation invariants hold for {len(cards)} timelines.")
+    print(
+        f"OK: animation identity, layered presentation and damage-only original-impact sync hold for {len(cards)} timelines."
+    )
     return 0
 
 
