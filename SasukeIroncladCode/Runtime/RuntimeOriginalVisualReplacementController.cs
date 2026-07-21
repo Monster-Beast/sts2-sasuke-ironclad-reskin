@@ -77,19 +77,26 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
         if (!originalVisible)
             return Fail("The original Ironclad visual was already hidden by the game or another Mod; replacement remains disabled.");
 
+        // Register the restore target before attempting concealment. If the
+        // engine setter throws after changing state, the catch path can still
+        // restore the captured original visibility.
+        _target = target;
+        _active = true;
         try
         {
             target.Visible = false;
             if (target.Visible)
+            {
+                Restore("hide_not_accepted");
                 return Fail("The original Ironclad visual did not accept the canary visibility change.");
+            }
         }
         catch
         {
+            Restore("hide_threw");
             return Fail("The original Ironclad visual could not be hidden safely.");
         }
 
-        _target = target;
-        _active = true;
         _everHidden = true;
         _lastTransition = "original_visual_hidden_after_verified_overlay_playback";
         AddReason("The exact local Ironclad NCreatureVisuals node was hidden after a reviewed Sasuke timeline started successfully.");
@@ -105,9 +112,7 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
         Node2D? target = _target;
         if (target is null || !GodotObject.IsInstanceValid(target) || !target.IsInsideTree())
         {
-            _active = false;
-            _target = null;
-            _lastTransition = "target_left_scene_tree";
+            Restore("target_left_scene_tree");
             AddReason("The hidden Ironclad visual left the scene tree; replacement was deactivated.");
             return false;
         }
@@ -119,8 +124,7 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
         }
         catch
         {
-            _active = false;
-            _lastTransition = "target_visibility_read_failed";
+            Restore("target_visibility_read_failed");
             AddReason("The hidden Ironclad visibility state became unreadable; replacement was deactivated.");
             return false;
         }
