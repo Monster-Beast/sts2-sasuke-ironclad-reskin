@@ -12,6 +12,7 @@ internal static class AdditionalSafetyTests
     {
         VerifyNonMethodTokenIsRejected();
         VerifyBetaBranchAndWorkshopBaseLibDetection();
+        VerifyAuditedMethodResolution();
     }
 
     private static void VerifyNonMethodTokenIsRejected()
@@ -120,5 +121,84 @@ internal static class AdditionalSafetyTests
             if (Directory.Exists(root))
                 Directory.Delete(root, recursive: true);
         }
+    }
+
+    private static void VerifyAuditedMethodResolution()
+    {
+        Assembly assembly = Assembly.GetExecutingAssembly();
+        MethodInfo method = typeof(AdditionalSafetyTests).GetMethod(
+            nameof(AuditedResolverTarget),
+            BindingFlags.Static | BindingFlags.NonPublic
+        ) ?? throw new InvalidOperationException("Resolver test method was not found.");
+        string signature = AuditedMethodBindingResolver.FormatMethodSignature(method);
+        GameIntegrationProfile profile = CreateResolverProfile(
+            assembly.ManifestModule.ModuleVersionId,
+            method,
+            signature
+        );
+        GameIntegrationDecision decision = new(
+            EnableVisualBindings: true,
+            EnableTitleBindings: false,
+            ProfileId: profile.Id,
+            Reasons: ["fixture"]
+        );
+
+        AuditedMethodResolutionResult resolved = AuditedMethodBindingResolver.Resolve(assembly, profile, decision);
+        if (!resolved.Success || resolved.Methods.Count != 1 || resolved.Methods[0].Method != method)
+            throw new InvalidOperationException("Exact audited MethodDef did not resolve.");
+
+        GameIntegrationProfile badSignature = CreateResolverProfile(
+            assembly.ManifestModule.ModuleVersionId,
+            method,
+            signature.Replace("int)", "string)", StringComparison.Ordinal)
+        );
+        AuditedMethodResolutionResult signatureFailure = AuditedMethodBindingResolver.Resolve(
+            assembly,
+            badSignature,
+            decision with { ProfileId = badSignature.Id }
+        );
+        if (signatureFailure.Success || signatureFailure.Methods.Count != 0)
+            throw new InvalidOperationException("A mismatched method signature was accepted.");
+
+        GameIntegrationProfile badMvid = CreateResolverProfile(Guid.NewGuid(), method, signature);
+        AuditedMethodResolutionResult mvidFailure = AuditedMethodBindingResolver.Resolve(
+            assembly,
+            badMvid,
+            decision with { ProfileId = badMvid.Id }
+        );
+        if (mvidFailure.Success || mvidFailure.Methods.Count != 0)
+            throw new InvalidOperationException("A mismatched module MVID was accepted.");
+    }
+
+    private static GameIntegrationProfile CreateResolverProfile(Guid mvid, MethodInfo method, string signature) => new()
+    {
+        Id = $"resolver-{mvid:N}",
+        Status = "verified",
+        Branch = "fixture",
+        Fingerprint = new GameBuildFingerprintSpec
+        {
+            SteamBuildId = "fixture",
+            Sts2Sha256 = new string('d', 64),
+            ModuleMvid = mvid.ToString("D"),
+            BaseLibVersion = "fixture",
+        },
+        VisualBindings =
+        [
+            new GameVisualBindingSpec
+            {
+                Id = "card_visual_request",
+                DeclaringType = method.DeclaringType?.FullName ?? string.Empty,
+                MethodSignature = signature,
+                MetadataToken = $"0x{method.MetadataToken:X8}",
+                Status = "verified",
+                Fallback = "original_visual",
+            }
+        ],
+        TitleBindings = [],
+    };
+
+    private static void AuditedResolverTarget(int impactIndex)
+    {
+        _ = impactIndex;
     }
 }
