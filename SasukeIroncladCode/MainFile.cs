@@ -131,6 +131,7 @@ public partial class MainFile : Node
                 new CurrentProcessRuntimeBuildFingerprintProvider(),
                 gameAssembly,
                 CanaryPatcher,
+                modAssemblyPath,
                 observationEnabled);
         }
         catch (Exception exception)
