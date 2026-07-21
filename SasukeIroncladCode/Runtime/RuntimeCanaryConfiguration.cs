@@ -63,6 +63,10 @@ public sealed class RuntimeCanaryOptIn
     [JsonPropertyName("enable_titles")] public bool EnableTitles { get; init; } = true;
     [JsonPropertyName("low_flash")] public bool LowFlash { get; init; } = true;
     [JsonPropertyName("fast_mode")] public bool FastMode { get; init; }
+    [JsonPropertyName("anchor_to_local_player")] public bool AnchorToLocalPlayer { get; init; } = true;
+    [JsonPropertyName("anchor_scale")] public float AnchorScale { get; init; } = 1.0f;
+    [JsonPropertyName("anchor_offset_x")] public float AnchorOffsetX { get; init; }
+    [JsonPropertyName("anchor_offset_y")] public float AnchorOffsetY { get; init; }
 }
 
 public sealed class CurrentBetaCardScopeMap
@@ -90,5 +94,26 @@ public sealed class RuntimeCanaryStatusDocument
     [JsonPropertyName("animations_enabled")] public bool AnimationsEnabled { get; init; }
     [JsonPropertyName("titles_enabled")] public bool TitlesEnabled { get; init; }
     [JsonPropertyName("patched_binding_ids")] public IReadOnlyList<string> PatchedBindingIds { get; init; } = [];
+    [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
+}
+
+public sealed class RuntimeCanaryAnchorStatusDocument
+{
+    [JsonPropertyName("schema_version")] public int SchemaVersion { get; init; } = 1;
+    [JsonPropertyName("generated_at_utc")] public string GeneratedAtUtc { get; init; } = string.Empty;
+    [JsonPropertyName("attempted")] public bool Attempted { get; init; }
+    [JsonPropertyName("bound")] public bool Bound { get; init; }
+    [JsonPropertyName("overlay_visible")] public bool OverlayVisible { get; init; }
+    [JsonPropertyName("strategy")] public string Strategy { get; init; } = string.Empty;
+    [JsonPropertyName("candidate_count")] public int CandidateCount { get; init; }
+    [JsonPropertyName("local_player_reference_count")] public int LocalPlayerReferenceCount { get; init; }
+    [JsonPropertyName("anchor_type")] public string? AnchorType { get; init; }
+    [JsonPropertyName("anchor_name")] public string? AnchorName { get; init; }
+    [JsonPropertyName("anchor_global_x")] public float? AnchorGlobalX { get; init; }
+    [JsonPropertyName("anchor_global_y")] public float? AnchorGlobalY { get; init; }
+    [JsonPropertyName("anchor_scale")] public float AnchorScale { get; init; } = 1.0f;
+    [JsonPropertyName("anchor_offset_x")] public float AnchorOffsetX { get; init; }
+    [JsonPropertyName("anchor_offset_y")] public float AnchorOffsetY { get; init; }
+    [JsonPropertyName("original_visual_hidden")] public bool OriginalVisualHidden { get; init; }
     [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
 }
