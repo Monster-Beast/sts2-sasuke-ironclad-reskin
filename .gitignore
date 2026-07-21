@@ -19,6 +19,7 @@ audit-output/
 observation-output/
 runtime-observation-review/
 SasukeIronclad.observe.json
+runtime-observation-status.json
 runtime-observation-*.jsonl
 *.autosave
 *.bak
