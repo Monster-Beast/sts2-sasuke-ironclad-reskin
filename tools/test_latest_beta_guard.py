@@ -26,6 +26,39 @@ def steam_output(public_build: str, beta_build: str) -> str:
 {{
   "depots"
   {{
+    "2868841"
+    {{
+      "manifests"
+      {{
+        "public-beta"
+        {{
+          "gid" "4669006088270458095"
+          "size" "2972630778"
+        }}
+      }}
+    }}
+    "2868842"
+    {{
+      "manifests"
+      {{
+        "public-beta"
+        {{
+          "gid" "7169427731078769081"
+          "size" "2387142857"
+        }}
+      }}
+    }}
+    "2868843"
+    {{
+      "manifests"
+      {{
+        "public-beta"
+        {{
+          "gid" "2369613610653457098"
+          "size" "2159859647"
+        }}
+      }}
+    }}
     "branches"
     {{
       "public"
@@ -84,6 +117,8 @@ def main() -> int:
 
         manifest.write_text(appmanifest("222222", "public-beta"), encoding="utf-8")
         remote.write_text(steam_output("111111", "222222"), encoding="utf-8")
+        assert module.read_remote_build_id(remote) == "222222"
+
         attestation = module.create_attestation(
             game,
             remote,
@@ -115,7 +150,15 @@ def main() -> int:
         remote.write_text(steam_output("111111", "not-a-build"), encoding="utf-8")
         expect_error(module, lambda: module.read_remote_build_id(remote), "missing or invalid")
 
-    print("LATEST_BETA_GUARD_OK branch=public-beta latest=true stale_rejected=true stable_rejected=true")
+        remote.write_text('''"public-beta" { "gid" "123" }
+"public-beta" { "size" "456" }
+''', encoding="utf-8")
+        expect_error(module, lambda: module.read_remote_build_id(remote), "missing or invalid")
+
+    print(
+        "LATEST_BETA_GUARD_OK branch=public-beta latest=true stale_rejected=true "
+        "stable_rejected=true repeated_blocks=true"
+    )
     return 0
 
 
