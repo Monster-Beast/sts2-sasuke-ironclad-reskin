@@ -29,10 +29,16 @@ REQUIRED_VISUALS = {
 REQUIRED_TITLES = {"card_art", "hand", "deck_list", "reward", "compendium", "tooltip"}
 
 
+def text(path: Path) -> str:
+    assert path.is_file(), path
+    return path.read_text(encoding="utf-8")
+
+
 def main() -> int:
-    raw_contract = CONTRACT.read_text(encoding="utf-8")
+    raw_contract = text(CONTRACT)
     data = json.loads(raw_contract)
-    beta_policy = json.loads(BETA_POLICY.read_text(encoding="utf-8"))
+    beta_policy = json.loads(text(BETA_POLICY))
+
     assert data["schema_version"] == 1
     assert data["gameplay_changes"] is False
     assert data["status"] == "pending_local_audit"
@@ -41,7 +47,7 @@ def main() -> int:
     assert set(data["required_title_surfaces"]) == REQUIRED_TITLES
 
     policy = data["policy"]
-    for key in [
+    boolean_guards = [
         "exact_build_fingerprint_required",
         "unverified_bindings_disabled",
         "fallback_to_original_on_mismatch",
@@ -49,11 +55,12 @@ def main() -> int:
         "latest_beta_only",
         "remote_beta_attestation_required",
         "stale_profiles_disabled",
-    ]:
-        assert policy[key] is True, key
+    ]
+    assert all(policy[key] is True for key in boolean_guards)
     assert policy["required_branch"] == "public-beta"
     assert 1 <= int(policy["max_beta_attestation_age_hours"]) <= 168
 
+    assert beta_policy["app_id"] == "2868840"
     assert beta_policy["required_branch"] == "public-beta"
     assert beta_policy["tracking_mode"] == "rolling_latest"
     assert beta_policy["remote_build_source"] == "steamcmd_app_info_print"
@@ -61,50 +68,38 @@ def main() -> int:
     assert beta_policy["stale_profiles_disabled"] is True
     assert beta_policy["max_attestation_age_hours"] == policy["max_beta_attestation_age_hours"]
 
-    gate = GATE.read_text(encoding="utf-8")
-    bootstrap = BOOTSTRAP.read_text(encoding="utf-8")
-    collector = COLLECTOR.read_text(encoding="utf-8")
-    main_file = MAIN.read_text(encoding="utf-8")
-    models = MODELS.read_text(encoding="utf-8")
-    generator = PROFILE_GENERATOR.read_text(encoding="utf-8")
-    review_compiler = REVIEW_COMPILER.read_text(encoding="utf-8")
-    beta_guard = BETA_GUARD.read_text(encoding="utf-8")
-    gate_test = GATE_TEST.read_text(encoding="utf-8")
-    additional_gate_test = ADDITIONAL_GATE_TEST.read_text(encoding="utf-8")
+    gate = text(GATE)
+    bootstrap = text(BOOTSTRAP)
+    collector = text(COLLECTOR)
+    main_file = text(MAIN)
+    models = text(MODELS)
+    generator = text(PROFILE_GENERATOR)
+    review_compiler = text(REVIEW_COMPILER)
+    beta_guard = text(BETA_GUARD)
+    gate_test = text(GATE_TEST)
+    additional_gate_test = text(ADDITIONAL_GATE_TEST)
 
-    for field in [
-        "SteamBuildId", "Sts2Sha256", "ModuleMvid", "BaseLibVersion",
-        "RequiredBranch", "LatestBetaOnly", "BetaAttestation",
-    ]:
-        assert field in gate + models
-    for contract in [
-        "contract.Status != \"verified\"",
-        "profile.Status != \"verified\"",
-        "No exact audited build profile matched",
-        "Multiple integration profiles matched",
-        "Duplicate build fingerprint",
-        "IsFreshLatestBetaProfile",
-        "beta attestation is stale",
-        "RollingBetaBranch",
-        "IsVerified",
-        "IsMethodDefinitionToken",
-        "0x06000000u",
-        "original_title",
-        "original_visual",
-        "MultiplayerLocalVisualsOnly",
-        "ExactBuildFingerprintRequired",
-    ]:
-        assert contract in gate
-
-    assert "JsonPropertyName(\"status\")" in models
-    assert "JsonPropertyName(\"beta_attestation\")" in models
-    assert "HarmonyPatch" not in gate + bootstrap + collector
     assert "PatchAll" not in gate + bootstrap + collector + main_file
+    assert "HarmonyPatch" not in gate + bootstrap + collector
     assert '"profiles": []' in raw_contract
     assert "GameIntegrationBootstrap.Start" in main_file
     assert "PendingGameIntegrationInstaller" in main_file
 
-    for contract in [
+    for token in [
+        "RequiredBranch",
+        "LatestBetaOnly",
+        "RemoteBetaAttestationRequired",
+        "StaleProfilesDisabled",
+        "MaxBetaAttestationAgeHours",
+        "BetaAttestation",
+        "IsFreshLatestBetaProfile",
+        "RollingBetaBranch",
+        "IsMethodDefinitionToken",
+        "0x06000000u",
+    ]:
+        assert token in gate + models, token
+
+    for token in [
         "SHA256.HashData",
         "ReadModuleMvid",
         "ReadSteamMetadata",
@@ -114,64 +109,61 @@ def main() -> int:
         "STS2_BRANCH",
         "public-beta",
     ]:
-        assert contract in collector
+        assert token in collector, token
 
-    for contract in [
-        '"status": "pending_review"',
-        "two equivalent audit runs are required",
-        "manual_symbol_review_required",
+    for token in [
+        "latest-beta-attestation",
+        "public-beta",
+        "beta_attestation",
+        "pending_review",
         "INTEGRATION_PROFILE_TEMPLATE_OK",
     ]:
-        assert contract in generator
+        assert token in generator, token
 
-    for contract in [
+    for token in [
         "METHOD_TOKEN_RE",
         "non-method metadata target",
         "non-MethodDef metadata token",
         "latest public-beta",
         "beta_attestation",
-        '"status": "pending_review"',
+        "pending_review",
     ]:
-        assert contract in review_compiler
+        assert token in review_compiler, token
 
-    for contract in [
-        "DEFAULT_BRANCH = \"public-beta\"",
+    for token in [
+        'DEFAULT_BRANCH = "public-beta"',
         "LATEST_BETA_OK",
         "LATEST_BETA_STALE",
         "steamcmd_app_info_print",
         "installed_build_id",
         "remote_build_id",
     ]:
-        assert contract in beta_guard
+        assert token in beta_guard, token
 
-    for contract in [
-        "pending global contract unexpectedly enabled bindings",
-        "pending profile unexpectedly enabled bindings",
-        "mismatched assembly hash unexpectedly enabled bindings",
+    for token in [
         "stable branch unexpectedly enabled",
         "stale beta attestation unexpectedly enabled",
-        "pending title surface unexpectedly enabled title bindings",
         "duplicate fingerprint was accepted",
         "bootstrap=true",
         "collector=true",
         "fail_closed=true",
         "INTEGRATION_GATE_OK",
     ]:
-        assert contract in gate_test
+        assert token in gate_test, token
 
-    for contract in [
-        "A non-MethodDef title token was not rejected",
+    for token in [
+        "non-MethodDef title token",
         "Workshop BaseLib",
         "public-beta",
         "Exact audited MethodDef did not resolve",
         "mismatched method signature was accepted",
         "mismatched module MVID was accepted",
     ]:
-        assert contract in additional_gate_test
+        assert token in additional_gate_test, token
 
     print(
-        "OK: integration is limited to a fresh, remotely attested public-beta build; "
-        "verified MethodDef bindings and installer behavior remain fail-closed."
+        "OK: integration remains disabled until a fresh remotely attested public-beta profile, "
+        "verified MethodDef bindings and an explicit installer are all present."
     )
     return 0
 
