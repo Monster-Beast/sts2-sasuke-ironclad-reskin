@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="../../SasukeIroncladCode/Runtime/**/*.cs" Link="Runtime/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../../SasukeIroncladCode/Adapters/**/*.cs" Link="Adapters/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../../SasukeIroncladCode/Visuals/**/*.cs" Link="Visuals/%(RecursiveDir)%(Filename)%(Extension)" />
