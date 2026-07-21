@@ -13,6 +13,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "steamcmd-query.ps1")
 
 function Resolve-Sts2GamePath {
     param([string]$ExplicitPath)
@@ -96,6 +97,7 @@ function Invoke-LatestBetaGuard {
     )
 
     $python = Resolve-PythonCommand
+    $guardScript = Join-Path $PSScriptRoot "latest_beta_guard.py"
     $betaDirectory = Join-Path $ResolvedOutputRoot "latest-beta"
     New-Item -ItemType Directory -Force -Path $betaDirectory | Out-Null
     $capturedOutput = Join-Path $betaDirectory "steamcmd-app-info.txt"
@@ -108,14 +110,16 @@ function Invoke-LatestBetaGuard {
     }
     else {
         $steamCmd = Resolve-SteamCmd -ExplicitPath $SteamCmdPath
-        & $steamCmd +login anonymous +app_info_update 1 +app_info_print 2868840 +quit 2>&1 |
-            Tee-Object -FilePath $capturedOutput | Out-Host
-        if ($LASTEXITCODE -ne 0) {
-            throw "SteamCMD 查询 public-beta 失败，退出码：$LASTEXITCODE"
-        }
+        $queryResult = Invoke-SteamCmdBetaQuery `
+            -SteamCmdPath $steamCmd `
+            -OutputPath $capturedOutput `
+            -PythonCommand $python.Command `
+            -PythonPrefix $python.Prefix `
+            -GuardScript $guardScript `
+            -Branch "public-beta"
+        Write-Host "SteamCMD 已解析 public-beta buildid=$($queryResult.RemoteBuildId)" -ForegroundColor Cyan
     }
 
-    $guardScript = Join-Path $PSScriptRoot "latest_beta_guard.py"
     $attestation = Join-Path $betaDirectory "attestation.json"
     $arguments = @($python.Prefix) + @(
         $guardScript,
