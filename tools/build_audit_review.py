@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONTRACT = ROOT / "SasukeIronclad/data/game_integration_contract.json"
 DEFAULT_RULES = ROOT / "tools/game_audit/binding-review-rules.json"
 TOKEN_RE = re.compile(r"^0x[0-9a-fA-F]{8}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+REQUIRED_BETA_BRANCH = "public-beta"
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -51,6 +53,50 @@ def validate_sources(report: dict[str, Any], comparison: dict[str, Any]) -> None
     }
     if not session or session not in sessions:
         raise SystemExit("selected report was not part of the supplied comparison")
+
+
+def validate_latest_beta(
+    report: dict[str, Any],
+    attestation: dict[str, Any],
+) -> dict[str, Any]:
+    if attestation.get("schema_version") != 1:
+        raise SystemExit("unsupported latest beta attestation schema")
+    if attestation.get("status") != "verified" or attestation.get("is_latest") is not True:
+        raise SystemExit("latest beta attestation is not verified")
+
+    required_branch = normalized(attestation.get("required_branch")).lower()
+    installed_branch = normalized(attestation.get("installed_branch")).lower()
+    installed_build = normalized(attestation.get("installed_build_id"))
+    remote_build = normalized(attestation.get("remote_build_id"))
+    report_branch = normalized(report.get("branch")).lower()
+    report_build = normalized(report.get("game", {}).get("steamBuildId"))
+    checked_at = normalized(attestation.get("checked_at_utc"))
+    output_sha = normalized(attestation.get("steamcmd_output_sha256")).lower()
+
+    if required_branch != REQUIRED_BETA_BRANCH or installed_branch != REQUIRED_BETA_BRANCH:
+        raise SystemExit("audit review requires an installed public-beta branch")
+    if report_branch != REQUIRED_BETA_BRANCH:
+        raise SystemExit("audit report branch is not public-beta")
+    if not installed_build.isdigit() or installed_build != remote_build or report_build != remote_build:
+        raise SystemExit("audit report buildid does not match the remotely attested latest public-beta build")
+    if not SHA256_RE.fullmatch(output_sha):
+        raise SystemExit("latest beta attestation lacks a valid SteamCMD output digest")
+    try:
+        parsed_checked_at = datetime.fromisoformat(checked_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise SystemExit("latest beta attestation timestamp is invalid") from exc
+    if parsed_checked_at.tzinfo is None:
+        raise SystemExit("latest beta attestation timestamp must include a timezone")
+
+    return {
+        "required_branch": required_branch,
+        "installed_build_id": installed_build,
+        "remote_build_id": remote_build,
+        "checked_at_utc": parsed_checked_at.astimezone(timezone.utc).isoformat(),
+        "source": normalized(attestation.get("source")),
+        "steamcmd_output_sha256": output_sha,
+        "is_latest": True,
+    }
 
 
 def score_candidate(symbol: dict[str, Any], rule: dict[str, Any]) -> int | None:
@@ -200,12 +246,15 @@ def build_review(
     comparison_path: Path,
     contract_path: Path,
     rules_path: Path,
+    latest_beta_attestation_path: Path,
 ) -> dict[str, Any]:
     report = load(report_path)
     comparison = load(comparison_path)
     contract = load(contract_path)
     rules = load(rules_path)
+    attestation = load(latest_beta_attestation_path)
     validate_sources(report, comparison)
+    latest_beta = validate_latest_beta(report, attestation)
 
     rules_by_id = {normalized(item.get("id")): item for item in rules.get("bindings", [])}
     required: list[tuple[str, str]] = [
@@ -236,6 +285,7 @@ def build_review(
             ),
             "report_sha256": digest(report_path),
             "comparison_sha256": digest(comparison_path),
+            "latest_beta_attestation_sha256": digest(latest_beta_attestation_path),
             "two_runs_equivalent": True,
         },
         "fingerprint": {
@@ -245,11 +295,13 @@ def build_review(
             "module_mvid": normalized(game.get("moduleVersionId")).lower(),
             "baselib_version": normalized(game.get("baseLibVersion")),
         },
+        "latest_beta": latest_beta,
         "policy": {
             "auto_selection_forbidden": True,
             "selected_symbols_must_come_from_report": True,
             "output_bindings_remain_pending_review": True,
             "runtime_observation_required": True,
+            "latest_public_beta_required": True,
         },
         "bindings": bindings,
         "card_id_candidates": build_card_inventory(report),
@@ -260,12 +312,14 @@ def markdown(review: dict[str, Any]) -> str:
     lines = [
         "# 游戏接口候选审阅表",
         "",
-        "> 所有候选仅来自两次一致的本地元数据审计；本文件不会自动选择或启用接口。",
+        "> 所有候选仅来自两次一致的最新 public-beta 本地元数据审计；本文件不会自动选择或启用接口。",
         "",
         f"- 状态：`{review['status']}`",
         f"- 审计 Session：`{review['source']['report_session']}`",
         f"- 分支：`{review['fingerprint']['branch']}`",
         f"- Steam buildid：`{review['fingerprint']['steam_build_id']}`",
+        f"- 远端 public-beta buildid：`{review['latest_beta']['remote_build_id']}`",
+        f"- Beta 校验时间：`{review['latest_beta']['checked_at_utc']}`",
         f"- sts2 SHA-256：`{review['fingerprint']['sts2_sha256']}`",
         "",
     ]
@@ -323,16 +377,23 @@ def markdown(review: dict[str, Any]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Build a no-auto-selection review workbook from equivalent game audit runs."
+        description="Build a no-auto-selection review workbook from equivalent latest-beta audit runs."
     )
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--comparison", type=Path, required=True)
+    parser.add_argument("--latest-beta-attestation", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--contract", type=Path, default=DEFAULT_CONTRACT)
     parser.add_argument("--rules", type=Path, default=DEFAULT_RULES)
     args = parser.parse_args()
 
-    review = build_review(args.report, args.comparison, args.contract, args.rules)
+    review = build_review(
+        args.report,
+        args.comparison,
+        args.contract,
+        args.rules,
+        args.latest_beta_attestation,
+    )
     args.output.mkdir(parents=True, exist_ok=True)
     json_path = args.output / "binding-review.json"
     md_path = args.output / "binding-review.md"
@@ -340,7 +401,8 @@ def main() -> int:
     md_path.write_text(markdown(review), encoding="utf-8")
     print(
         f"AUDIT_REVIEW_OK bindings={len(review['bindings'])} "
-        f"card_candidates={len(review['card_id_candidates'])} output={args.output}"
+        f"card_candidates={len(review['card_id_candidates'])} "
+        f"beta_build={review['latest_beta']['remote_build_id']} output={args.output}"
     )
     return 0
 
