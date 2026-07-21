@@ -33,10 +33,7 @@ internal static class ReportWriter
             .Order()
             .ToList();
 
-        bool sameAssembly = string.Equals(
-            first.Game.Sts2AssemblySha256,
-            second.Game.Sts2AssemblySha256,
-            StringComparison.OrdinalIgnoreCase);
+        bool sameAssembly = string.Equals(first.Game.Sts2AssemblySha256, second.Game.Sts2AssemblySha256, StringComparison.OrdinalIgnoreCase);
         bool sameSteamBuild = string.Equals(first.Game.SteamBuildId, second.Game.SteamBuildId, StringComparison.Ordinal);
         bool sameBaseLib = string.Equals(first.Game.BaseLibVersion, second.Game.BaseLibVersion, StringComparison.Ordinal);
         bool sameSymbols = addedSymbols.Count == 0 && removedSymbols.Count == 0;
@@ -67,9 +64,7 @@ internal static class ReportWriter
         File.WriteAllText(
             Path.Combine(outputDirectory, "audit-comparison.json"),
             JsonSerializer.Serialize(comparison, AuditJsonContext.Default.AuditComparison));
-        File.WriteAllText(
-            Path.Combine(outputDirectory, "audit-comparison.md"),
-            BuildComparisonMarkdown(comparison));
+        File.WriteAllText(Path.Combine(outputDirectory, "audit-comparison.md"), BuildComparisonMarkdown(comparison));
     }
 
     public static AuditReport ReadReport(string path)
@@ -86,10 +81,7 @@ internal static class ReportWriter
         SteamBuildId = report.Game.SteamBuildId,
         BaseLibVersion = report.Game.BaseLibVersion,
         SymbolKeys = report.Symbols.Select(SymbolKey).Order().ToList(),
-        AssetKeys = report.Assets
-            .Select(asset => $"{AssetIdentity(asset)}|{asset.Sha256 ?? asset.HashStatus}")
-            .Order()
-            .ToList(),
+        AssetKeys = report.Assets.Select(asset => $"{AssetIdentity(asset)}|{asset.Sha256 ?? asset.HashStatus}").Order().ToList(),
     };
 
     private static string BuildMarkdown(AuditReport report)
@@ -97,7 +89,7 @@ internal static class ReportWriter
         StringBuilder builder = new();
         builder.AppendLine("# Slay the Spire 2 本地审计报告");
         builder.AppendLine();
-        builder.AppendLine("> 该报告只包含路径、尺寸、哈希和托管元数据签名，不包含游戏资源或反编译源码。");
+        builder.AppendLine("> 该报告只包含路径、尺寸、哈希和托管元数据签名/常量，不包含游戏资源、方法体或反编译源码。");
         builder.AppendLine();
         builder.AppendLine($"- Session：`{Escape(report.Session)}`");
         builder.AppendLine($"- 生成时间：`{report.GeneratedAtUtc:O}`");
@@ -123,12 +115,13 @@ internal static class ReportWriter
 
         builder.AppendLine($"## 候选托管符号（{report.Symbols.Count}）");
         builder.AppendLine();
-        builder.AppendLine("| 分数 | 类别 | Token | 签名 |");
-        builder.AppendLine("|---:|---|---|---|");
-        foreach (SymbolCandidate symbol in report.Symbols.Take(200))
+        builder.AppendLine("| 分数 | 种类 | 类别 | Token | 元数据常量 | 签名 |");
+        builder.AppendLine("|---:|---|---|---|---|---|");
+        foreach (SymbolCandidate symbol in report.Symbols.Take(400))
         {
             builder.AppendLine(
-                $"| {symbol.Score} | {Escape(string.Join(", ", symbol.Categories))} | `{Escape(symbol.MetadataToken)}` | `{Escape(symbol.Signature)}` |");
+                $"| {symbol.Score} | {Escape(symbol.Kind)} | {Escape(string.Join(", ", symbol.Categories))} | " +
+                $"`{Escape(symbol.MetadataToken)}` | `{Escape(symbol.ConstantValue ?? "-")}` | `{Escape(symbol.Signature)}` |");
         }
         builder.AppendLine();
 
@@ -138,11 +131,10 @@ internal static class ReportWriter
         builder.AppendLine("|---:|---|---|---:|---:|---|");
         foreach (AssetCandidate asset in report.Assets.Take(300))
         {
-            string dimensions = asset.Width.HasValue && asset.Height.HasValue
-                ? $"{asset.Width}×{asset.Height}"
-                : "-";
+            string dimensions = asset.Width.HasValue && asset.Height.HasValue ? $"{asset.Width}×{asset.Height}" : "-";
             builder.AppendLine(
-                $"| {asset.Score} | `{Escape(asset.RootLabel)}` | `{Escape(asset.RelativePath)}` | {dimensions} | {asset.SizeBytes} | `{Escape(asset.Sha256 ?? asset.HashStatus)}` |");
+                $"| {asset.Score} | `{Escape(asset.RootLabel)}` | `{Escape(asset.RelativePath)}` | {dimensions} | " +
+                $"{asset.SizeBytes} | `{Escape(asset.Sha256 ?? asset.HashStatus)}` |");
         }
 
         if (report.Warnings.Count > 0)
@@ -153,7 +145,6 @@ internal static class ReportWriter
             foreach (string warning in report.Warnings)
                 builder.AppendLine($"- {Escape(warning)}");
         }
-
         return builder.ToString();
     }
 
@@ -193,10 +184,8 @@ internal static class ReportWriter
     }
 
     private static string SymbolKey(SymbolCandidate symbol) =>
-        $"{symbol.Kind}|{symbol.MetadataToken}|{symbol.Signature}";
+        $"{symbol.Kind}|{symbol.MetadataToken}|{symbol.Signature}|{symbol.ConstantValue ?? string.Empty}";
 
-    private static string AssetIdentity(AssetCandidate asset) =>
-        $"{asset.RootLabel}|{asset.RelativePath}";
-
-    private static string Escape(string value) => value.Replace("|", "\\|").Replace("`", "'");
+    private static string AssetIdentity(AssetCandidate asset) => $"{asset.RootLabel}|{asset.RelativePath}";
+    private static string Escape(string value) => value.Replace("|", "\\|").Replace("`", "'").Replace("\r", " ").Replace("\n", " ");
 }
