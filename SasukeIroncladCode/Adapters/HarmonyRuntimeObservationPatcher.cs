@@ -85,3 +85,20 @@ public sealed class HarmonyRuntimeObservationPatcher : IRuntimeObservationPatche
         }
     }
 }
+
+internal static class HarmonyPostfixInstaller
+{
+    internal static Harmony Install(
+        string harmonyId,
+        MethodInfo postfix,
+        IEnumerable<MethodBase> methods)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(harmonyId);
+        ArgumentNullException.ThrowIfNull(postfix);
+        ArgumentNullException.ThrowIfNull(methods);
+        Harmony harmony = new(harmonyId);
+        foreach (MethodBase method in methods)
+            harmony.Patch(method, postfix: new HarmonyMethod(postfix));
+        return harmony;
+    }
+}
