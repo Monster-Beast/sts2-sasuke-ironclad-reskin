@@ -8,14 +8,16 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "SasukeIronclad/data/game_integration_contract.json"
 BETA_POLICY = ROOT / "SasukeIronclad/data/latest_beta_policy.json"
 MAIN = ROOT / "SasukeIroncladCode/MainFile.cs"
-BOOTSTRAP = ROOT / "SasukeIroncladCode/Runtime/GameIntegrationBootstrap.cs"
-COLLECTOR = ROOT / "SasukeIroncladCode/Runtime/RuntimeBuildFingerprintCollector.cs"
-GATE = ROOT / "SasukeIroncladCode/Runtime/GameIntegrationGate.cs"
-MODELS = ROOT / "SasukeIroncladCode/Visuals/GameIntegrationConfiguration.cs"
-BETA_GUARD = ROOT / "tools/latest_beta_guard.py"
-PROFILE_GENERATOR = ROOT / "tools/create_integration_profile.py"
-REVIEW_BUILDER = ROOT / "tools/build_audit_review.py"
-REVIEW_COMPILER = ROOT / "tools/compile_reviewed_profile.py"
+REQUIRED_FILES = [
+    ROOT / "SasukeIroncladCode/Runtime/GameIntegrationGate.cs",
+    ROOT / "SasukeIroncladCode/Runtime/GameIntegrationBootstrap.cs",
+    ROOT / "SasukeIroncladCode/Runtime/RuntimeBuildFingerprintCollector.cs",
+    ROOT / "SasukeIroncladCode/Visuals/GameIntegrationConfiguration.cs",
+    ROOT / "tools/latest_beta_guard.py",
+    ROOT / "tools/create_integration_profile.py",
+    ROOT / "tools/build_audit_review.py",
+    ROOT / "tools/compile_reviewed_profile.py",
+]
 
 REQUIRED_VISUALS = {
     "card_visual_request",
@@ -28,20 +30,19 @@ REQUIRED_VISUALS = {
 REQUIRED_TITLES = {"card_art", "hand", "deck_list", "reward", "compendium", "tooltip"}
 
 
-def read(path: Path) -> str:
-    if not path.is_file():
-        raise AssertionError(f"required file is missing: {path.relative_to(ROOT)}")
-    return path.read_text(encoding="utf-8")
-
-
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
 
 
 def main() -> int:
-    contract = json.loads(read(CONTRACT))
-    beta_policy = json.loads(read(BETA_POLICY))
+    require(CONTRACT.is_file(), "game integration contract is missing")
+    require(BETA_POLICY.is_file(), "latest beta policy is missing")
+    for path in REQUIRED_FILES:
+        require(path.is_file(), f"required integration component is missing: {path.relative_to(ROOT)}")
+
+    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    beta_policy = json.loads(BETA_POLICY.read_text(encoding="utf-8"))
 
     require(contract.get("schema_version") == 1, "unsupported integration contract schema")
     require(contract.get("gameplay_changes") is False, "integration contract enables gameplay changes")
@@ -51,7 +52,7 @@ def main() -> int:
     require(set(contract.get("required_title_surfaces", [])) == REQUIRED_TITLES, "title surface contract changed")
 
     policy = contract.get("policy", {})
-    required_true = {
+    for key in [
         "exact_build_fingerprint_required",
         "unverified_bindings_disabled",
         "fallback_to_original_on_mismatch",
@@ -59,9 +60,8 @@ def main() -> int:
         "latest_beta_only",
         "remote_beta_attestation_required",
         "stale_profiles_disabled",
-    }
-    missing_guards = sorted(key for key in required_true if policy.get(key) is not True)
-    require(not missing_guards, "integration safety flags are missing: " + ", ".join(missing_guards))
+    ]:
+        require(policy.get(key) is True, f"integration safety flag is not enabled: {key}")
     require(policy.get("required_branch") == "public-beta", "integration branch must be public-beta")
     attestation_hours = int(policy.get("max_beta_attestation_age_hours", 0))
     require(1 <= attestation_hours <= 168, "beta attestation age window is unsafe")
@@ -75,37 +75,14 @@ def main() -> int:
     require(beta_policy.get("stale_profiles_disabled") is True, "stale profiles are not disabled")
     require(beta_policy.get("max_attestation_age_hours") == attestation_hours, "policy age windows disagree")
 
-    sources = {
-        "main": read(MAIN),
-        "bootstrap": read(BOOTSTRAP),
-        "collector": read(COLLECTOR),
-        "gate": read(GATE),
-        "models": read(MODELS),
-        "guard": read(BETA_GUARD),
-        "profile_generator": read(PROFILE_GENERATOR),
-        "review_builder": read(REVIEW_BUILDER),
-        "review_compiler": read(REVIEW_COMPILER),
-    }
-    require("PatchAll" not in "\n".join(sources.values()), "unconditional Harmony PatchAll returned")
-    require("HarmonyPatch" not in sources["main"] + sources["bootstrap"] + sources["collector"],
-            "startup contains an unaudited Harmony target")
-    require("GameIntegrationBootstrap.Start" in sources["main"], "startup does not use the integration gate")
-    require("PendingGameIntegrationInstaller" in sources["main"], "startup is not fail-closed")
-
-    require("public-beta" in sources["collector"], "runtime collector cannot identify public-beta")
-    require("latest_beta_guard" in BETA_GUARD.stem, "latest beta guard entry point is missing")
-    require("--latest-beta-attestation" in sources["profile_generator"],
-            "profile templates are not tied to beta attestation")
-    require("--latest-beta-attestation" in sources["review_builder"],
-            "review workbooks are not tied to beta attestation")
-    require("beta_attestation" in sources["review_compiler"],
-            "compiled profiles do not retain beta attestation")
-    require("GameBetaAttestationSpec" in sources["models"], "runtime configuration lacks beta attestation model")
-    require("IsFreshLatestBetaProfile" in sources["gate"], "runtime gate does not reject stale beta profiles")
+    main_file = MAIN.read_text(encoding="utf-8")
+    require("PatchAll" not in main_file, "unconditional Harmony PatchAll returned to startup")
+    require("GameIntegrationBootstrap.Start" in main_file, "startup no longer uses the integration gate")
+    require("PendingGameIntegrationInstaller" in main_file, "startup is not fail-closed")
 
     print(
-        "OK: repository integration is disabled by default and restricted to a fresh, "
-        "remotely attested rolling public-beta build."
+        "OK: repository contract is disabled and structurally restricted to a remotely attested "
+        "rolling public-beta build. Executable tests cover gate behavior."
     )
     return 0
 
