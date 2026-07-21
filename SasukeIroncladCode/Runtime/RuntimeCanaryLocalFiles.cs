@@ -15,6 +15,7 @@ public static class RuntimeCanaryLocalFiles
     public const string OptInFileName = "SasukeIronclad.canary.json";
     public const string StatusFileName = "runtime-canary-status.json";
     public const string AnchorStatusFileName = "runtime-canary-anchor-status.json";
+    public const string ReplacementStatusFileName = "runtime-canary-replacement-status.json";
     public const string ObservationOptInFileName = "SasukeIronclad.observe.json";
 
     private static readonly JsonSerializerOptions ReadOptions = new()
@@ -81,7 +82,8 @@ public static class RuntimeCanaryLocalFiles
         RuntimeCanaryOptIn optIn,
         bool attempted,
         RuntimePlayerAnchorResolution resolution,
-        GodotVisualSceneHost? host)
+        GodotVisualSceneHost? host,
+        bool originalVisualHidden)
     {
         ArgumentNullException.ThrowIfNull(optIn);
         ArgumentNullException.ThrowIfNull(resolution);
@@ -107,10 +109,44 @@ public static class RuntimeCanaryLocalFiles
             AnchorScale = optIn.AnchorScale,
             AnchorOffsetX = optIn.AnchorOffsetX,
             AnchorOffsetY = optIn.AnchorOffsetY,
-            OriginalVisualHidden = false,
+            ReplacementRequested = optIn.HideOriginalVisual,
+            OriginalVisualHidden = originalVisualHidden,
             Reasons = resolution.Reasons,
         };
         TryWriteAtomic(Path.Combine(modDirectory, AnchorStatusFileName), document);
+    }
+
+    public static void WriteReplacementStatus(
+        string modAssemblyPath,
+        RuntimeCanaryOptIn optIn,
+        RuntimeOriginalVisualReplacementSnapshot snapshot,
+        GodotVisualSceneHost? host)
+    {
+        ArgumentNullException.ThrowIfNull(optIn);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        string? modDirectory = ResolveModDirectory(modAssemblyPath);
+        if (string.IsNullOrWhiteSpace(modDirectory))
+            return;
+
+        RuntimeCanaryReplacementStatusDocument document = new()
+        {
+            GeneratedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+            Requested = snapshot.Requested,
+            Active = snapshot.Active,
+            EverHidden = snapshot.EverHidden,
+            RestoreCount = snapshot.RestoreCount,
+            LastTransition = snapshot.LastTransition,
+            TargetType = snapshot.TargetType,
+            TargetName = snapshot.TargetName,
+            OriginalVisibleBeforeHide = snapshot.OriginalVisibleBeforeHide,
+            AnchorBound = host?.IsAnchorBound == true,
+            OverlayVisible = host?.Visible == true,
+            AnchorScale = optIn.AnchorScale,
+            AnchorOffsetX = optIn.AnchorOffsetX,
+            AnchorOffsetY = optIn.AnchorOffsetY,
+            Reasons = snapshot.Reasons,
+        };
+        TryWriteAtomic(Path.Combine(modDirectory, ReplacementStatusFileName), document);
     }
 
     private static void TryWriteAtomic<T>(string statusPath, T document)
