@@ -10,6 +10,8 @@ param(
     [string]$SteamCmdOutput = "",
     [string]$PythonPath = "",
     [string]$DotnetPath = "",
+    [ValidateRange(1000, 50000)]
+    [int]$MaxSymbols = 12000,
     [switch]$SingleRun,
     [switch]$SkipReviewWorkbook
 )
@@ -181,7 +183,8 @@ function Invoke-GameAudit {
         "--output", $OutputDirectory,
         "--branch", $Branch,
         "--session", $Session,
-        "--megadot-version", $MegaDotVersion
+        "--megadot-version", $MegaDotVersion,
+        "--max-symbols", [string]$MaxSymbols
     )
     if ($AssetRoot) {
         $arguments += @("--asset-root", $AssetRoot)
@@ -241,6 +244,34 @@ function Invoke-AuditReviewWorkbook {
     }
 }
 
+function Invoke-AuditReadiness {
+    param(
+        [string]$FirstReport,
+        [string]$SecondReport,
+        [string]$ComparisonPath,
+        [string]$LatestBetaAttestation,
+        [string]$ReviewPath,
+        [string]$OutputDirectory,
+        [object]$Python
+    )
+
+    $readinessScript = Join-Path $PSScriptRoot "validate_real_audit_evidence.py"
+    $arguments = @($Python.Prefix) + @(
+        $readinessScript,
+        "--report", $FirstReport,
+        "--second-report", $SecondReport,
+        "--comparison", $ComparisonPath,
+        "--latest-beta-attestation", $LatestBetaAttestation,
+        "--review", $ReviewPath,
+        "--output", $OutputDirectory
+    )
+    $result = Invoke-CapturedNativeProcess -FilePath $Python.Command -Arguments $arguments
+    Write-CapturedResult -Result $result
+    if ($result.ExitCode -ne 0) {
+        throw "Audit readiness validation failed with exit code $($result.ExitCode)."
+    }
+}
+
 if ($Branch -ne "public-beta") {
     throw "This project only supports the current Steam public-beta branch."
 }
@@ -265,6 +296,7 @@ else {
 Write-Host "Actual game audit path: $resolvedGamePath" -ForegroundColor Cyan
 Write-Host "Using Python $($resolvedPython.Version): $pythonDisplay" -ForegroundColor Cyan
 Write-Host "Using .NET SDK $($resolvedDotnet.Version): $($resolvedDotnet.Command)" -ForegroundColor Cyan
+Write-Host "Focused symbol limit: $MaxSymbols" -ForegroundColor Cyan
 if ($AssetRoot) {
     Write-Host "Recovered asset path: $AssetRoot" -ForegroundColor Cyan
 }
@@ -280,6 +312,7 @@ $run1 = Join-Path $OutputRoot "run-1"
 $run2 = Join-Path $OutputRoot "run-2"
 $comparison = Join-Path $OutputRoot "comparison"
 $review = Join-Path $OutputRoot "review"
+$readiness = Join-Path $OutputRoot "readiness"
 
 Invoke-GameAudit `
     -ResolvedGamePath $resolvedGamePath `
@@ -320,8 +353,18 @@ if (-not $SkipReviewWorkbook) {
         -OutputDirectory $review `
         -LatestBetaAttestation $latestBetaAttestation `
         -Python $resolvedPython
+    $reviewJson = Join-Path $review "binding-review.json"
     if (Test-Path (Join-Path $review "binding-review.md")) {
         Write-Host "Candidate review workbook generated: $review\binding-review.md" -ForegroundColor Green
     }
+    Invoke-AuditReadiness `
+        -FirstReport $firstReport `
+        -SecondReport $secondReport `
+        -ComparisonPath $comparisonJson `
+        -LatestBetaAttestation $latestBetaAttestation `
+        -ReviewPath $reviewJson `
+        -OutputDirectory $readiness `
+        -Python $resolvedPython
+    Write-Host "Audit readiness report generated: $readiness\audit-readiness.md" -ForegroundColor Yellow
 }
 Write-Host "Do not commit $OutputRoot. Review outputs must remain pending_review until real-game validation is complete." -ForegroundColor Yellow
