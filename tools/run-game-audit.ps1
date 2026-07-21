@@ -20,7 +20,7 @@ function Resolve-Sts2GamePath {
 
     if (-not [string]::IsNullOrWhiteSpace($ExplicitPath)) {
         if (-not (Test-Path -LiteralPath $ExplicitPath -PathType Container)) {
-            throw "GamePath 不存在或不是目录：$ExplicitPath。显式路径无效时不会回退到其他 Steam 安装目录。"
+            throw "GamePath does not exist or is not a directory: $ExplicitPath. An invalid explicit path will not fall back to another Steam installation."
         }
         return (Resolve-Path -LiteralPath $ExplicitPath).Path
     }
@@ -46,7 +46,7 @@ function Resolve-Sts2GamePath {
         }
     }
 
-    throw "未找到《杀戮尖塔 2》安装目录，请通过 -GamePath 显式指定。"
+    throw "Slay the Spire 2 was not found. Supply the installation directory with -GamePath."
 }
 
 function Resolve-PythonCommand {
@@ -59,7 +59,7 @@ function Resolve-PythonCommand {
     if (Get-Command python3 -ErrorAction SilentlyContinue) {
         return @{ Command = "python3"; Prefix = @() }
     }
-    throw "最新 Beta 校验需要 Python 3，但当前系统未找到 python、py 或 python3。"
+    throw "Latest-beta validation requires Python 3, but python, py, and python3 were not found."
 }
 
 function Resolve-SteamCmd {
@@ -67,7 +67,7 @@ function Resolve-SteamCmd {
 
     if ($ExplicitPath) {
         if (-not (Test-Path -LiteralPath $ExplicitPath -PathType Leaf)) {
-            throw "SteamCMD 不存在：$ExplicitPath"
+            throw "SteamCMD does not exist: $ExplicitPath"
         }
         return (Resolve-Path -LiteralPath $ExplicitPath).Path
     }
@@ -90,7 +90,7 @@ function Resolve-SteamCmd {
         }
     }
 
-    throw "未找到 SteamCMD。请安装 Valve SteamCMD，或通过 -SteamCmdPath / -SteamCmdOutput 指定。"
+    throw "SteamCMD was not found. Install Valve SteamCMD or supply -SteamCmdPath / -SteamCmdOutput."
 }
 
 function Invoke-LatestBetaGuard {
@@ -107,7 +107,7 @@ function Invoke-LatestBetaGuard {
 
     if ($SteamCmdOutput) {
         if (-not (Test-Path -LiteralPath $SteamCmdOutput -PathType Leaf)) {
-            throw "SteamCMD 输出文件不存在：$SteamCmdOutput"
+            throw "SteamCMD output file does not exist: $SteamCmdOutput"
         }
         Copy-Item -LiteralPath $SteamCmdOutput -Destination $capturedOutput -Force
     }
@@ -117,7 +117,7 @@ function Invoke-LatestBetaGuard {
             -SteamCmdPath $steamCmd `
             -OutputPath $capturedOutput `
             -Branch "public-beta"
-        Write-Host "SteamCMD 已解析 public-beta buildid=$($queryResult.RemoteBuildId)" -ForegroundColor Cyan
+        Write-Host "SteamCMD parsed public-beta buildid=$($queryResult.RemoteBuildId)" -ForegroundColor Cyan
     }
 
     $attestation = Join-Path $betaDirectory "attestation.json"
@@ -146,18 +146,18 @@ function Invoke-LatestBetaGuard {
                 )
             }
             catch {
-                $detail = "无法读取 attestation.json：$($_.Exception.Message)"
+                $detail = "Could not read attestation.json: $($_.Exception.Message)"
             }
         }
         if (-not $detail) {
             $detail = ($guardOutput | ForEach-Object { [string]$_ }) -join " | "
         }
         throw (
-            "本地游戏不是 Steam 当前最新 public-beta。" +
-            "审计目录：$ResolvedGamePath；$detail。请确认 Steam Beta 分支和本机 buildid。"
+            "The local game is not the current Steam public-beta. " +
+            "Audit path: $ResolvedGamePath; $detail. Check the Steam beta branch and local buildid."
         )
     }
-    Write-Host "已确认当前安装为最新 public-beta：$attestation" -ForegroundColor Green
+    Write-Host "Confirmed latest public-beta: $attestation" -ForegroundColor Green
     return $attestation
 }
 
@@ -184,7 +184,7 @@ function Invoke-GameAudit {
 
     & dotnet @arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "本地审计失败，退出码：$LASTEXITCODE"
+        throw "Local audit failed with exit code $LASTEXITCODE."
     }
 }
 
@@ -207,27 +207,27 @@ function Invoke-AuditReviewWorkbook {
     )
     & $python.Command @arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "生成候选审阅表失败，退出码：$LASTEXITCODE"
+        throw "Audit review workbook generation failed with exit code $LASTEXITCODE."
     }
 }
 
 if ($Branch -ne "public-beta") {
-    throw "本项目只适配 Steam 最新 public-beta，不再接受 stable 或其他分支。"
+    throw "This project only supports the current Steam public-beta branch."
 }
 
 $resolvedGamePath = Resolve-Sts2GamePath -ExplicitPath $GamePath
 if (-not [string]::IsNullOrWhiteSpace($AssetRoot)) {
     if (-not (Test-Path -LiteralPath $AssetRoot -PathType Container)) {
-        throw "AssetRoot 不存在或不是目录：$AssetRoot。没有恢复资源目录时请省略 -AssetRoot。"
+        throw "AssetRoot does not exist or is not a directory: $AssetRoot. Omit -AssetRoot when no recovered asset directory is available."
     }
     $AssetRoot = (Resolve-Path -LiteralPath $AssetRoot).Path
 }
-Write-Host "实际审计游戏目录：$resolvedGamePath" -ForegroundColor Cyan
+Write-Host "Actual game audit path: $resolvedGamePath" -ForegroundColor Cyan
 if ($AssetRoot) {
-    Write-Host "恢复资源目录：$AssetRoot" -ForegroundColor Cyan
+    Write-Host "Recovered asset path: $AssetRoot" -ForegroundColor Cyan
 }
 else {
-    Write-Host "未提供 AssetRoot；本次只扫描安装目录中可见资源。" -ForegroundColor Yellow
+    Write-Host "No AssetRoot supplied; only resources visible in the installed game directory will be scanned." -ForegroundColor Yellow
 }
 
 $latestBetaAttestation = Invoke-LatestBetaGuard -ResolvedGamePath $resolvedGamePath -ResolvedOutputRoot $OutputRoot
@@ -237,13 +237,13 @@ $comparison = Join-Path $OutputRoot "comparison"
 $review = Join-Path $OutputRoot "review"
 
 Invoke-GameAudit -ResolvedGamePath $resolvedGamePath -Session "run-1" -OutputDirectory $run1
-Write-Host "第一次审计已完成：$run1" -ForegroundColor Green
+Write-Host "First audit completed: $run1" -ForegroundColor Green
 
 if ($SingleRun) {
     exit 0
 }
 
-Read-Host "请完整启动并退出一次 public-beta 游戏，确认 Steam 未更新且 Mod 环境未变化后按 Enter"
+Read-Host "Launch and fully exit the public-beta game once. Confirm Steam and the Mod environment did not change, then press Enter"
 Invoke-LatestBetaGuard -ResolvedGamePath $resolvedGamePath -ResolvedOutputRoot $OutputRoot | Out-Null
 Invoke-GameAudit -ResolvedGamePath $resolvedGamePath -Session "run-2" -OutputDirectory $run2
 
@@ -257,10 +257,10 @@ $comparisonJson = Join-Path $comparison "audit-comparison.json"
     --output $comparison
 
 if ($LASTEXITCODE -ne 0) {
-    throw "两次审计结果不一致。请查看：$comparison\audit-comparison.md"
+    throw "The two audit runs differ. Review: $comparison\audit-comparison.md"
 }
 
-Write-Host "两次独立审计一致：$comparison\audit-comparison.md" -ForegroundColor Green
+Write-Host "Two independent audit runs match: $comparison\audit-comparison.md" -ForegroundColor Green
 if (-not $SkipReviewWorkbook) {
     Invoke-AuditReviewWorkbook `
         -ReportPath $firstReport `
@@ -268,7 +268,7 @@ if (-not $SkipReviewWorkbook) {
         -OutputDirectory $review `
         -LatestBetaAttestation $latestBetaAttestation
     if (Test-Path (Join-Path $review "binding-review.md")) {
-        Write-Host "候选审阅表已生成：$review\binding-review.md" -ForegroundColor Green
+        Write-Host "Candidate review workbook generated: $review\binding-review.md" -ForegroundColor Green
     }
 }
-Write-Host "不要提交 $OutputRoot；审阅结果在真实游戏验证完成前必须保持 pending_review。" -ForegroundColor Yellow
+Write-Host "Do not commit $OutputRoot. Review outputs must remain pending_review until real-game validation is complete." -ForegroundColor Yellow
