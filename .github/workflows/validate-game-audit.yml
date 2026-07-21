@@ -33,6 +33,13 @@ jobs:
               exit 1
             }
           }
+      - name: Execute parser regression with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          .\tools\test_steamcmd_query.ps1 | Tee-Object -FilePath windows-steamcmd-query-test.log
+          if (-not (Select-String -Path windows-steamcmd-query-test.log -Pattern "STEAMCMD_QUERY_OK" -Quiet)) {
+            throw "Windows PowerShell SteamCMD parser regression did not report success."
+          }
 
   audit-self-test:
     runs-on: ubuntu-latest
