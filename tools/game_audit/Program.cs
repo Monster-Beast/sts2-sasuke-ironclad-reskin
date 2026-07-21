@@ -103,16 +103,19 @@ internal static class Program
         string steamApps = Path.Combine(outputRoot, "fixture", "steamapps");
         string gamePath = Path.Combine(steamApps, "common", "Slay the Spire 2");
         string dataPath = Path.Combine(gamePath, "data_sts2_windows_x86_64");
+        string workshopBaseLib = Path.Combine(steamApps, "workshop", "content", "2868840", "self-test-baselib");
         string assetRoot = Path.Combine(outputRoot, "fixture", "recovered");
         Directory.CreateDirectory(dataPath);
-        Directory.CreateDirectory(Path.Combine(gamePath, "mods", "BaseLib"));
+        Directory.CreateDirectory(workshopBaseLib);
         Directory.CreateDirectory(Path.Combine(assetRoot, "images", "cards", "ironclad"));
         Directory.CreateDirectory(Path.Combine(assetRoot, "animations", "characters", "ironclad"));
         Directory.CreateDirectory(Path.Combine(assetRoot, "audit_fixture"));
 
         string currentAssembly = Assembly.GetExecutingAssembly().Location;
         File.Copy(currentAssembly, Path.Combine(dataPath, "sts2.dll"));
-        File.WriteAllText(Path.Combine(gamePath, "mods", "BaseLib", "BaseLib.json"), "{\"version\":\"v0.0.0-self-test\"}");
+        File.WriteAllText(
+            Path.Combine(workshopBaseLib, "BaseLib.json"),
+            "{\"id\":\"BaseLib\",\"version\":\"v0.0.0-self-test\"}");
         File.WriteAllText(
             Path.Combine(steamApps, "appmanifest_2868840.acf"),
             "\"AppState\"\n{\n  \"appid\" \"2868840\"\n  \"buildid\" \"999999\"\n  \"LastUpdated\" \"1777777777\"\n}\n");
@@ -157,6 +160,11 @@ internal static class Program
         string firstJson = File.ReadAllText(Path.Combine(firstOutput, "audit-report.json"));
         if (first.Symbols.Count == 0 || first.Assets.Count == 0)
             throw new InvalidOperationException("Self-test did not produce symbol and asset candidates.");
+        if (!string.Equals(first.Game.BaseLibVersion, "v0.0.0-self-test", StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(first.Game.BaseLibManifestSha256))
+        {
+            throw new InvalidOperationException("Self-test did not discover the Workshop BaseLib manifest.");
+        }
         if (!comparison.Equivalent)
             throw new InvalidOperationException("Two identical self-test scans did not compare as equivalent.");
         if (firstJson.Contains(outputRoot, StringComparison.OrdinalIgnoreCase) ||
@@ -167,7 +175,7 @@ internal static class Program
         }
 
         Console.WriteLine(
-            $"GAME_AUDIT_SELF_TEST_OK symbols={first.Symbols.Count} assets={first.Assets.Count} equivalent={comparison.Equivalent}");
+            $"GAME_AUDIT_SELF_TEST_OK symbols={first.Symbols.Count} assets={first.Assets.Count} equivalent={comparison.Equivalent} baselib={first.Game.BaseLibVersion}");
         return 0;
     }
 
