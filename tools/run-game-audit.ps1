@@ -9,12 +9,14 @@ param(
     [string]$SteamCmdPath = "",
     [string]$SteamCmdOutput = "",
     [string]$PythonPath = "",
+    [string]$DotnetPath = "",
     [switch]$SingleRun,
     [switch]$SkipReviewWorkbook
 )
 
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "steamcmd-query.ps1")
+. (Join-Path $PSScriptRoot "dotnet-sdk.ps1")
 
 function Resolve-Sts2GamePath {
     param([string]$ExplicitPath)
@@ -167,7 +169,8 @@ function Invoke-GameAudit {
     param(
         [string]$ResolvedGamePath,
         [string]$Session,
-        [string]$OutputDirectory
+        [string]$OutputDirectory,
+        [object]$Dotnet
     )
 
     $project = Join-Path $PSScriptRoot "game_audit\SasukeIronclad.GameAudit.csproj"
@@ -184,9 +187,33 @@ function Invoke-GameAudit {
         $arguments += @("--asset-root", $AssetRoot)
     }
 
-    & dotnet @arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "Local audit failed with exit code $LASTEXITCODE."
+    $auditResult = Invoke-CapturedNativeProcess -FilePath $Dotnet.Command -Arguments $arguments
+    Write-CapturedResult -Result $auditResult
+    if ($auditResult.ExitCode -ne 0) {
+        throw "Local audit failed with exit code $($auditResult.ExitCode); dotnet=$($Dotnet.Command)."
+    }
+}
+
+function Invoke-AuditComparison {
+    param(
+        [string]$FirstReport,
+        [string]$SecondReport,
+        [string]$OutputDirectory,
+        [object]$Dotnet
+    )
+
+    $project = Join-Path $PSScriptRoot "game_audit\SasukeIronclad.GameAudit.csproj"
+    $arguments = @(
+        "run", "--project", $project, "--configuration", "Release", "--",
+        "compare",
+        "--first", $FirstReport,
+        "--second", $SecondReport,
+        "--output", $OutputDirectory
+    )
+    $compareResult = Invoke-CapturedNativeProcess -FilePath $Dotnet.Command -Arguments $arguments
+    Write-CapturedResult -Result $compareResult
+    if ($compareResult.ExitCode -ne 0) {
+        throw "The two audit runs differ or comparison failed with exit code $($compareResult.ExitCode). Review: $OutputDirectory\audit-comparison.md"
     }
 }
 
@@ -226,6 +253,7 @@ if (-not [string]::IsNullOrWhiteSpace($AssetRoot)) {
     $AssetRoot = (Resolve-Path -LiteralPath $AssetRoot).Path
 }
 $resolvedPython = Resolve-Python3Command -ExplicitPath $PythonPath
+$resolvedDotnet = Resolve-Dotnet9Command -ExplicitPath $DotnetPath
 $pythonPrefixText = (@($resolvedPython.Prefix) -join " ").Trim()
 $pythonDisplay = if ($pythonPrefixText) {
     "$($resolvedPython.Command) $pythonPrefixText"
@@ -236,6 +264,7 @@ else {
 
 Write-Host "Actual game audit path: $resolvedGamePath" -ForegroundColor Cyan
 Write-Host "Using Python $($resolvedPython.Version): $pythonDisplay" -ForegroundColor Cyan
+Write-Host "Using .NET SDK $($resolvedDotnet.Version): $($resolvedDotnet.Command)" -ForegroundColor Cyan
 if ($AssetRoot) {
     Write-Host "Recovered asset path: $AssetRoot" -ForegroundColor Cyan
 }
@@ -252,7 +281,11 @@ $run2 = Join-Path $OutputRoot "run-2"
 $comparison = Join-Path $OutputRoot "comparison"
 $review = Join-Path $OutputRoot "review"
 
-Invoke-GameAudit -ResolvedGamePath $resolvedGamePath -Session "run-1" -OutputDirectory $run1
+Invoke-GameAudit `
+    -ResolvedGamePath $resolvedGamePath `
+    -Session "run-1" `
+    -OutputDirectory $run1 `
+    -Dotnet $resolvedDotnet
 Write-Host "First audit completed: $run1" -ForegroundColor Green
 
 if ($SingleRun) {
@@ -264,20 +297,20 @@ Invoke-LatestBetaGuard `
     -ResolvedGamePath $resolvedGamePath `
     -ResolvedOutputRoot $OutputRoot `
     -Python $resolvedPython | Out-Null
-Invoke-GameAudit -ResolvedGamePath $resolvedGamePath -Session "run-2" -OutputDirectory $run2
+Invoke-GameAudit `
+    -ResolvedGamePath $resolvedGamePath `
+    -Session "run-2" `
+    -OutputDirectory $run2 `
+    -Dotnet $resolvedDotnet
 
-$project = Join-Path $PSScriptRoot "game_audit\SasukeIronclad.GameAudit.csproj"
 $firstReport = Join-Path $run1 "audit-report.json"
 $secondReport = Join-Path $run2 "audit-report.json"
 $comparisonJson = Join-Path $comparison "audit-comparison.json"
-& dotnet run --project $project --configuration Release -- compare `
-    --first $firstReport `
-    --second $secondReport `
-    --output $comparison
-
-if ($LASTEXITCODE -ne 0) {
-    throw "The two audit runs differ. Review: $comparison\audit-comparison.md"
-}
+Invoke-AuditComparison `
+    -FirstReport $firstReport `
+    -SecondReport $secondReport `
+    -OutputDirectory $comparison `
+    -Dotnet $resolvedDotnet
 
 Write-Host "Two independent audit runs match: $comparison\audit-comparison.md" -ForegroundColor Green
 if (-not $SkipReviewWorkbook) {
