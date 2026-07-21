@@ -12,6 +12,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Validate cross-platform helper syntax
+        shell: pwsh
+        run: |
+          bash -n tools/run-game-audit.sh
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path tools/run-game-audit.ps1),
+            [ref]$tokens,
+            [ref]$errors
+          )
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
       - name: Restore audit tool
         run: dotnet restore tools/game_audit/SasukeIronclad.GameAudit.csproj
       - name: Build audit tool
@@ -34,6 +49,7 @@ jobs:
           grep -q "INTEGRATION_GATE_OK" integration-gate-test.log
           grep -q "bootstrap=true" integration-gate-test.log
           grep -q "collector=true" integration-gate-test.log
+          grep -q "fail_closed=true" integration-gate-test.log
       - name: Run two-scan redaction self-test
         run: |
           set -o pipefail
@@ -68,6 +84,13 @@ jobs:
           grep -q '"auto_selection_forbidden": true' audit-output/self-test/review/binding-review.json
           grep -q '"selected_candidate_id": ""' audit-output/self-test/review/binding-review.json
           grep -q '"constant_value": "STRIKE"' audit-output/self-test/review/binding-review.json
+          if grep -q '"kind": "property"' audit-output/self-test/review/binding-review.json; then
+            python - <<'PY'
+          import json
+          data = json.load(open('audit-output/self-test/review/binding-review.json', encoding='utf-8'))
+          assert all(c['kind'] == 'method' for b in data['bindings'] for c in b['candidates'])
+          PY
+          fi
       - name: Upload metadata-only self-test reports
         if: always()
         uses: actions/upload-artifact@v4
