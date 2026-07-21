@@ -116,6 +116,7 @@ jobs:
           python tools/test_latest_beta_guard.py
           python tools/test_latest_beta_profiles.py
           python tools/test_audit_review_pipeline.py
+          python tools/test_real_audit_evidence.py
       - name: Execute exact-build integration gate matrix
         run: |
           set -o pipefail
