@@ -6,6 +6,9 @@ obj/
 *.pdb
 *.pck
 *.dll
+*.uid
+*.import
+*.translation
 publish/
 releases/
 extracted/
