@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "status": "pending_review",
+  "gameplay_changes": false,
+  "branch": "public-beta",
+  "steam_build_id": "24251656",
+  "fingerprint": {
+    "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+    "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+    "baselib_version": "v3.3.7",
+    "baselib_manifest_sha256": "e74480e29a3a23300002fffe4d53b1a08ad545b690bd34f157b1cd315ef65064"
+  },
+  "policy": {
+    "rolling_beta_invalidates_scope": true,
+    "missing_cards_remain_design_only": true,
+    "unreviewed_bindings_disabled": true,
+    "fallback_to_original": true
+  },
+  "active_cards": [
+    {
+      "card_id": "Strike",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad"
+    },
+    {
+      "card_id": "Defend",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad"
+    },
+    {
+      "card_id": "Bash",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.Bash"
+    },
+    {
+      "card_id": "Anger",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.Anger"
+    },
+    {
+      "card_id": "Thunderclap",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.Thunderclap"
+    },
+    {
+      "card_id": "Flame Barrier",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.FlameBarrier"
+    },
+    {
+      "card_id": "Whirlwind",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.Whirlwind"
+    },
+    {
+      "card_id": "Burning Pact",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.BurningPact"
+    },
+    {
+      "card_id": "Demon Form",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.DemonForm"
+    },
+    {
+      "card_id": "Fiend Fire",
+      "model_type": "MegaCrit.Sts2.Core.Models.Cards.FiendFire"
+    }
+  ],
+  "design_only_absent_cards": [
+    {
+      "card_id": "Cleave",
+      "expected_model_type": "MegaCrit.Sts2.Core.Models.Cards.Cleave",
+      "reason": "No matching card model type was present after exact-priority metadata scanning of build 24251656."
+    },
+    {
+      "card_id": "Heavy Blade",
+      "expected_model_type": "MegaCrit.Sts2.Core.Models.Cards.HeavyBlade",
+      "reason": "No matching card model type was present after exact-priority metadata scanning of build 24251656."
+    },
+    {
+      "card_id": "Limit Break",
+      "expected_model_type": "MegaCrit.Sts2.Core.Models.Cards.LimitBreak",
+      "reason": "No matching card model type was present after exact-priority metadata scanning of build 24251656."
+    }
+  ],
+  "evidence": {
+    "two_runs_equivalent": true,
+    "run_1_sha256": "16bf22e887ab8c3fde07b44030ac1d970483ce6d4cfd2b57fe23c87c28bdbefb",
+    "run_2_sha256": "49222ee4f4834ad0bcc9cf7a6cdc985e9501e989664ba33b405599e9365f418b",
+    "comparison_sha256": "ed1b3e4511bbfa8238c900fcc21599797506cc8169b39a878a1b0478b96f4d3a",
+    "attestation_sha256": "3e5b6da9a53e011b0d2d13f0775fbc45fe4c65c2af4fe07cc760d6655c7ac4b4",
+    "binding_review_sha256": "63db467a9b9b00ff14923b4659c1a1f419a480eec87f5547dc66f20b410dfb49",
+    "audited_at_utc": "2026-07-21T08:19:51.816550+00:00"
+  }
+}
