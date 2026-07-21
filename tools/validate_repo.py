@@ -37,6 +37,10 @@ def main():
     if manifest.get('id')!='SasukeIronclad': die('manifest id changed')
     if manifest.get('author')!='Monster-Beast': die('manifest author must be Monster-Beast')
     if manifest.get('affects_gameplay') is not False: die('affects_gameplay must be false')
+    dependencies=manifest.get('dependencies',[])
+    baselib=[item for item in dependencies if item.get('id')=='BaseLib']
+    if len(baselib)!=1 or baselib[0].get('min_version')!='3.3.0':
+        die('BaseLib runtime minimum must remain the reviewed compatibility floor 3.3.0')
 
     cards=load('SasukeIronclad/data/card_visual_map.json')
     card_animations=load('SasukeIronclad/data/card_animation_manifest.json')
@@ -179,6 +183,12 @@ def main():
         die('mod project must compile only SasukeIroncladCode/**/*.cs')
     if any(value and ('.godot' in value or value.startswith('tools/')) for value in compile_includes):
         die('generated or tooling sources entered the production mod compile scope')
+    package_names={item.get('Include') for item in project_root.findall('.//PackageReference')}
+    if 'Alchyr.Sts2.BaseLib' in package_names:
+        die('production build must not convert a floating BaseLib NuGet version into a runtime loader minimum')
+    project_text=(ROOT/'SasukeIronclad.csproj').read_text(encoding='utf-8')
+    if 'ActiveBaseLibVersion' in project_text or 'NuGetAssetsPath' in project_text:
+        die('build must not rewrite the BaseLib runtime minimum from NuGet restore data')
 
     forbidden={'.pck','.dll','.atlas','.skel','.ogg','.mp3','.ttf','.otf'}
     bad=[str(p.relative_to(ROOT)) for p in ROOT.rglob('*') if p.is_file() and '.git' not in p.parts and p.suffix.lower() in forbidden]
