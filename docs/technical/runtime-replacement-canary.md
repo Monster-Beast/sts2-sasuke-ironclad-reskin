@@ -69,6 +69,8 @@ Only then is the original `Visible` value captured and set to `false`.
 
 The captured original visibility is restored when any of these occurs:
 
+- a local card is outside the reviewed current-Beta replacement scope;
+- Demon Form is played while its persistent form-removal evidence is still blocked;
 - animation mapping or resource fallback;
 - synchronous or asynchronous playback failure;
 - original-impact forwarding failure;
@@ -79,8 +81,9 @@ The captured original visibility is restored when any of these occurs:
 - canary session disposal.
 
 A failed replacement attempt disables replacement for the rest of the current
-combat. The original game method has already completed because every reviewed
-adapter remains postfix-only.
+combat. This prevents repeated character flicker and preserves the complete
+original presentation for all remaining cards in that combat. The original game
+method has already completed because every reviewed adapter remains postfix-only.
 
 ## Diagnostics
 
@@ -117,7 +120,7 @@ replacement is not lost from the diagnostic history.
 This replacement canary is not a production release because it still needs:
 
 - several combat and room-transition runs;
-- unsupported-card behavior review;
+- reviewed and unreviewed card fallback verification;
 - multiplayer local-player-only verification;
 - different resolutions and UI scales;
 - multi-Mod visibility ownership checks;
