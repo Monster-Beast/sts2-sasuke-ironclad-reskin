@@ -30,7 +30,11 @@ public static class CardAnimationSelector
         )
         {
             FastMode = context.FastMode,
-            LowFlashMode = context.LowFlashMode
+            LowFlashMode = context.LowFlashMode,
+            RequiresOriginalImpactSync = string.Equals(
+                spec.HitSync,
+                "original_hit_events",
+                StringComparison.Ordinal)
         };
         return true;
     }
