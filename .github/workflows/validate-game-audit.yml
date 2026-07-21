@@ -38,7 +38,7 @@ jobs:
               exit 1
             }
           }
-      - name: Execute parser regression with Windows PowerShell 5.1
+      - name: Execute SteamCMD parser regression with Windows PowerShell 5.1
         shell: powershell
         run: |
           .\tools\test_steamcmd_query.ps1 | Tee-Object -FilePath windows-steamcmd-query-test.log
@@ -110,19 +110,23 @@ jobs:
         run: dotnet build tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj --configuration Release --no-restore
       - name: Validate disabled-until-audited integration contract
         run: python tools/test_game_integration_contract.py
-      - name: Validate startup, latest-beta and review pipeline contracts
-        run: |
-          python tools/test_game_integration_startup.py
-          python tools/test_latest_beta_guard.py
-          python tools/test_latest_beta_profiles.py
-          python tools/test_audit_review_pipeline.py
-          python tools/test_real_audit_evidence.py
+      - name: Validate game integration startup contract
+        run: python tools/test_game_integration_startup.py
+      - name: Validate latest public-beta guard contract
+        run: python tools/test_latest_beta_guard.py
+      - name: Validate rolling Beta profile contract
+        run: python tools/test_latest_beta_profiles.py
+      - name: Validate audit review pipeline contract
+        run: python tools/test_audit_review_pipeline.py
+      - name: Validate real audit evidence contract
+        run: python tools/test_real_audit_evidence.py
       - name: Execute exact-build integration gate matrix
         run: |
           set -o pipefail
           dotnet run --project tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj \
-            --configuration Release --no-build | tee integration-gate-test.log
+            --configuration Release --no-build 2>&1 | tee integration-gate-test.log
           grep -q "INTEGRATION_GATE_OK" integration-gate-test.log
+          grep -q "RUNTIME_OBSERVATION_GATE_OK" integration-gate-test.log
           grep -q "stable=false" integration-gate-test.log
           grep -q "stale=false" integration-gate-test.log
           grep -q "superseded=false" integration-gate-test.log
