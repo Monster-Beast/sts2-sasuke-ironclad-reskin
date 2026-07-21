@@ -20,4 +20,5 @@ public sealed record CardAnimationSelection(
 {
     public bool FastMode { get; init; }
     public bool LowFlashMode { get; init; }
+    public bool RequiresOriginalImpactSync { get; init; }
 }
