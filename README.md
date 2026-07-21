@@ -234,6 +234,7 @@ GitHub Actions 还会：
 - 生成合成 Beta Attestation 与不自动选择候选的审阅表；
 - 每 6 小时通过 SteamCMD 查询一次远端 `public-beta`；
 - 当 Contract 启用后，若没有且仅有一个匹配远端 build 的有效 Profile，监控工作流失败；
+- 发现旧 verified Profile、重复当前 Profile 或超前于远端的 Profile 时失败；
 - 将脚本错误、运行期 `ERROR:` 和 ObjectDB 泄漏视为失败。
 
 ## 目录
