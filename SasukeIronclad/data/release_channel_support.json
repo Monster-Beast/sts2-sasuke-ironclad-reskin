@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "app_id": "2868840",
+  "loader_supported_channels": [
+    {
+      "runtime_branch": "stable",
+      "steam_remote_branch": "public",
+      "display_name": "default public release"
+    },
+    {
+      "runtime_branch": "public-beta",
+      "steam_remote_branch": "public-beta",
+      "display_name": "public beta"
+    }
+  ],
+  "runtime_integration_policy": {
+    "exact_profile_required_per_channel": true,
+    "cross_channel_profile_reuse_forbidden": true,
+    "cross_channel_method_token_reuse_forbidden": true,
+    "fallback_to_original_when_profile_missing": true
+  },
+  "current_status": {
+    "public-beta": "pending_runtime_review",
+    "stable": "pending_local_audit"
+  },
+  "baselib": {
+    "manifest_min_version": "3.3.0",
+    "build_must_not_raise_runtime_minimum_from_nuget": true,
+    "exact_loaded_version_recorded_in_each_runtime_profile": true
+  }
+}
