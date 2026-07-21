@@ -4,6 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <StartupObject>SasukeIronclad.IntegrationGateTest.CombinedProgram</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../SasukeIroncladCode/Runtime/GameIntegrationGate.cs" Link="GameIntegrationGate.cs" />
