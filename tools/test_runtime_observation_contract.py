@@ -10,11 +10,29 @@ MANIFEST_PATH = ROOT / "SasukeIronclad/data/runtime_observation_targets.json"
 SCOPE_PATH = ROOT / "SasukeIronclad/data/current_beta_card_scope.json"
 PROFILE_PATH = ROOT / "SasukeIronclad/data/integration_profiles/public-beta-24251656-ee45848ff631.pending-review.json"
 CONTRACT_PATH = ROOT / "SasukeIronclad/data/game_integration_contract.json"
+BINDING_REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-runtime-binding-review.json"
 CONTROL_SCRIPT_PATH = ROOT / "tools/runtime-observation.ps1"
 MAIN_FILE_PATH = ROOT / "SasukeIroncladCode/MainFile.cs"
 BOOTSTRAP_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeObservationBootstrap.cs"
 GATE_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeObservationGate.cs"
 METHOD_TOKEN_RE = re.compile(r"^0x06[0-9A-Fa-f]{6}$")
+EXPECTED_CANARY_BINDINGS = {
+    "card_visual_request": "card-play.local-queue",
+    "original_impact": "impact.damage-history",
+    "state_removed": "power.container-removed",
+    "combat_ended": "combat.room-ended",
+    "card_art": "title.card-label-update",
+    "hand": "title.hand-card-update",
+    "deck_list": "title.deck-grid-set",
+    "reward": "title.reward-refresh",
+    "compendium": "title.compendium-grid-display",
+    "tooltip": "title.card-hover",
+}
+EXPECTED_TARGETED_BINDINGS = {"form_removed", "character_state"}
+EXPECTED_RUNTIME_LOG_SHA256 = {
+    "338d85a75625876ffdaa8c29fc3452aacc2c48b35fce6e1d0153e66869b4a5b6",
+    "bd22300d335cb6292051f0bb6d54e9e77837d5926a7b94c049bd001eb35f9392",
+}
 
 
 def load(path: Path) -> dict:
@@ -31,6 +49,7 @@ def main() -> int:
     scope = load(SCOPE_PATH)
     profile = load(PROFILE_PATH)["profile"]
     contract = load(CONTRACT_PATH)
+    binding_review = load(BINDING_REVIEW_PATH)
 
     require(manifest.get("schema_version") == 1, "unsupported observation manifest schema")
     require(manifest.get("status") == "observation_only", "observation manifest status changed")
@@ -90,6 +109,7 @@ def main() -> int:
     target_ids: set[str] = set()
     target_tokens: set[str] = set()
     covered_bindings: set[str] = set()
+    manifest_targets: dict[str, dict] = {}
     for target in manifest["targets"]:
         target_id = str(target.get("id", ""))
         token = str(target.get("metadata_token", ""))
@@ -102,8 +122,65 @@ def main() -> int:
         target_ids.add(target_id)
         target_tokens.add(token)
         covered_bindings.update(binding_ids)
+        manifest_targets[target_id] = target
     require(len(target_ids) >= 20, "observation target matrix is not broad enough")
     require(covered_bindings == required_bindings, "observation targets do not cover all review surfaces")
+
+    require(binding_review.get("schema_version") == 1, "unsupported binding review schema")
+    require(binding_review.get("status") == "partial_manual_review", "binding review must remain partial")
+    require(binding_review.get("profile_id") == profile.get("id"), "binding review/profile mismatch")
+    for key in ("steam_build_id", "sts2_sha256", "module_mvid", "baselib_version"):
+        require(binding_review["runtime"][key] == manifest_fingerprint[key], f"binding review fingerprint mismatch: {key}")
+    require(
+        binding_review["source"]["runtime_review_sha256"]
+        == "8eaf9869c1c6f3ceca0ee33c94569951a478e1e16550107261eca1f7bc99fe6f",
+        "uploaded runtime review digest changed",
+    )
+    require(
+        {item["sha256"] for item in binding_review["source"]["logs"]} == EXPECTED_RUNTIME_LOG_SHA256,
+        "runtime log digest set changed",
+    )
+    require(binding_review["quality"]["event_counts"] == [4279, 6109], "reviewed event counts changed")
+    require(binding_review["quality"]["balanced_call_pairs"] is True, "runtime calls are not balanced")
+    require(binding_review["quality"]["errors"] == [], "runtime review contains errors")
+    require(binding_review["policy"]["production_contract_remains_disabled"] is True, "review enabled production")
+    require(binding_review["policy"]["runtime_bindings_remain_disabled"] is True, "review enabled bindings")
+
+    decisions = {item["binding_id"]: item for item in binding_review["decisions"]}
+    require(set(decisions) == required_bindings, "binding review does not cover twelve surfaces")
+    for binding_id, target_id in EXPECTED_CANARY_BINDINGS.items():
+        decision = decisions[binding_id]
+        target = manifest_targets[target_id]
+        require(decision["status"] == "approved_for_canary", f"{binding_id} is not canary-only")
+        require(decision["selected_target_id"] == target_id, f"{binding_id} target drifted")
+        require(binding_id in target["binding_ids"], f"{target_id} does not cover {binding_id}")
+        for key in ("declaring_type", "method_signature", "metadata_token"):
+            require(decision[key] == target[key], f"{binding_id} {key} drifted")
+        require(decision["observed_in_all_sessions"] is True, f"{binding_id} lacks two-run evidence")
+        require(
+            len(decision["session_evidence"]) == 2
+            and all(item["enter_count"] == item["return_count"] > 0 for item in decision["session_evidence"]),
+            f"{binding_id} runtime evidence is invalid",
+        )
+    for binding_id in EXPECTED_TARGETED_BINDINGS:
+        decision = decisions[binding_id]
+        require(decision["status"] == "needs_targeted_observation", f"{binding_id} must remain blocked")
+        require(not decision["selected_target_id"] and not decision["metadata_token"], f"{binding_id} was selected")
+
+    require(binding_review["readiness"]["title_canary_candidate_count"] == 6, "title canary count changed")
+    require(binding_review["readiness"]["visual_canary_candidate_count"] == 4, "visual canary count changed")
+    require(binding_review["readiness"]["blocked_binding_count"] == 2, "blocked binding count changed")
+    require(binding_review["readiness"]["production_profile_ready"] is False, "review claims production readiness")
+    require(contract["status"] == "pending_local_audit" and contract["profiles"] == [], "production contract was enabled")
+    require(profile["status"] == "pending_review", "pending profile was promoted")
+    require(
+        all(not item["metadata_token"] and item["status"] == "pending_review" for item in profile["visual_bindings"]),
+        "pending visual profile was populated",
+    )
+    require(
+        all(not item["metadata_token"] and item["status"] == "pending_review" for item in profile["title_bindings"]),
+        "pending title profile was populated",
+    )
 
     script_bytes = CONTROL_SCRIPT_PATH.read_bytes()
     require(all(byte < 128 for byte in script_bytes), "PowerShell 5.1 control script must remain ASCII-only")
@@ -121,7 +198,8 @@ def main() -> int:
 
     print(
         f"RUNTIME_OBSERVATION_CONTRACT_OK targets={len(target_ids)} bindings={len(required_bindings)} "
-        "cards=10 default_enabled=false read_only=true startup_status=true generated_regex=false"
+        "cards=10 default_enabled=false read_only=true startup_status=true generated_regex=false "
+        "manual_review=true approved_canary=10 blocked=2 production=false"
     )
     return 0
 
