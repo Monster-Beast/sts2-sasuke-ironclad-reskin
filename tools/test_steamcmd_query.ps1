@@ -68,7 +68,7 @@ exit 7
             -Branch "public-beta" | Out-Null
     }
     catch {
-        if ($_.Exception.Message -notmatch "退出码 7") {
+        if ($_.Exception.Message -notmatch "exit code 7") {
             throw
         }
         $rejected = $true
