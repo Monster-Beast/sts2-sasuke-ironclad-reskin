@@ -17,6 +17,8 @@ public sealed class CardVisualPlaybackService : IDisposable
     private AnimationContext? _activeContext;
     private bool _disposed;
 
+    public event Action<AnimationContext, string>? FallbackActivated;
+
     public CardVisualPlaybackService(IVisualSceneHost sceneHost, IOriginalAnimationFallback fallback)
     {
         _sceneHost = sceneHost ?? throw new ArgumentNullException(nameof(sceneHost));
@@ -180,6 +182,14 @@ public sealed class CardVisualPlaybackService : IDisposable
         {
             // The fallback adapter is also cosmetic. Never allow it to affect the
             // original combat action queue.
+        }
+        try
+        {
+            FallbackActivated?.Invoke(context, reason);
+        }
+        catch
+        {
+            // Replacement safety listeners are cosmetic and cannot affect gameplay.
         }
     }
 
