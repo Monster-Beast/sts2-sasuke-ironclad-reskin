@@ -11,10 +11,16 @@ public sealed record RuntimeObservationGateResult(
     IReadOnlyList<string> Reasons
 );
 
-public static partial class RuntimeObservationGate
+public static class RuntimeObservationGate
 {
     private const string RequiredBranch = "public-beta";
     private const string RequiredMode = "read_only";
+    private static readonly Regex SessionLabelPattern = new(
+        "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex TargetIdPattern = new(
+        "^[a-z0-9][a-z0-9._-]{2,95}$",
+        RegexOptions.CultureInvariant);
 
     public static RuntimeObservationGateResult Evaluate(
         RuntimeObservationManifestMap manifest,
@@ -43,7 +49,7 @@ public static partial class RuntimeObservationGate
         {
             return Disabled("Runtime observation requires an explicit schema-1 read_only opt-in marker.");
         }
-        if (!SessionLabelPattern().IsMatch(optIn.SessionLabel))
+        if (!SessionLabelPattern.IsMatch(optIn.SessionLabel))
             return Disabled("Runtime observation session_label must use 1-64 ASCII letters, digits, dots, underscores or hyphens.");
 
         if (!Matches(manifest, runtime))
@@ -193,7 +199,7 @@ public static partial class RuntimeObservationGate
         HashSet<string> coveredBindings = [];
         foreach (RuntimeObservationTargetSpec target in manifest.Targets)
         {
-            if (!TargetIdPattern().IsMatch(target.Id) || !targetIds.Add(target.Id) ||
+            if (!TargetIdPattern.IsMatch(target.Id) || !targetIds.Add(target.Id) ||
                 string.IsNullOrWhiteSpace(target.Purpose) || string.IsNullOrWhiteSpace(target.DeclaringType) ||
                 string.IsNullOrWhiteSpace(target.MethodSignature) || !IsMethodDefinitionToken(target.MetadataToken) ||
                 target.BindingIds.Count == 0 || target.BindingIds.Distinct(StringComparer.Ordinal).Count() != target.BindingIds.Count ||
@@ -220,10 +226,4 @@ public static partial class RuntimeObservationGate
         value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
 
     private static RuntimeObservationGateResult Disabled(string reason) => new(false, 0, 0, [reason]);
-
-    [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$", RegexOptions.CultureInvariant)]
-    private static partial Regex SessionLabelPattern();
-
-    [GeneratedRegex("^[a-z0-9][a-z0-9._-]{2,95}$", RegexOptions.CultureInvariant)]
-    private static partial Regex TargetIdPattern();
 }
