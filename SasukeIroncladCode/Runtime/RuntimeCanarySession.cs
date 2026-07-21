@@ -30,11 +30,14 @@ public sealed class RuntimeCanarySession : IDisposable
     private readonly GodotVisualSceneHost? _sceneHost;
     private readonly CardVisualPlaybackService? _playback;
     private readonly CardTitlePresentationService? _titleService;
+    private readonly RuntimeOriginalVisualReplacementController? _replacementController;
 
+    private RuntimePlayerAnchorResolution? _lastAnchorResolution;
     private object? _activeCardModel;
     private string? _activeCardId;
     private int _activeImpactIndex;
     private bool _flameBarrierStateInstalled;
+    private bool _replacementDisabledForCombat;
     private int _disposed;
 
     public RuntimeCanarySession(
@@ -65,18 +68,24 @@ public sealed class RuntimeCanarySession : IDisposable
             _sceneTree.Root.AddChild(host);
             _sceneHost = host;
             _playback = new CardVisualPlaybackService(host, new PreserveOriginalAnimationFallback());
+            _playback.FallbackActivated += OnPlaybackFallback;
+            host.AnchorInvalidated += OnAnchorInvalidated;
+
+            if (optIn.HideOriginalVisual)
+            {
+                _replacementController = new RuntimeOriginalVisualReplacementController();
+                WriteReplacementStatus();
+            }
+
+            RuntimePlayerAnchorResolution waiting = CreateWaitingResolution();
+            _lastAnchorResolution = waiting;
             RuntimeCanaryLocalFiles.WriteAnchorStatus(
                 _modAssemblyPath,
                 _optIn,
                 attempted: false,
-                new RuntimePlayerAnchorResolution(
-                    false,
-                    null,
-                    "waiting_for_local_card_play",
-                    0,
-                    0,
-                    ["The animation overlay is hidden until a local card-play callback proves a unique local-player visual anchor."]),
-                host);
+                waiting,
+                host,
+                originalVisualHidden: false);
         }
     }
 
@@ -131,6 +140,7 @@ public sealed class RuntimeCanarySession : IDisposable
         {
             // Every canary adapter is postfix-only and cosmetic. An adapter
             // failure must leave the already-completed original method intact.
+            FailReplacementForCombat("canary_adapter_exception");
         }
     }
 
@@ -138,9 +148,29 @@ public sealed class RuntimeCanarySession : IDisposable
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
+
+        RestoreOriginalVisual("session_dispose");
+        try
+        {
+            if (_playback is not null)
+                _playback.FallbackActivated -= OnPlaybackFallback;
+        }
+        catch { }
+        try
+        {
+            if (_sceneHost is not null)
+                _sceneHost.AnchorInvalidated -= OnAnchorInvalidated;
+        }
+        catch { }
         try
         {
             _playback?.Dispose();
+        }
+        catch { }
+        try
+        {
+            _replacementController?.Dispose();
+            WriteReplacementStatus();
         }
         catch { }
         try
@@ -167,11 +197,12 @@ public sealed class RuntimeCanarySession : IDisposable
         if (string.Equals(cardId, DemonFormCardId, StringComparison.Ordinal))
             return;
 
+        if (_optIn.HideOriginalVisual && _replacementDisabledForCombat)
+            return;
+
         if (!EnsureLocalPlayerAnchor(callbackInstance, args))
         {
-            _activeCardModel = null;
-            _activeCardId = null;
-            _activeImpactIndex = 0;
+            ClearActiveCardState();
             return;
         }
 
@@ -194,9 +225,15 @@ public sealed class RuntimeCanarySession : IDisposable
         AnimationPlaybackHandle? handle = _playback.Request(context);
         if (handle is null)
         {
-            _activeCardModel = null;
-            _activeCardId = null;
-            _activeImpactIndex = 0;
+            FailReplacementForCombat("reviewed_timeline_request_failed");
+            ClearActiveCardState();
+            return;
+        }
+
+        if (!TryActivateReplacement())
+        {
+            try { _playback.Release(cardId); } catch { }
+            ClearActiveCardState();
             return;
         }
 
@@ -212,21 +249,24 @@ public sealed class RuntimeCanarySession : IDisposable
         if (_sceneHost is null || _sceneTree is null || !_optIn.AnchorToLocalPlayer)
             return false;
         if (_sceneHost.IsAnchorBound)
+        {
+            if (_replacementController?.Active == true && !_replacementController.ValidateActiveTarget())
+            {
+                FailReplacementForCombat("original_visual_state_changed_outside_controller");
+                return false;
+            }
             return true;
+        }
 
         RuntimePlayerAnchorResolution resolution = RuntimePlayerVisualAnchorResolver.Resolve(
             _sceneTree,
             callbackInstance,
             args);
+        _lastAnchorResolution = resolution;
         if (!resolution.Success || resolution.Anchor is null)
         {
             _sceneHost.ClearAnchor();
-            RuntimeCanaryLocalFiles.WriteAnchorStatus(
-                _modAssemblyPath,
-                _optIn,
-                attempted: true,
-                resolution,
-                _sceneHost);
+            WriteAnchorStatus(resolution, attempted: true);
             return false;
         }
 
@@ -243,13 +283,80 @@ public sealed class RuntimeCanarySession : IDisposable
                 resolution.CandidateCount,
                 resolution.LocalPlayerReferenceCount,
                 resolution.Reasons.Concat(["The resolved node could not be bound by the local overlay host."]).ToArray());
+        _lastAnchorResolution = finalResolution;
+        WriteAnchorStatus(finalResolution, attempted: true);
+        WriteReplacementStatus();
+        return bound;
+    }
+
+    private bool TryActivateReplacement()
+    {
+        if (!_optIn.HideOriginalVisual)
+            return true;
+        if (_replacementDisabledForCombat || _replacementController is null || _sceneHost is null)
+            return false;
+
+        Node2D? anchor = _sceneHost.AnchorNode;
+        if (anchor is null || !_replacementController.TryHide(anchor))
+        {
+            FailReplacementForCombat("exact_local_ironclad_visual_could_not_be_hidden");
+            return false;
+        }
+
+        WriteReplacementStatus();
+        WriteAnchorStatus(_lastAnchorResolution ?? CreateWaitingResolution(), attempted: true);
+        return true;
+    }
+
+    private void OnPlaybackFallback(AnimationContext context, string reason)
+    {
+        _ = context;
+        FailReplacementForCombat($"playback_fallback:{reason}");
+    }
+
+    private void OnAnchorInvalidated(string reason)
+    {
+        FailReplacementForCombat($"anchor_invalidated:{reason}");
+    }
+
+    private void FailReplacementForCombat(string reason)
+    {
+        if (!_optIn.HideOriginalVisual)
+            return;
+        _replacementDisabledForCombat = true;
+        RestoreOriginalVisual(reason);
+        try { _sceneHost?.ClearAnchor(); } catch { }
+        WriteReplacementStatus();
+        WriteAnchorStatus(AddReason(_lastAnchorResolution ?? CreateWaitingResolution(), reason), attempted: true);
+        ClearActiveCardState();
+    }
+
+    private void RestoreOriginalVisual(string reason)
+    {
+        try { _replacementController?.Restore(reason); } catch { }
+        WriteReplacementStatus();
+    }
+
+    private void WriteReplacementStatus()
+    {
+        if (!_optIn.HideOriginalVisual || _replacementController is null)
+            return;
+        RuntimeCanaryLocalFiles.WriteReplacementStatus(
+            _modAssemblyPath,
+            _optIn,
+            _replacementController.Snapshot(requested: true),
+            _sceneHost);
+    }
+
+    private void WriteAnchorStatus(RuntimePlayerAnchorResolution resolution, bool attempted)
+    {
         RuntimeCanaryLocalFiles.WriteAnchorStatus(
             _modAssemblyPath,
             _optIn,
-            attempted: true,
-            finalResolution,
-            _sceneHost);
-        return bound;
+            attempted,
+            resolution,
+            _sceneHost,
+            originalVisualHidden: _replacementController?.Active == true);
     }
 
     private void HandleOriginalImpact(object?[]? args)
@@ -280,12 +387,42 @@ public sealed class RuntimeCanarySession : IDisposable
 
     private void ReleaseCombatResources()
     {
+        RestoreOriginalVisual("combat_ended");
         try { _playback?.ReleaseCombatResources(); } catch { }
+        WriteReplacementStatus();
+        WriteAnchorStatus(
+            AddReason(_lastAnchorResolution ?? CreateWaitingResolution(), "Combat resources released and the original visual was restored."),
+            attempted: _lastAnchorResolution is not null);
+        _lastAnchorResolution = null;
+        _replacementDisabledForCombat = false;
+        ClearActiveCardState();
+        _flameBarrierStateInstalled = false;
+    }
+
+    private void ClearActiveCardState()
+    {
         _activeCardModel = null;
         _activeCardId = null;
         _activeImpactIndex = 0;
-        _flameBarrierStateInstalled = false;
     }
+
+    private static RuntimePlayerAnchorResolution CreateWaitingResolution() => new(
+        false,
+        null,
+        "waiting_for_local_card_play",
+        0,
+        0,
+        ["The animation overlay is hidden until a local card-play callback proves a unique local-player visual anchor."]);
+
+    private static RuntimePlayerAnchorResolution AddReason(
+        RuntimePlayerAnchorResolution resolution,
+        string reason) => new(
+            resolution.Success,
+            resolution.Anchor,
+            resolution.Strategy,
+            resolution.CandidateCount,
+            resolution.LocalPlayerReferenceCount,
+            resolution.Reasons.Concat([reason]).TakeLast(12).ToArray());
 
     private void ApplyTitlesFromSurface(object? instance, object?[]? args, string surfaceId)
     {
