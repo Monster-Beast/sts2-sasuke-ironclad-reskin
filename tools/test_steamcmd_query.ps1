@@ -4,12 +4,71 @@ Set-StrictMode -Version Latest
 $toolsDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $toolsDirectory "steamcmd-query.ps1")
 
+$repeatedBlockContent = @'
+"2868840"
+{
+  "depots"
+  {
+    "2868841"
+    {
+      "manifests"
+      {
+        "public-beta"
+        {
+          "gid" "4669006088270458095"
+          "size" "2972630778"
+        }
+      }
+    }
+    "2868842"
+    {
+      "manifests"
+      {
+        "public-beta"
+        {
+          "gid" "7169427731078769081"
+          "size" "2387142857"
+        }
+      }
+    }
+    "branches"
+    {
+      "public"
+      {
+        "buildid" "23811903"
+      }
+      "public-beta"
+      {
+        "buildid" "24251656"
+        "description" "The sts2 public beta branch"
+      }
+    }
+  }
+}
+'@
+
+$parsedBuildId = Get-SteamCmdBranchBuildId -Content $repeatedBlockContent -Branch "public-beta"
+if ($parsedBuildId -ne "24251656") {
+    throw "repeated public-beta blocks returned an unexpected buildid: $parsedBuildId"
+}
+
+$invalidBuildId = Get-SteamCmdBranchBuildId -Content '"public-beta" { "gid" "123" }' -Branch "public-beta"
+if ($invalidBuildId) {
+    throw "a public-beta block without buildid was accepted"
+}
+
+$isWindowsPlatform = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
+if ($isWindowsPlatform) {
+    Write-Output "STEAMCMD_QUERY_OK repeated_blocks=true windows_parser=true buildid=24251656"
+    exit 0
+}
+
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("sasuke-steamcmd-query-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
 try {
     $goodSteamCmd = Join-Path $tempRoot "steamcmd-good.sh"
-    @'
+    $goodScript = @'
 #!/usr/bin/env bash
 cat <<'EOF'
 "2868840"
@@ -54,7 +113,12 @@ cat <<'EOF'
 }
 EOF
 exit 7
-'@ | Set-Content -LiteralPath $goodSteamCmd -Encoding utf8NoBOM
+'@
+    [System.IO.File]::WriteAllText(
+        $goodSteamCmd,
+        $goodScript,
+        (New-Object System.Text.UTF8Encoding($false))
+    )
     & chmod +x $goodSteamCmd
     if ($LASTEXITCODE -ne 0) {
         throw "chmod failed for the valid SteamCMD fixture"
@@ -77,11 +141,16 @@ exit 7
     }
 
     $badSteamCmd = Join-Path $tempRoot "steamcmd-bad.sh"
-    @'
+    $badScript = @'
 #!/usr/bin/env bash
 echo 'SteamCMD updated, but no app info was returned.'
 exit 7
-'@ | Set-Content -LiteralPath $badSteamCmd -Encoding utf8NoBOM
+'@
+    [System.IO.File]::WriteAllText(
+        $badSteamCmd,
+        $badScript,
+        (New-Object System.Text.UTF8Encoding($false))
+    )
     & chmod +x $badSteamCmd
     if ($LASTEXITCODE -ne 0) {
         throw "chmod failed for the invalid SteamCMD fixture"
