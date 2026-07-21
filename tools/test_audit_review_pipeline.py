@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import tempfile
@@ -36,6 +37,17 @@ def symbol(kind: str, name: str, declaring: str, token: str, categories: list[st
     }
 
 
+def approve(review: dict) -> None:
+    for binding in review["bindings"]:
+        binding["review"] = {
+            "status": "approved",
+            "selected_candidate_id": binding["candidates"][0]["candidate_id"],
+            "reviewer": "fixture-reviewer",
+            "evidence": sorted(compile_module.REQUIRED_EVIDENCE),
+            "notes": "fixture",
+        }
+
+
 def main() -> int:
     visual_ids = [
         "card_visual_request", "original_impact", "state_removed",
@@ -60,7 +72,13 @@ def main() -> int:
         symbol("method", name, "Fixture.GameVisuals", f"0x{0x06000001 + index:08X}", categories)
         for index, (name, categories) in enumerate(names)
     ]
-    symbols.append(symbol("field", "StrikeCardId", "Fixture.IroncladCards", "0x04000001", ["cards"], "STRIKE"))
+    symbols.extend(
+        [
+            symbol("field", "StrikeCardId", "Fixture.IroncladCards", "0x04000001", ["cards"], "STRIKE"),
+            symbol("property", "CardTitle", "Fixture.CardView", "0x17000001", ["titles", "cards"]),
+            symbol("event", "OriginalImpact", "Fixture.GameEvents", "0x14000001", ["visuals"]),
+        ]
+    )
 
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
@@ -102,20 +120,14 @@ def main() -> int:
             ROOT / "tools/game_audit/binding-review-rules.json",
         )
         assert len(review["bindings"]) == 12
-        assert len(review["card_id_candidates"]) == 1
-        assert review["card_id_candidates"][0]["constant_value"] == "STRIKE"
+        assert len(review["card_id_candidates"]) == 2
+        assert any(item["constant_value"] == "STRIKE" for item in review["card_id_candidates"])
         assert all(binding["candidates"] for binding in review["bindings"])
+        assert all(candidate["kind"] == "method" for binding in review["bindings"] for candidate in binding["candidates"])
         assert all(binding["review"]["selected_candidate_id"] == "" for binding in review["bindings"])
         assert review["policy"]["auto_selection_forbidden"] is True
 
-        for binding in review["bindings"]:
-            binding["review"] = {
-                "status": "approved",
-                "selected_candidate_id": binding["candidates"][0]["candidate_id"],
-                "reviewer": "fixture-reviewer",
-                "evidence": sorted(compile_module.REQUIRED_EVIDENCE),
-                "notes": "fixture",
-            }
+        approve(review)
         review_path.write_text(json.dumps(review), encoding="utf-8")
         compiled = compile_module.build_profile(review, review_path, "stable-fixture")
         assert compiled["status"] == "pending_review"
@@ -124,16 +136,43 @@ def main() -> int:
         assert len(compiled["profile"]["title_bindings"]) == 6
         assert all(item["status"] == "pending_review" for item in compiled["profile"]["visual_bindings"])
         assert all(item["status"] == "pending_review" for item in compiled["profile"]["title_bindings"])
+        assert all(item["metadata_token"].startswith("0x06") for item in compiled["profile"]["visual_bindings"])
+        assert all(item["metadata_token"].startswith("0x06") for item in compiled["profile"]["title_bindings"])
 
-        review["bindings"][0]["review"]["evidence"] = []
+        missing_evidence = copy.deepcopy(review)
+        missing_evidence["bindings"][0]["review"]["evidence"] = []
         try:
-            compile_module.build_profile(review, review_path, "invalid")
+            compile_module.build_profile(missing_evidence, review_path, "invalid")
         except SystemExit as exc:
             assert "missing evidence" in str(exc)
         else:
             raise AssertionError("missing evidence was accepted")
 
-    print("AUDIT_REVIEW_PIPELINE_OK bindings=12 card_ids=1 status=pending_review")
+        non_method = copy.deepcopy(review)
+        malicious = symbol("property", "CardTitle", "Fixture.CardView", "0x17000001", ["titles", "cards"])
+        malicious_candidate = {
+            "candidate_id": "malicious-property",
+            "review_score": 999,
+            "kind": malicious["kind"],
+            "name": malicious["name"],
+            "declaring_type": malicious["declaringType"],
+            "signature": malicious["signature"],
+            "metadata_token": malicious["metadataToken"],
+            "visibility": malicious["visibility"],
+            "constant_value": "",
+            "audit_score": malicious["score"],
+            "categories": malicious["categories"],
+        }
+        non_method["bindings"][0]["candidates"].append(malicious_candidate)
+        non_method["bindings"][0]["review"]["selected_candidate_id"] = "malicious-property"
+        try:
+            compile_module.build_profile(non_method, review_path, "invalid")
+        except SystemExit as exc:
+            assert "non-method" in str(exc)
+        else:
+            raise AssertionError("non-method metadata target was accepted")
+
+    print("AUDIT_REVIEW_PIPELINE_OK bindings=12 card_ids=2 methoddef_only=true status=pending_review")
     return 0
 
 
