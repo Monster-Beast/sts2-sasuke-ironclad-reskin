@@ -168,6 +168,8 @@ public static class AuditedMethodBindingResolver
         }
         if (type.IsGenericParameter)
             return type.DeclaringMethod is null ? $"!{type.GenericParameterPosition}" : $"!!{type.GenericParameterPosition}";
+        if (type.IsEnum)
+            return type.FullName ?? type.Name;
 
         string? primitive = Type.GetTypeCode(type) switch
         {
