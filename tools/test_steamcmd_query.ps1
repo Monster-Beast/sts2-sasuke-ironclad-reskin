@@ -59,7 +59,26 @@ if ($invalidBuildId) {
 
 $isWindowsPlatform = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
 if ($isWindowsPlatform) {
-    Write-Output "STEAMCMD_QUERY_OK repeated_blocks=true windows_parser=true buildid=24251656"
+    $childPowerShell = Join-Path $PSHOME "powershell.exe"
+    $capture = Invoke-CapturedNativeProcess `
+        -FilePath $childPowerShell `
+        -Arguments @(
+            "-NoProfile",
+            "-Command",
+            "[Console]::Out.WriteLine('CAPTURE_STDOUT'); [Console]::Error.WriteLine('CAPTURE_STDERR'); exit 3"
+        )
+
+    if ($capture.ExitCode -ne 3) {
+        throw "native process exit code was not captured"
+    }
+    if ($capture.StandardOutput -notmatch "CAPTURE_STDOUT") {
+        throw "native process stdout was not captured"
+    }
+    if ($capture.StandardError -notmatch "CAPTURE_STDERR") {
+        throw "native process stderr was not captured"
+    }
+
+    Write-Output "STEAMCMD_QUERY_OK repeated_blocks=true windows_parser=true native_capture=true buildid=24251656"
     exit 0
 }
 
@@ -174,7 +193,7 @@ exit 7
         throw "invalid SteamCMD output with exit code 7 was accepted"
     }
 
-    Write-Output "STEAMCMD_QUERY_OK repeated_blocks=true valid_exit7=true invalid_exit7_rejected=true buildid=24251656"
+    Write-Output "STEAMCMD_QUERY_OK repeated_blocks=true valid_exit7=true invalid_exit7_rejected=true native_capture=true buildid=24251656"
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {
