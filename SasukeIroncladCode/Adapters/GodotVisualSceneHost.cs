@@ -108,7 +108,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
             ["low_flash"] = selection.LowFlashMode,
             ["fast_mode"] = selection.FastMode,
             ["quality_scale"] = QualityScale,
-            ["external_impact_sync"] = true,
+            ["external_impact_sync"] = selection.RequiresOriginalImpactSync,
             ["impact_timeout_seconds"] = ImpactTimeoutSeconds,
             ["final_damage"] = context.FinalDamage,
             ["hit_count"] = context.HitCount,
