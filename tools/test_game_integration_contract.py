@@ -85,7 +85,7 @@ def main() -> int:
         "SHA256.HashData",
         "ReadModuleMvid",
         "ReadSteamMetadata",
-        "BetaKey",
+        "betakey",
         "workshop",
         "BaseLib",
         "STS2_BRANCH",
@@ -125,6 +125,9 @@ def main() -> int:
         "A non-MethodDef title token was not rejected",
         "Workshop BaseLib",
         "public-beta",
+        "Exact audited MethodDef did not resolve",
+        "mismatched method signature was accepted",
+        "mismatched module MVID was accepted",
     ]:
         assert contract in additional_gate_test
 
