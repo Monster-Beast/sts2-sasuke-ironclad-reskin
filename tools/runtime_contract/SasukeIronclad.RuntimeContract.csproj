@@ -12,8 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="../../SasukeIroncladCode/MainFile.cs" Link="MainFile.cs" />
     <Compile Include="../../SasukeIroncladCode/Runtime/**/*.cs" Link="Runtime/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../../SasukeIroncladCode/Adapters/**/*.cs" Link="Adapters/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../../SasukeIroncladCode/Visuals/**/*.cs" Link="Visuals/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="Sts2ModdingStubs.cs" Link="Sts2ModdingStubs.cs" />
   </ItemGroup>
 </Project>
