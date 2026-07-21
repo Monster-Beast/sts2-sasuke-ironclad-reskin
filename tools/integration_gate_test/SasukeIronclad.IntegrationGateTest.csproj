@@ -9,6 +9,7 @@
     <Compile Include="../../SasukeIroncladCode/Runtime/GameIntegrationGate.cs" Link="GameIntegrationGate.cs" />
     <Compile Include="../../SasukeIroncladCode/Runtime/GameIntegrationBootstrap.cs" Link="GameIntegrationBootstrap.cs" />
     <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeBuildFingerprintCollector.cs" Link="RuntimeBuildFingerprintCollector.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/AuditedMethodBindingResolver.cs" Link="AuditedMethodBindingResolver.cs" />
     <Compile Include="../../SasukeIroncladCode/Adapters/IGameIntegrationInstaller.cs" Link="IGameIntegrationInstaller.cs" />
     <Compile Include="../../SasukeIroncladCode/Visuals/GameIntegrationConfiguration.cs" Link="GameIntegrationConfiguration.cs" />
   </ItemGroup>
