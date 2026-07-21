@@ -16,11 +16,38 @@ cat <<'EOF'
 {
   "depots"
   {
+    "2868841"
+    {
+      "manifests"
+      {
+        "public-beta"
+        {
+          "gid" "4669006088270458095"
+          "size" "2972630778"
+        }
+      }
+    }
+    "2868842"
+    {
+      "manifests"
+      {
+        "public-beta"
+        {
+          "gid" "7169427731078769081"
+          "size" "2387142857"
+        }
+      }
+    }
     "branches"
     {
+      "public"
+      {
+        "buildid" "23811903"
+      }
       "public-beta"
       {
         "buildid" "24251656"
+        "description" "The sts2 public beta branch"
       }
     }
   }
@@ -40,7 +67,7 @@ exit 7
         -Branch "public-beta"
 
     if ($result.RemoteBuildId -ne "24251656") {
-        throw "valid output returned an unexpected buildid: $($result.RemoteBuildId)"
+        throw "valid repeated-block output returned an unexpected buildid: $($result.RemoteBuildId)"
     }
     if ($result.SteamExitCode -ne 7) {
         throw "the SteamCMD exit code was not preserved"
@@ -78,7 +105,7 @@ exit 7
         throw "invalid SteamCMD output with exit code 7 was accepted"
     }
 
-    Write-Output "STEAMCMD_QUERY_OK valid_exit7=true invalid_exit7_rejected=true buildid=24251656"
+    Write-Output "STEAMCMD_QUERY_OK repeated_blocks=true valid_exit7=true invalid_exit7_rejected=true buildid=24251656"
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {
