@@ -31,7 +31,7 @@ public static class CardAnimationSelector
         {
             FastMode = context.FastMode,
             LowFlashMode = context.LowFlashMode,
-            RequiresOriginalImpactSync = string.Equals(
+            RequiresOriginalImpactSync = spec.IsDamageCard && string.Equals(
                 spec.HitSync,
                 "original_hit_events",
                 StringComparison.Ordinal)
