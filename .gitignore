@@ -18,11 +18,13 @@ local-audit*/
 audit-output/
 observation-output/
 runtime-observation-review/
+runtime-observation-upload/
 SasukeIronclad.observe.json
 runtime-observation-status.json
 runtime-observation-*.jsonl
 SasukeIronclad.canary.json
 runtime-canary-status.json
+runtime-canary-anchor-status.json
 *.autosave
 *.bak
 .idea/
