@@ -28,7 +28,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Alchyr.Sts2.BaseLib" Version="*" PrivateAssets="All"/>
+    <!-- BaseLib is a runtime Mod dependency declared in SasukeIronclad.json.
+         The production assembly does not consume BaseLib APIs directly, so a
+         floating NuGet package must not raise the Mod loader minimum version. -->
     <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="All"/>
     <PackageReference Include="Alchyr.Sts2.ModAnalyzers" Version="*" />
     <AdditionalFiles Include="SasukeIronclad/localization/**/*.json"/>
@@ -57,15 +59,9 @@
       <SourceManifestPath>$(MSBuildProjectDirectory)\$(MSBuildProjectName).json</SourceManifestPath>
       <GeneratedManifestDirectory>$(IntermediateOutputPath)generated\</GeneratedManifestDirectory>
       <GeneratedManifestPath>$(GeneratedManifestDirectory)$(MSBuildProjectName).json</GeneratedManifestPath>
-      <NuGetAssetsPath>$(MSBuildProjectDirectory)\.godot\mono\temp\obj\project.assets.json</NuGetAssetsPath>
-      <SourceManifestContent>$([System.IO.File]::ReadAllText(&quot;$(SourceManifestPath)&quot;))</SourceManifestContent>
-      <GeneratedManifestContent>$(SourceManifestContent)</GeneratedManifestContent>
-      <NuGetData Condition="Exists('$(NuGetAssetsPath)')">$([System.IO.File]::ReadAllText(&quot;$(NuGetAssetsPath)&quot;))</NuGetData>
-      <ActiveBaseLibVersion Condition="'$(NuGetData)' != ''">$([System.Text.RegularExpressions.Regex]::Match($(NuGetData), '&quot;Alchyr.Sts2.BaseLib\/([^&quot;]*)&quot;').Result('$1'))</ActiveBaseLibVersion>
-      <GeneratedManifestContent Condition="'$(ActiveBaseLibVersion)' != ''">$([System.Text.RegularExpressions.Regex]::Replace($(SourceManifestContent), '(&quot;id&quot;:\s*&quot;BaseLib&quot;,\s*&quot;min_version&quot;:\s*&quot;)[^&quot;]*', '${1}$(ActiveBaseLibVersion)'))</GeneratedManifestContent>
     </PropertyGroup>
     <MakeDir Directories="$(GeneratedManifestDirectory)" />
-    <WriteLinesToFile File="$(GeneratedManifestPath)" Lines="$(GeneratedManifestContent)" Overwrite="true" Encoding="UTF-8" />
+    <Copy SourceFiles="$(SourceManifestPath)" DestinationFiles="$(GeneratedManifestPath)" />
   </Target>
 
   <Target Name="CopyToModsFolderOnBuild" AfterTargets="PostBuildEvent" DependsOnTargets="GenerateModManifest">
