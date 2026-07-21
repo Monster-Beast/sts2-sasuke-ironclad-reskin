@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-07-21T08:32:06.549385+00:00",
+  "evidence": {
+    "report_session": "run-1",
+    "comparison_sessions": [
+      "run-1",
+      "run-2"
+    ],
+    "report_sha256": "16bf22e887ab8c3fde07b44030ac1d970483ce6d4cfd2b57fe23c87c28bdbefb",
+    "second_report_sha256": "49222ee4f4834ad0bcc9cf7a6cdc985e9501e989664ba33b405599e9365f418b",
+    "comparison_sha256": "ed1b3e4511bbfa8238c900fcc21599797506cc8169b39a878a1b0478b96f4d3a",
+    "latest_beta_attestation_sha256": "3e5b6da9a53e011b0d2d13f0775fbc45fe4c65c2af4fe07cc760d6655c7ac4b4",
+    "binding_review_sha256": "63db467a9b9b00ff14923b4659c1a1f419a480eec87f5547dc66f20b410dfb49",
+    "two_runs_equivalent": true,
+    "latest_public_beta_verified": true,
+    "active_card_scope_verified": true,
+    "active_card_count": 10,
+    "design_only_absent_card_count": 3,
+    "manual_symbol_review_required": true
+  },
+  "profile": {
+    "id": "public-beta-24251656-ee45848ff631",
+    "status": "pending_review",
+    "branch": "public-beta",
+    "fingerprint": {
+      "steam_build_id": "24251656",
+      "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+      "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+      "baselib_version": "v3.3.7",
+      "baselib_manifest_sha256": "e74480e29a3a23300002fffe4d53b1a08ad545b690bd34f157b1cd315ef65064"
+    },
+    "beta_attestation": {
+      "status": "verified",
+      "branch": "public-beta",
+      "installed_build_id": "24251656",
+      "remote_build_id": "24251656",
+      "checked_at_utc": "2026-07-21T08:19:47.960412+00:00",
+      "source": "steamcmd_app_info_print",
+      "steamcmd_output_sha256": "e5c0751c8f1d688eff27af1fa6cc4e1f469d8dfa88dab3ae152e2effb51b9bcf"
+    },
+    "card_scope_file": "SasukeIronclad/data/current_beta_card_scope.json",
+    "visual_bindings": [
+      {
+        "id": "card_visual_request",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_visual"
+      },
+      {
+        "id": "original_impact",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_visual"
+      },
+      {
+        "id": "state_removed",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_visual"
+      },
+      {
+        "id": "form_removed",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_visual"
+      },
+      {
+        "id": "combat_ended",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_visual"
+      },
+      {
+        "id": "character_state",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_visual"
+      }
+    ],
+    "title_bindings": [
+      {
+        "surface_id": "card_art",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_title"
+      },
+      {
+        "surface_id": "hand",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_title"
+      },
+      {
+        "surface_id": "deck_list",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_title"
+      },
+      {
+        "surface_id": "reward",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_title"
+      },
+      {
+        "surface_id": "compendium",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_title"
+      },
+      {
+        "surface_id": "tooltip",
+        "declaring_type": "",
+        "method_signature": "",
+        "metadata_token": "",
+        "status": "pending_review",
+        "fallback": "original_title"
+      }
+    ]
+  }
+}
