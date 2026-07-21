@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Godot;
+using SasukeIronclad.SasukeIroncladCode.Adapters;
 
 namespace SasukeIronclad.SasukeIroncladCode.Runtime;
 
@@ -12,6 +14,7 @@ public static class RuntimeCanaryLocalFiles
 {
     public const string OptInFileName = "SasukeIronclad.canary.json";
     public const string StatusFileName = "runtime-canary-status.json";
+    public const string AnchorStatusFileName = "runtime-canary-anchor-status.json";
     public const string ObservationOptInFileName = "SasukeIronclad.observe.json";
 
     private static readonly JsonSerializerOptions ReadOptions = new()
@@ -61,18 +64,59 @@ public static class RuntimeCanaryLocalFiles
         if (string.IsNullOrWhiteSpace(modDirectory))
             return;
 
+        RuntimeCanaryStatusDocument document = new()
+        {
+            GeneratedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+            Enabled = status.Enabled,
+            AnimationsEnabled = status.AnimationsEnabled,
+            TitlesEnabled = status.TitlesEnabled,
+            PatchedBindingIds = status.PatchedBindingIds.Order(StringComparer.Ordinal).ToArray(),
+            Reasons = status.Reasons,
+        };
+        TryWriteAtomic(Path.Combine(modDirectory, StatusFileName), document);
+    }
+
+    public static void WriteAnchorStatus(
+        string modAssemblyPath,
+        RuntimeCanaryOptIn optIn,
+        bool attempted,
+        RuntimePlayerAnchorResolution resolution,
+        GodotVisualSceneHost? host)
+    {
+        ArgumentNullException.ThrowIfNull(optIn);
+        ArgumentNullException.ThrowIfNull(resolution);
+        string? modDirectory = ResolveModDirectory(modAssemblyPath);
+        if (string.IsNullOrWhiteSpace(modDirectory))
+            return;
+
+        Vector2? globalPosition = host?.AnchorGlobalPosition;
+        bool bound = attempted && resolution.Success && host?.IsAnchorBound == true;
+        RuntimeCanaryAnchorStatusDocument document = new()
+        {
+            GeneratedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+            Attempted = attempted,
+            Bound = bound,
+            OverlayVisible = bound && host?.Visible == true,
+            Strategy = resolution.Strategy,
+            CandidateCount = resolution.CandidateCount,
+            LocalPlayerReferenceCount = resolution.LocalPlayerReferenceCount,
+            AnchorType = bound ? host?.AnchorType : null,
+            AnchorName = bound ? host?.AnchorName : null,
+            AnchorGlobalX = bound && globalPosition.HasValue ? globalPosition.Value.X : null,
+            AnchorGlobalY = bound && globalPosition.HasValue ? globalPosition.Value.Y : null,
+            AnchorScale = optIn.AnchorScale,
+            AnchorOffsetX = optIn.AnchorOffsetX,
+            AnchorOffsetY = optIn.AnchorOffsetY,
+            OriginalVisualHidden = false,
+            Reasons = resolution.Reasons,
+        };
+        TryWriteAtomic(Path.Combine(modDirectory, AnchorStatusFileName), document);
+    }
+
+    private static void TryWriteAtomic<T>(string statusPath, T document)
+    {
         try
         {
-            RuntimeCanaryStatusDocument document = new()
-            {
-                GeneratedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
-                Enabled = status.Enabled,
-                AnimationsEnabled = status.AnimationsEnabled,
-                TitlesEnabled = status.TitlesEnabled,
-                PatchedBindingIds = status.PatchedBindingIds.Order(StringComparer.Ordinal).ToArray(),
-                Reasons = status.Reasons,
-            };
-            string statusPath = Path.Combine(modDirectory, StatusFileName);
             string temporaryPath = statusPath + ".tmp";
             File.WriteAllText(
                 temporaryPath,
