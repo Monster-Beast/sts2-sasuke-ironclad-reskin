@@ -119,33 +119,39 @@ def main() -> int:
         remote.write_text(steam_output("111111", "222222"), encoding="utf-8")
         assert module.read_remote_build_id(remote) == "222222"
 
-        attestation = module.create_attestation(
+        beta_attestation = module.create_attestation(
             game,
             remote,
             "public-beta",
             datetime(2026, 7, 21, 0, 0, tzinfo=timezone.utc),
         )
-        assert attestation["is_latest"] is True
-        assert attestation["status"] == "verified"
-        assert attestation["installed_branch"] == "public-beta"
-        assert attestation["installed_build_id"] == "222222"
-        assert attestation["remote_build_id"] == "222222"
-        assert str(root) not in json.dumps(attestation)
+        assert beta_attestation["is_latest"] is True
+        assert beta_attestation["status"] == "verified"
+        assert beta_attestation["installed_branch"] == "public-beta"
+        assert beta_attestation["remote_branch"] == "public-beta"
+        assert beta_attestation["installed_build_id"] == "222222"
+        assert beta_attestation["remote_build_id"] == "222222"
+        assert str(root) not in json.dumps(beta_attestation)
 
         manifest.write_text(appmanifest("222221", "public-beta"), encoding="utf-8")
         stale = module.create_attestation(game, remote, "public-beta")
         assert stale["is_latest"] is False
         assert stale["status"] == "rejected"
 
-        manifest.write_text(appmanifest("222222", ""), encoding="utf-8")
-        stable = module.create_attestation(game, remote, "public-beta")
+        manifest.write_text(appmanifest("111111", ""), encoding="utf-8")
+        stable = module.create_attestation(game, remote, "stable")
         assert stable["installed_branch"] == "stable"
-        assert stable["is_latest"] is False
+        assert stable["required_branch"] == "stable"
+        assert stable["remote_branch"] == "public"
+        assert stable["installed_build_id"] == "111111"
+        assert stable["remote_build_id"] == "111111"
+        assert stable["is_latest"] is True
+        assert stable["status"] == "verified"
 
         expect_error(
             module,
-            lambda: module.create_attestation(game, remote, "stable"),
-            "only supports",
+            lambda: module.create_attestation(game, remote, "private-test"),
+            "unsupported release channel",
         )
         remote.write_text(steam_output("111111", "not-a-build"), encoding="utf-8")
         expect_error(module, lambda: module.read_remote_build_id(remote), "missing or invalid")
@@ -156,8 +162,8 @@ def main() -> int:
         expect_error(module, lambda: module.read_remote_build_id(remote), "missing or invalid")
 
     print(
-        "LATEST_BETA_GUARD_OK branch=public-beta latest=true stale_rejected=true "
-        "stable_rejected=true repeated_blocks=true"
+        "RELEASE_CHANNEL_GUARD_OK beta=true stable=true stale_rejected=true "
+        "unsupported_rejected=true repeated_blocks=true"
     )
     return 0
 
