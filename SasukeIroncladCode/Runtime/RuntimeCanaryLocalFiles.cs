@@ -120,7 +120,7 @@ public static class RuntimeCanaryLocalFiles
             string temporaryPath = statusPath + ".tmp";
             File.WriteAllText(
                 temporaryPath,
-                JsonSerializer.Serialize(document, WriteOptions) + Environment.NewLine,
+                JsonSerializer.Serialize(document, WriteOptions) + System.Environment.NewLine,
                 new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             File.Move(temporaryPath, statusPath, overwrite: true);
         }
