@@ -16,6 +16,8 @@ REQUIRED_EVIDENCE = {
     "local_visual_only_verified",
 }
 METHOD_TOKEN_RE = re.compile(r"^0x06[0-9a-fA-F]{6}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+REQUIRED_BETA_BRANCH = "public-beta"
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -50,6 +52,48 @@ def selected_candidate(binding: dict[str, Any]) -> dict[str, Any]:
     return candidate
 
 
+def validate_latest_beta(review: dict[str, Any], fingerprint: dict[str, Any]) -> dict[str, Any]:
+    policy = review.get("policy", {})
+    if policy.get("latest_public_beta_required") is not True:
+        raise SystemExit("review did not preserve the latest public-beta policy")
+
+    latest = review.get("latest_beta", {})
+    required_branch = str(latest.get("required_branch", "")).strip().lower()
+    installed_build = str(latest.get("installed_build_id", "")).strip()
+    remote_build = str(latest.get("remote_build_id", "")).strip()
+    checked_at = str(latest.get("checked_at_utc", "")).strip()
+    output_sha = str(latest.get("steamcmd_output_sha256", "")).strip().lower()
+
+    if latest.get("is_latest") is not True:
+        raise SystemExit("review is not tied to a verified latest public-beta build")
+    if required_branch != REQUIRED_BETA_BRANCH:
+        raise SystemExit("review latest-beta branch is not public-beta")
+    if str(fingerprint.get("branch", "")).strip().lower() != REQUIRED_BETA_BRANCH:
+        raise SystemExit("profile fingerprint branch is not public-beta")
+    if not remote_build.isdigit() or installed_build != remote_build:
+        raise SystemExit("latest-beta installed and remote build IDs do not match")
+    if str(fingerprint.get("steam_build_id", "")).strip() != remote_build:
+        raise SystemExit("profile fingerprint does not match the latest-beta attested build")
+    if not SHA256_RE.fullmatch(output_sha):
+        raise SystemExit("latest-beta attestation digest is invalid")
+    try:
+        parsed_checked_at = datetime.fromisoformat(checked_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise SystemExit("latest-beta attestation timestamp is invalid") from exc
+    if parsed_checked_at.tzinfo is None:
+        raise SystemExit("latest-beta attestation timestamp must include a timezone")
+
+    return {
+        "status": "verified",
+        "branch": REQUIRED_BETA_BRANCH,
+        "installed_build_id": installed_build,
+        "remote_build_id": remote_build,
+        "checked_at_utc": parsed_checked_at.astimezone(timezone.utc).isoformat(),
+        "source": str(latest.get("source", "")).strip(),
+        "steamcmd_output_sha256": output_sha,
+    }
+
+
 def build_profile(
     review: dict[str, Any],
     source_path: Path,
@@ -70,6 +114,7 @@ def build_profile(
     missing = [key for key in required_fingerprint if not str(fingerprint.get(key, "")).strip()]
     if missing:
         raise SystemExit("review fingerprint is incomplete: " + ", ".join(missing))
+    beta_attestation = validate_latest_beta(review, fingerprint)
 
     visual_bindings: list[dict[str, Any]] = []
     title_bindings: list[dict[str, Any]] = []
@@ -117,11 +162,13 @@ def build_profile(
                 "module_mvid": fingerprint["module_mvid"],
                 "baselib_version": fingerprint["baselib_version"],
             },
+            "beta_attestation": beta_attestation,
             "visual_bindings": visual_bindings,
             "title_bindings": title_bindings,
         },
         "review_evidence": evidence_by_binding,
         "promotion_requirements": [
+            "latest_beta_attestation_is_fresh",
             "real_game_build_succeeds",
             "visual_fallback_regression_passes",
             "title_fallback_regression_passes",
@@ -134,7 +181,7 @@ def build_profile(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Compile a manually approved review into a still-disabled pending profile."
+        description="Compile a manually approved latest-beta review into a still-disabled pending profile."
     )
     parser.add_argument("--review", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -146,6 +193,7 @@ def main() -> int:
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(
         f"REVIEWED_PROFILE_OK profile={result['profile']['id']} "
+        f"beta_build={result['profile']['beta_attestation']['remote_build_id']} "
         f"visuals={len(result['profile']['visual_bindings'])} "
         f"titles={len(result['profile']['title_bindings'])} status=pending_review"
     )
