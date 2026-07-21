@@ -21,6 +21,8 @@ runtime-observation-review/
 SasukeIronclad.observe.json
 runtime-observation-status.json
 runtime-observation-*.jsonl
+SasukeIronclad.canary.json
+runtime-canary-status.json
 *.autosave
 *.bak
 .idea/
