@@ -69,17 +69,18 @@ public static class GameIntegrationGate
 
     private static bool IsVerified(GameVisualBindingSpec binding) =>
         binding.Status == "verified" && !string.IsNullOrWhiteSpace(binding.DeclaringType) &&
-        !string.IsNullOrWhiteSpace(binding.MethodSignature) && IsMetadataToken(binding.MetadataToken) &&
-        !string.IsNullOrWhiteSpace(binding.Fallback);
+        !string.IsNullOrWhiteSpace(binding.MethodSignature) && IsMethodDefinitionToken(binding.MetadataToken) &&
+        binding.Fallback == "original_visual";
 
     private static bool IsVerified(GameTitleBindingSpec binding) =>
         binding.Status == "verified" && !string.IsNullOrWhiteSpace(binding.DeclaringType) &&
-        !string.IsNullOrWhiteSpace(binding.MethodSignature) && IsMetadataToken(binding.MetadataToken) &&
+        !string.IsNullOrWhiteSpace(binding.MethodSignature) && IsMethodDefinitionToken(binding.MetadataToken) &&
         binding.Fallback == "original_title";
 
-    private static bool IsMetadataToken(string value) =>
-        value.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && value.Length == 10 &&
-        uint.TryParse(value.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out _);
+    private static bool IsMethodDefinitionToken(string value) =>
+        value.StartsWith("0x06", StringComparison.OrdinalIgnoreCase) && value.Length == 10 &&
+        uint.TryParse(value.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint token) &&
+        (token & 0xFF000000u) == 0x06000000u && (token & 0x00FFFFFFu) != 0;
 
     private static bool IsSha256(string value) => value.Length == 64 && value.All(Uri.IsHexDigit);
 
