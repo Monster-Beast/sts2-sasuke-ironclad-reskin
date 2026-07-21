@@ -1,5 +1,31 @@
 Set-StrictMode -Version Latest
 
+function Get-SteamCmdBranchBuildId {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Content,
+
+        [string]$Branch = "public-beta"
+    )
+
+    $branchPattern = '(?s)"' + [Regex]::Escape($Branch) + '"\s*\{(?<body>.*?)\}'
+    $branchMatch = [Regex]::Match($Content, $branchPattern, [Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    if (-not $branchMatch.Success) {
+        return ""
+    }
+
+    $buildMatch = [Regex]::Match(
+        $branchMatch.Groups["body"].Value,
+        '"buildid"\s+"(?<build>[0-9]+)"',
+        [Text.RegularExpressions.RegexOptions]::IgnoreCase
+    )
+    if (-not $buildMatch.Success) {
+        return ""
+    }
+    return $buildMatch.Groups["build"].Value
+}
+
 function Invoke-SteamCmdBetaQuery {
     [CmdletBinding()]
     param(
@@ -8,14 +34,6 @@ function Invoke-SteamCmdBetaQuery {
 
         [Parameter(Mandatory = $true)]
         [string]$OutputPath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$PythonCommand,
-
-        [string[]]$PythonPrefix = @(),
-
-        [Parameter(Mandatory = $true)]
-        [string]$GuardScript,
 
         [string]$Branch = "public-beta"
     )
@@ -58,25 +76,11 @@ function Invoke-SteamCmdBetaQuery {
         (New-Object System.Text.UTF8Encoding($false))
     )
     if ($combinedOutput) {
-        Write-Host $combinedOutput.TrimEnd()
+        Write-Host ($combinedOutput.TrimEnd())
     }
 
-    $parseArguments = @($PythonPrefix) + @(
-        $GuardScript,
-        "parse-remote",
-        "--steamcmd-output", $OutputPath,
-        "--branch", $Branch
-    )
-    $parsedLines = @(& $PythonCommand @parseArguments 2>$null)
-    $parseExitCode = $LASTEXITCODE
-    $remoteBuildId = if ($parsedLines.Count -gt 0) {
-        ([string]$parsedLines[-1]).Trim()
-    }
-    else {
-        ""
-    }
-
-    if ($parseExitCode -ne 0 -or $remoteBuildId -notmatch '^[0-9]+$') {
+    $remoteBuildId = Get-SteamCmdBranchBuildId -Content $combinedOutput -Branch $Branch
+    if ($remoteBuildId -notmatch '^[0-9]+$') {
         if ($steamExitCode -ne 0) {
             throw "SteamCMD 返回退出码 $steamExitCode，且输出中未找到有效的 $Branch buildid。"
         }
