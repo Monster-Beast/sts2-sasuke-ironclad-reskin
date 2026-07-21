@@ -1,0 +1,79 @@
+name: Monitor latest public beta
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate latest-beta guard
+        run: python tools/test_latest_beta_guard.py
+      - name: Validate profile inventory policy
+        run: python tools/test_latest_beta_profiles.py
+
+  query-remote-beta:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install SteamCMD runtime dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            ca-certificates curl lib32gcc-s1 lib32stdc++6
+      - name: Download Valve SteamCMD
+        run: |
+          mkdir -p .steamcmd
+          curl --fail --location --retry 3 \
+            https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz \
+            --output .steamcmd/steamcmd_linux.tar.gz
+          tar -xzf .steamcmd/steamcmd_linux.tar.gz -C .steamcmd
+          chmod +x .steamcmd/steamcmd.sh
+      - name: Query Slay the Spire 2 public-beta
+        run: |
+          set -o pipefail
+          timeout 240s .steamcmd/steamcmd.sh \
+            +login anonymous \
+            +app_info_update 1 \
+            +app_info_print 2868840 \
+            +quit 2>&1 | tee steamcmd-app-info.txt
+          remote_build="$(python tools/latest_beta_guard.py parse-remote \
+            --steamcmd-output steamcmd-app-info.txt \
+            --branch public-beta | tail -n 1)"
+          test -n "$remote_build"
+          echo "REMOTE_BETA_BUILD_ID=$remote_build" >> "$GITHUB_ENV"
+          echo "Current public-beta buildid: $remote_build" >> "$GITHUB_STEP_SUMMARY"
+      - name: Compare committed profiles with remote beta
+        run: |
+          python tools/check_latest_beta_profiles.py \
+            --contract SasukeIronclad/data/game_integration_contract.json \
+            --remote-build-id "$REMOTE_BETA_BUILD_ID" \
+            --output beta-monitor
+          cat beta-monitor/beta-profile-status.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload beta monitor evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-public-beta-status
+          path: |
+            steamcmd-app-info.txt
+            beta-monitor/beta-profile-status.json
+            beta-monitor/beta-profile-status.md
+          if-no-files-found: warn
+          retention-days: 14
