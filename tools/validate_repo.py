@@ -167,9 +167,19 @@ def main():
             display_by_locale[locale].add(display.casefold())
     if 'GIANT_ROCK' not in name_ids: die('derived Giant Rock display name is missing')
 
+    xml_trees={}
     for p in ['SasukeIronclad.csproj','Directory.Build.props','Sts2PathDiscovery.props']:
-        try: ET.parse(ROOT/p)
+        try: xml_trees[p]=ET.parse(ROOT/p)
         except Exception as exc: die(f"invalid XML {p}: {exc}")
+    project_root=xml_trees['SasukeIronclad.csproj'].getroot()
+    if project_root.findtext('.//EnableDefaultCompileItems')!='false':
+        die('mod project must disable recursive default Compile items')
+    compile_includes=[item.get('Include') for item in project_root.findall('.//Compile') if item.get('Include')]
+    if compile_includes!=['SasukeIroncladCode/**/*.cs']:
+        die('mod project must compile only SasukeIroncladCode/**/*.cs')
+    if any(value and ('.godot' in value or value.startswith('tools/')) for value in compile_includes):
+        die('generated or tooling sources entered the production mod compile scope')
+
     forbidden={'.pck','.dll','.atlas','.skel','.ogg','.mp3','.ttf','.otf'}
     bad=[str(p.relative_to(ROOT)) for p in ROOT.rglob('*') if p.is_file() and '.git' not in p.parts and p.suffix.lower() in forbidden]
     if bad: die('forbidden binary/extracted assets: '+', '.join(bad))
@@ -179,7 +189,7 @@ def main():
     print(
         f"OK: {len(card_ids)} card timelines ({len(active_ids)} active beta, {len(design_ids)} design-only; "
         f"{damage_count} damage, {bespoke_count} bespoke), {len(name_ids)} display names ({derived_names} derived), "
-        f"{len(action_ids)} primitives, {len(tier_ids)} tiers, {len(surface_ids)} surfaces."
+        f"{len(action_ids)} primitives, {len(tier_ids)} tiers, {len(surface_ids)} surfaces; production compile scope isolated."
     )
     return 0
 
