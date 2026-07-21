@@ -17,6 +17,7 @@ SESSION_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanarySession.cs"
 ANCHOR_RESOLVER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimePlayerVisualAnchorResolver.cs"
 SCENE_HOST_PATH = ROOT / "SasukeIroncladCode/Adapters/GodotVisualSceneHost.cs"
 GATE_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryGate.cs"
+RUNTIME_CONTRACT_PROJECT_PATH = ROOT / "tools/runtime_contract/SasukeIronclad.RuntimeContract.csproj"
 
 EXPECTED_APPROVED = {
     "card_visual_request", "original_impact", "state_removed", "combat_ended",
@@ -82,6 +83,7 @@ def main() -> int:
     resolver_text = ANCHOR_RESOLVER_PATH.read_text(encoding="utf-8")
     host_text = SCENE_HOST_PATH.read_text(encoding="utf-8")
     gate_text = GATE_PATH.read_text(encoding="utf-8")
+    runtime_contract_text = RUNTIME_CONTRACT_PROJECT_PATH.read_text(encoding="utf-8")
 
     require("local_visual_only" in script_text, "canary marker mode changed")
     require("anchor_to_local_player" in script_text and "anchor_scale" in script_text, "local-player anchor marker fields are missing")
@@ -101,10 +103,12 @@ def main() -> int:
     require("Visible = false" in host_text and "BindToAnchor" in host_text, "visual host does not stay hidden before anchoring")
     require("GetGlobalTransformWithCanvas" in host_text and "ClearAnchor" in host_text, "visual host does not track or clear the game anchor")
     require("original_visual_hidden=false" in gate_text, "gate does not declare the overlay-only safety boundary")
+    require("SasukeIroncladCode/MainFile.cs" in runtime_contract_text, "runtime contract does not compile the Mod initializer")
+    require("Sts2ModdingStubs.cs" in runtime_contract_text, "runtime contract does not compile the STS2 Mod stubs")
 
     print(
         "RUNTIME_CANARY_CONTRACT_OK sessions=2 events=10388 approved=10 blocked=2 "
-        "explicit_opt_in=true anchor=true ambiguous=false original_visible=true production=false"
+        "explicit_opt_in=true anchor=true ambiguous=false original_visible=true mainfile_compiled=true production=false"
     )
     return 0
 
