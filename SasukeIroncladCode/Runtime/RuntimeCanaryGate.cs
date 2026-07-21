@@ -86,6 +86,14 @@ public static class RuntimeCanaryGate
         {
             return Disabled("Runtime canary requires an explicit schema-1 local_visual_only marker with at least one presentation layer enabled.");
         }
+        if (optIn.EnableAnimations &&
+            (!optIn.AnchorToLocalPlayer ||
+             !float.IsFinite(optIn.AnchorScale) || optIn.AnchorScale is < 0.25f or > 3.0f ||
+             !float.IsFinite(optIn.AnchorOffsetX) || Math.Abs(optIn.AnchorOffsetX) > 1000.0f ||
+             !float.IsFinite(optIn.AnchorOffsetY) || Math.Abs(optIn.AnchorOffsetY) > 1000.0f))
+        {
+            return Disabled("Animation canary requires bounded local-player anchoring, scale and offsets.");
+        }
         if (!string.Equals(optIn.ExpectedBranch, runtime.Branch, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(optIn.ExpectedBuildId, runtime.SteamBuildId, StringComparison.Ordinal))
         {
@@ -147,6 +155,13 @@ public static class RuntimeCanaryGate
             $"Exact-build runtime canary enabled for {runtime.Branch} build {runtime.SteamBuildId}; " +
             $"animations={optIn.EnableAnimations}; titles={optIn.EnableTitles}; low_flash={optIn.LowFlash}; fast_mode={optIn.FastMode}."
         );
+        if (optIn.EnableAnimations)
+        {
+            reasons.Add(
+                $"Local-player anchor required; scale={optIn.AnchorScale:R}; " +
+                $"offset=({optIn.AnchorOffsetX:R},{optIn.AnchorOffsetY:R}); original_visual_hidden=false."
+            );
+        }
         reasons.Add("Only approved_for_canary postfix adapters are eligible; form_removed and character_state remain disabled.");
         reasons.Add("Original game methods, arguments, return values, card IDs and gameplay state remain untouched.");
         return new(true, optIn.EnableAnimations, optIn.EnableTitles, selected, reasons);
