@@ -78,7 +78,7 @@ exit 7
         throw "invalid SteamCMD output with exit code 7 was accepted"
     }
 
-    Write-Host "STEAMCMD_QUERY_OK valid_exit7=true invalid_exit7_rejected=true buildid=24251656"
+    Write-Output "STEAMCMD_QUERY_OK valid_exit7=true invalid_exit7_rejected=true buildid=24251656"
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {
