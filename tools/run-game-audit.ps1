@@ -113,9 +113,6 @@ function Invoke-LatestBetaGuard {
         $queryResult = Invoke-SteamCmdBetaQuery `
             -SteamCmdPath $steamCmd `
             -OutputPath $capturedOutput `
-            -PythonCommand $python.Command `
-            -PythonPrefix $python.Prefix `
-            -GuardScript $guardScript `
             -Branch "public-beta"
         Write-Host "SteamCMD 已解析 public-beta buildid=$($queryResult.RemoteBuildId)" -ForegroundColor Cyan
     }
