@@ -14,6 +14,9 @@ SCRIPT_PATH = ROOT / "tools/runtime-canary.ps1"
 MAIN_PATH = ROOT / "SasukeIroncladCode/MainFile.cs"
 LOCAL_FILES_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryLocalFiles.cs"
 SESSION_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanarySession.cs"
+ANCHOR_RESOLVER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimePlayerVisualAnchorResolver.cs"
+SCENE_HOST_PATH = ROOT / "SasukeIroncladCode/Adapters/GodotVisualSceneHost.cs"
+GATE_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryGate.cs"
 
 EXPECTED_APPROVED = {
     "card_visual_request", "original_impact", "state_removed", "combat_ended",
@@ -76,14 +79,33 @@ def main() -> int:
     main_text = MAIN_PATH.read_text(encoding="utf-8")
     local_text = LOCAL_FILES_PATH.read_text(encoding="utf-8")
     session_text = SESSION_PATH.read_text(encoding="utf-8")
+    resolver_text = ANCHOR_RESOLVER_PATH.read_text(encoding="utf-8")
+    host_text = SCENE_HOST_PATH.read_text(encoding="utf-8")
+    gate_text = GATE_PATH.read_text(encoding="utf-8")
+
     require("local_visual_only" in script_text, "canary marker mode changed")
+    require("anchor_to_local_player" in script_text and "anchor_scale" in script_text, "local-player anchor marker fields are missing")
+    require("AnchorOffsetX" in script_text and "AnchorOffsetY" in script_text, "anchor calibration controls are missing")
     require("RuntimeCanaryLocalFiles.LoadOptIn" in main_text and "RuntimeCanaryLocalFiles.WriteStatus" in main_text, "canary startup wiring is missing")
     require("SasukeIronclad.canary.json" in local_text and "runtime-canary-status.json" in local_text, "canary local filenames changed")
+    require("runtime-canary-anchor-status.json" in local_text, "anchor diagnostics filename is missing")
+    require("OriginalVisualHidden = false" in local_text, "anchor diagnostics do not preserve the original visual")
     require("Runtime observation marker is present" in local_text, "simultaneous observation is not rejected")
     require("Demon Form" in session_text and "targeted run proves the exact form-removal event" in session_text, "Demon Form is not fail-closed")
     require("ReferenceEquals(sourceCardModel, _activeCardModel)" in session_text, "impact forwarding is not scoped to the active local card")
+    require("RuntimePlayerVisualAnchorResolver.Resolve" in session_text, "animation canary does not resolve a local-player anchor")
+    require("waiting_for_local_card_play" in session_text, "overlay does not begin in a hidden waiting state")
+    require("ReferenceEquals(local, associated)" in resolver_text, "anchor resolution is not tied to the local Player object")
+    require("Multiple similarly ranked local-player visual nodes" in resolver_text, "ambiguous anchors do not fail closed")
+    require("MaxSceneNodes" in resolver_text and "MaxReferenceObjects" in resolver_text, "anchor traversal is not bounded")
+    require("Visible = false" in host_text and "BindToAnchor" in host_text, "visual host does not stay hidden before anchoring")
+    require("GetGlobalTransformWithCanvas" in host_text and "ClearAnchor" in host_text, "visual host does not track or clear the game anchor")
+    require("original_visual_hidden=false" in gate_text, "gate does not declare the overlay-only safety boundary")
 
-    print("RUNTIME_CANARY_CONTRACT_OK sessions=2 events=10388 approved=10 blocked=2 explicit_opt_in=true production=false")
+    print(
+        "RUNTIME_CANARY_CONTRACT_OK sessions=2 events=10388 approved=10 blocked=2 "
+        "explicit_opt_in=true anchor=true ambiguous=false original_visible=true production=false"
+    )
     return 0
 
 
