@@ -2,6 +2,29 @@
   "schemaVersion": 1,
   "queries": [
     {
+      "id": "target_cards",
+      "priority": true,
+      "exactTypeNames": [
+        "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad",
+        "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad",
+        "MegaCrit.Sts2.Core.Models.Cards.Bash",
+        "MegaCrit.Sts2.Core.Models.Cards.Anger",
+        "MegaCrit.Sts2.Core.Models.Cards.Cleave",
+        "MegaCrit.Sts2.Core.Models.Cards.Thunderclap",
+        "MegaCrit.Sts2.Core.Models.Cards.HeavyBlade",
+        "MegaCrit.Sts2.Core.Models.Cards.FlameBarrier",
+        "MegaCrit.Sts2.Core.Models.Cards.Whirlwind",
+        "MegaCrit.Sts2.Core.Models.Cards.BurningPact",
+        "MegaCrit.Sts2.Core.Models.Cards.DemonForm",
+        "MegaCrit.Sts2.Core.Models.Cards.LimitBreak",
+        "MegaCrit.Sts2.Core.Models.Cards.FiendFire"
+      ],
+      "typeContains": [],
+      "methodContains": [],
+      "memberContains": [],
+      "assetContains": []
+    },
+    {
       "id": "cards",
       "typeContains": [
         "Card",
