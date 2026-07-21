@@ -16,16 +16,29 @@ jobs:
         shell: pwsh
         run: |
           bash -n tools/run-game-audit.sh
-          $tokens = $null
-          $errors = $null
-          [void][System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path tools/run-game-audit.ps1),
-            [ref]$tokens,
-            [ref]$errors
-          )
-          if ($errors.Count -gt 0) {
-            $errors | ForEach-Object { Write-Error $_.Message }
-            exit 1
+          foreach ($path in @(
+            "tools/run-game-audit.ps1",
+            "tools/steamcmd-query.ps1",
+            "tools/test_steamcmd_query.ps1"
+          )) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path),
+              [ref]$tokens,
+              [ref]$errors
+            )
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$path: $($_.Message)" }
+              exit 1
+            }
+          }
+      - name: Validate SteamCMD self-update exit handling
+        shell: pwsh
+        run: |
+          ./tools/test_steamcmd_query.ps1 | Tee-Object -FilePath steamcmd-query-test.log
+          if (-not (Select-String -Path steamcmd-query-test.log -Pattern "STEAMCMD_QUERY_OK" -Quiet)) {
+            throw "SteamCMD query regression test did not report success."
           }
       - name: Restore audit tool
         run: dotnet restore tools/game_audit/SasukeIronclad.GameAudit.csproj
@@ -164,6 +177,7 @@ jobs:
         with:
           name: game-audit-self-test-reports
           path: |
+            steamcmd-query-test.log
             integration-gate-test.log
             audit-self-test.log
             latest-beta-guard.log
