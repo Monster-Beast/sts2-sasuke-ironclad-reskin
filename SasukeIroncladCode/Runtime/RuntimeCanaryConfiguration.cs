@@ -64,9 +64,11 @@ public sealed class RuntimeCanaryOptIn
     [JsonPropertyName("low_flash")] public bool LowFlash { get; init; } = true;
     [JsonPropertyName("fast_mode")] public bool FastMode { get; init; }
     [JsonPropertyName("anchor_to_local_player")] public bool AnchorToLocalPlayer { get; init; } = true;
-    [JsonPropertyName("anchor_scale")] public float AnchorScale { get; init; } = 1.0f;
+    [JsonPropertyName("anchor_scale")] public float AnchorScale { get; init; } = 1.2f;
     [JsonPropertyName("anchor_offset_x")] public float AnchorOffsetX { get; init; }
-    [JsonPropertyName("anchor_offset_y")] public float AnchorOffsetY { get; init; }
+    [JsonPropertyName("anchor_offset_y")] public float AnchorOffsetY { get; init; } = -150.0f;
+    [JsonPropertyName("hide_original_visual")] public bool HideOriginalVisual { get; init; }
+    [JsonPropertyName("replacement_acknowledgement")] public string ReplacementAcknowledgement { get; init; } = string.Empty;
 }
 
 public sealed class CurrentBetaCardScopeMap
@@ -111,9 +113,30 @@ public sealed class RuntimeCanaryAnchorStatusDocument
     [JsonPropertyName("anchor_name")] public string? AnchorName { get; init; }
     [JsonPropertyName("anchor_global_x")] public float? AnchorGlobalX { get; init; }
     [JsonPropertyName("anchor_global_y")] public float? AnchorGlobalY { get; init; }
-    [JsonPropertyName("anchor_scale")] public float AnchorScale { get; init; } = 1.0f;
+    [JsonPropertyName("anchor_scale")] public float AnchorScale { get; init; } = 1.2f;
     [JsonPropertyName("anchor_offset_x")] public float AnchorOffsetX { get; init; }
-    [JsonPropertyName("anchor_offset_y")] public float AnchorOffsetY { get; init; }
+    [JsonPropertyName("anchor_offset_y")] public float AnchorOffsetY { get; init; } = -150.0f;
+    [JsonPropertyName("replacement_requested")] public bool ReplacementRequested { get; init; }
     [JsonPropertyName("original_visual_hidden")] public bool OriginalVisualHidden { get; init; }
+    [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
+}
+
+public sealed class RuntimeCanaryReplacementStatusDocument
+{
+    [JsonPropertyName("schema_version")] public int SchemaVersion { get; init; } = 1;
+    [JsonPropertyName("generated_at_utc")] public string GeneratedAtUtc { get; init; } = string.Empty;
+    [JsonPropertyName("requested")] public bool Requested { get; init; }
+    [JsonPropertyName("active")] public bool Active { get; init; }
+    [JsonPropertyName("ever_hidden")] public bool EverHidden { get; init; }
+    [JsonPropertyName("restore_count")] public int RestoreCount { get; init; }
+    [JsonPropertyName("last_transition")] public string LastTransition { get; init; } = string.Empty;
+    [JsonPropertyName("target_type")] public string? TargetType { get; init; }
+    [JsonPropertyName("target_name")] public string? TargetName { get; init; }
+    [JsonPropertyName("original_visible_before_hide")] public bool? OriginalVisibleBeforeHide { get; init; }
+    [JsonPropertyName("anchor_bound")] public bool AnchorBound { get; init; }
+    [JsonPropertyName("overlay_visible")] public bool OverlayVisible { get; init; }
+    [JsonPropertyName("anchor_scale")] public float AnchorScale { get; init; } = 1.2f;
+    [JsonPropertyName("anchor_offset_x")] public float AnchorOffsetX { get; init; }
+    [JsonPropertyName("anchor_offset_y")] public float AnchorOffsetY { get; init; } = -150.0f;
     [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
 }
