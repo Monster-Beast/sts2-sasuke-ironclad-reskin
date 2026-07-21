@@ -50,14 +50,15 @@ function Resolve-Sts2GamePath {
 }
 
 function Resolve-PythonCommand {
-    if (Get-Command python -ErrorAction SilentlyContinue) {
-        return @{ Command = "python"; Prefix = @() }
-    }
-    if (Get-Command py -ErrorAction SilentlyContinue) {
-        return @{ Command = "py"; Prefix = @("-3") }
-    }
-    if (Get-Command python3 -ErrorAction SilentlyContinue) {
-        return @{ Command = "python3"; Prefix = @() }
+    foreach ($candidate in @(
+        @{ Name = "python"; Prefix = @() },
+        @{ Name = "py"; Prefix = @("-3") },
+        @{ Name = "python3"; Prefix = @() }
+    )) {
+        $command = Get-Command $candidate.Name -ErrorAction SilentlyContinue
+        if ($command -and $command.Source) {
+            return @{ Command = $command.Source; Prefix = $candidate.Prefix }
+        }
     }
     throw "Latest-beta validation requires Python 3, but python, py, and python3 were not found."
 }
@@ -91,6 +92,17 @@ function Resolve-SteamCmd {
     }
 
     throw "SteamCMD was not found. Install Valve SteamCMD or supply -SteamCmdPath / -SteamCmdOutput."
+}
+
+function Write-CapturedResult {
+    param([object]$Result)
+
+    if ($Result.StandardOutput) {
+        Write-Host ($Result.StandardOutput.TrimEnd())
+    }
+    if ($Result.StandardError) {
+        Write-Host ($Result.StandardError.TrimEnd()) -ForegroundColor Yellow
+    }
 }
 
 function Invoke-LatestBetaGuard {
@@ -129,12 +141,10 @@ function Invoke-LatestBetaGuard {
         "--output", $attestation,
         "--required-branch", "public-beta"
     )
-    $guardOutput = @(& $python.Command @arguments 2>&1)
-    $guardExitCode = $LASTEXITCODE
-    foreach ($line in $guardOutput) {
-        Write-Host ([string]$line)
-    }
-    if ($guardExitCode -ne 0) {
+    $guardResult = Invoke-CapturedNativeProcess -FilePath $python.Command -Arguments $arguments
+    Write-CapturedResult -Result $guardResult
+
+    if ($guardResult.ExitCode -ne 0) {
         $detail = ""
         if (Test-Path -LiteralPath $attestation -PathType Leaf) {
             try {
@@ -150,7 +160,12 @@ function Invoke-LatestBetaGuard {
             }
         }
         if (-not $detail) {
-            $detail = ($guardOutput | ForEach-Object { [string]$_ }) -join " | "
+            $capturedDetail = @($guardResult.StandardOutput, $guardResult.StandardError) `
+                | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+            $detail = ($capturedDetail | ForEach-Object { ([string]$_).Trim() }) -join " | "
+        }
+        if (-not $detail) {
+            $detail = "Python exited with code $($guardResult.ExitCode) without output; executable=$($python.Command)"
         }
         throw (
             "The local game is not the current Steam public-beta. " +
@@ -205,9 +220,12 @@ function Invoke-AuditReviewWorkbook {
         "--latest-beta-attestation", $LatestBetaAttestation,
         "--output", $OutputDirectory
     )
-    & $python.Command @arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "Audit review workbook generation failed with exit code $LASTEXITCODE."
+    $reviewResult = Invoke-CapturedNativeProcess -FilePath $python.Command -Arguments $arguments
+    Write-CapturedResult -Result $reviewResult
+    if ($reviewResult.ExitCode -ne 0) {
+        $detail = @($reviewResult.StandardOutput, $reviewResult.StandardError) `
+            | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+        throw "Audit review workbook generation failed with exit code $($reviewResult.ExitCode): $($detail -join ' | ')"
     }
 }
 
