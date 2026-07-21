@@ -41,6 +41,8 @@ Linux/macOS：
 local-audit/run-1/audit-report.json
 local-audit/run-2/audit-report.json
 local-audit/comparison/audit-comparison.json
+local-audit/review/binding-review.json
+local-audit/review/binding-review.md
 ```
 
 并确认：
@@ -49,20 +51,15 @@ local-audit/comparison/audit-comparison.json
 "equivalent": true
 ```
 
-## 2. 生成接口候选审阅表
+Windows 与 Linux/macOS 辅助脚本会在比较成功后自动尝试生成审阅表。没有 Python 时可稍后手工运行 `tools/build_audit_review.py`。
+
+## 2. 手工生成接口候选审阅表
 
 ```bash
 python tools/build_audit_review.py \
   --report local-audit/run-1/audit-report.json \
   --comparison local-audit/comparison/audit-comparison.json \
   --output local-audit/review
-```
-
-输出：
-
-```text
-local-audit/review/binding-review.json
-local-audit/review/binding-review.md
 ```
 
 审阅表覆盖六类视觉事件：
@@ -169,7 +166,8 @@ python tools/compile_reviewed_profile.py \
 - 状态/Form 移除；
 - 多人本地视觉边界；
 - 与其他 Mod 共存；
-- Stable/Beta 分开测试。
+- Stable/Beta 分开测试；
+- 第二名审阅者复核。
 
 只有完成这些回归，才允许人工将 Contract、Profile 和 Binding 三层状态改成 `verified`。
 
@@ -186,6 +184,15 @@ python tools/compile_reviewed_profile.py \
 7. 在没有实际审阅适配器时保持所有接口禁用。
 
 分支名只是指纹的一部分。即使分支推断成功，Steam buildid、程序集 SHA-256、MVID 和 BaseLib 版本仍必须全部一致。
+
+安装器真正处理 MethodDef 前，还必须通过 `AuditedMethodBindingResolver` 二次核验：
+
+- Metadata Token 必须是 `0x06` MethodDef；
+- Token 必须能在已加载的游戏 Module 中解析；
+- Module MVID 必须与 Profile 一致；
+- 声明类型必须完全一致；
+- 完整方法签名必须完全一致；
+- 不接受抽象方法或开放泛型方法。
 
 即使有人误把 Contract 改成 `verified`，未注册真实适配器时也不会安装游戏接口。
 
