@@ -18,7 +18,10 @@ $ErrorActionPreference = "Stop"
 function Resolve-Sts2GamePath {
     param([string]$ExplicitPath)
 
-    if ($ExplicitPath -and (Test-Path -LiteralPath $ExplicitPath)) {
+    if (-not [string]::IsNullOrWhiteSpace($ExplicitPath)) {
+        if (-not (Test-Path -LiteralPath $ExplicitPath -PathType Container)) {
+            throw "GamePath 不存在或不是目录：$ExplicitPath。显式路径无效时不会回退到其他 Steam 安装目录。"
+        }
         return (Resolve-Path -LiteralPath $ExplicitPath).Path
     }
 
@@ -29,7 +32,7 @@ function Resolve-Sts2GamePath {
     foreach ($key in $uninstallKeys) {
         if (Test-Path $key) {
             $candidate = (Get-ItemProperty $key -ErrorAction SilentlyContinue).InstallLocation
-            if ($candidate -and (Test-Path -LiteralPath $candidate)) {
+            if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Container)) {
                 return (Resolve-Path -LiteralPath $candidate).Path
             }
         }
@@ -38,7 +41,7 @@ function Resolve-Sts2GamePath {
     $steamPath = (Get-ItemProperty "HKCU:\Software\Valve\Steam" -ErrorAction SilentlyContinue).SteamPath
     if ($steamPath) {
         $candidate = Join-Path $steamPath "steamapps\common\Slay the Spire 2"
-        if (Test-Path -LiteralPath $candidate) {
+        if (Test-Path -LiteralPath $candidate -PathType Container) {
             return (Resolve-Path -LiteralPath $candidate).Path
         }
     }
@@ -63,7 +66,7 @@ function Resolve-SteamCmd {
     param([string]$ExplicitPath)
 
     if ($ExplicitPath) {
-        if (-not (Test-Path -LiteralPath $ExplicitPath)) {
+        if (-not (Test-Path -LiteralPath $ExplicitPath -PathType Leaf)) {
             throw "SteamCMD 不存在：$ExplicitPath"
         }
         return (Resolve-Path -LiteralPath $ExplicitPath).Path
@@ -82,7 +85,7 @@ function Resolve-SteamCmd {
         "C:\Program Files\Steam\steamcmd.exe"
     )
     foreach ($candidate in $candidates) {
-        if (Test-Path -LiteralPath $candidate) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
             return (Resolve-Path -LiteralPath $candidate).Path
         }
     }
@@ -103,7 +106,7 @@ function Invoke-LatestBetaGuard {
     $capturedOutput = Join-Path $betaDirectory "steamcmd-app-info.txt"
 
     if ($SteamCmdOutput) {
-        if (-not (Test-Path -LiteralPath $SteamCmdOutput)) {
+        if (-not (Test-Path -LiteralPath $SteamCmdOutput -PathType Leaf)) {
             throw "SteamCMD 输出文件不存在：$SteamCmdOutput"
         }
         Copy-Item -LiteralPath $SteamCmdOutput -Destination $capturedOutput -Force
@@ -126,9 +129,33 @@ function Invoke-LatestBetaGuard {
         "--output", $attestation,
         "--required-branch", "public-beta"
     )
-    & $python.Command @arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "本地游戏不是 Steam 当前最新 public-beta；请先让 Steam 完成 Beta 更新。"
+    $guardOutput = @(& $python.Command @arguments 2>&1)
+    $guardExitCode = $LASTEXITCODE
+    foreach ($line in $guardOutput) {
+        Write-Host ([string]$line)
+    }
+    if ($guardExitCode -ne 0) {
+        $detail = ""
+        if (Test-Path -LiteralPath $attestation -PathType Leaf) {
+            try {
+                $state = Get-Content -LiteralPath $attestation -Raw | ConvertFrom-Json
+                $detail = (
+                    "installed_branch=$($state.installed_branch), " +
+                    "installed_build=$($state.installed_build_id), " +
+                    "remote_build=$($state.remote_build_id)"
+                )
+            }
+            catch {
+                $detail = "无法读取 attestation.json：$($_.Exception.Message)"
+            }
+        }
+        if (-not $detail) {
+            $detail = ($guardOutput | ForEach-Object { [string]$_ }) -join " | "
+        }
+        throw (
+            "本地游戏不是 Steam 当前最新 public-beta。" +
+            "审计目录：$ResolvedGamePath；$detail。请确认 Steam Beta 分支和本机 buildid。"
+        )
     }
     Write-Host "已确认当前安装为最新 public-beta：$attestation" -ForegroundColor Green
     return $attestation
@@ -152,10 +179,7 @@ function Invoke-GameAudit {
         "--megadot-version", $MegaDotVersion
     )
     if ($AssetRoot) {
-        if (-not (Test-Path -LiteralPath $AssetRoot)) {
-            throw "AssetRoot 不存在：$AssetRoot"
-        }
-        $arguments += @("--asset-root", (Resolve-Path -LiteralPath $AssetRoot).Path)
+        $arguments += @("--asset-root", $AssetRoot)
     }
 
     & dotnet @arguments
@@ -192,6 +216,20 @@ if ($Branch -ne "public-beta") {
 }
 
 $resolvedGamePath = Resolve-Sts2GamePath -ExplicitPath $GamePath
+if (-not [string]::IsNullOrWhiteSpace($AssetRoot)) {
+    if (-not (Test-Path -LiteralPath $AssetRoot -PathType Container)) {
+        throw "AssetRoot 不存在或不是目录：$AssetRoot。没有恢复资源目录时请省略 -AssetRoot。"
+    }
+    $AssetRoot = (Resolve-Path -LiteralPath $AssetRoot).Path
+}
+Write-Host "实际审计游戏目录：$resolvedGamePath" -ForegroundColor Cyan
+if ($AssetRoot) {
+    Write-Host "恢复资源目录：$AssetRoot" -ForegroundColor Cyan
+}
+else {
+    Write-Host "未提供 AssetRoot；本次只扫描安装目录中可见资源。" -ForegroundColor Yellow
+}
+
 $latestBetaAttestation = Invoke-LatestBetaGuard -ResolvedGamePath $resolvedGamePath -ResolvedOutputRoot $OutputRoot
 $run1 = Join-Path $OutputRoot "run-1"
 $run2 = Join-Path $OutputRoot "run-2"
