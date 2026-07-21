@@ -1,0 +1,102 @@
+using System.Text.Json;
+
+namespace SasukeIronclad.SasukeIroncladCode.Runtime;
+
+public sealed record RuntimeCanaryOptInLoadResult(
+    bool Found,
+    RuntimeCanaryOptIn? OptIn,
+    IReadOnlyList<string> Reasons
+);
+
+public static class RuntimeCanaryLocalFiles
+{
+    public const string OptInFileName = "SasukeIronclad.canary.json";
+    public const string StatusFileName = "runtime-canary-status.json";
+    public const string ObservationOptInFileName = "SasukeIronclad.observe.json";
+
+    private static readonly JsonSerializerOptions ReadOptions = new()
+    {
+        PropertyNameCaseInsensitive = false,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+    };
+    private static readonly JsonSerializerOptions WriteOptions = new()
+    {
+        WriteIndented = true,
+    };
+
+    public static RuntimeCanaryOptInLoadResult LoadOptIn(string modAssemblyPath)
+    {
+        string? modDirectory = ResolveModDirectory(modAssemblyPath);
+        if (string.IsNullOrWhiteSpace(modDirectory))
+            return new(false, null, ["Mod directory could not be derived; runtime canary remains disabled."]);
+
+        string markerPath = Path.Combine(modDirectory, OptInFileName);
+        if (!File.Exists(markerPath))
+            return new(false, null, ["Runtime canary opt-in marker is absent; canary remains disabled by default."]);
+        if (File.Exists(Path.Combine(modDirectory, ObservationOptInFileName)))
+            return new(true, null, ["Runtime observation marker is present; remove it before enabling the canary."]);
+
+        try
+        {
+            FileInfo info = new(markerPath);
+            if (info.Length is <= 0 or > 64 * 1024)
+                return new(true, null, ["Runtime canary opt-in marker size is invalid."]);
+            RuntimeCanaryOptIn? optIn = JsonSerializer.Deserialize<RuntimeCanaryOptIn>(
+                File.ReadAllText(markerPath),
+                ReadOptions);
+            return optIn is null
+                ? new(true, null, ["Runtime canary opt-in marker was empty."])
+                : new(true, optIn, ["Explicit runtime canary opt-in marker loaded."]);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return new(true, null, [$"Runtime canary opt-in marker could not be read: {exception.GetType().Name}."]);
+        }
+    }
+
+    public static void WriteStatus(string modAssemblyPath, RuntimeCanaryBootstrapResult status)
+    {
+        ArgumentNullException.ThrowIfNull(status);
+        string? modDirectory = ResolveModDirectory(modAssemblyPath);
+        if (string.IsNullOrWhiteSpace(modDirectory))
+            return;
+
+        try
+        {
+            RuntimeCanaryStatusDocument document = new()
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+                Enabled = status.Enabled,
+                AnimationsEnabled = status.AnimationsEnabled,
+                TitlesEnabled = status.TitlesEnabled,
+                PatchedBindingIds = status.PatchedBindingIds.Order(StringComparer.Ordinal).ToArray(),
+                Reasons = status.Reasons,
+            };
+            string statusPath = Path.Combine(modDirectory, StatusFileName);
+            string temporaryPath = statusPath + ".tmp";
+            File.WriteAllText(
+                temporaryPath,
+                JsonSerializer.Serialize(document, WriteOptions) + Environment.NewLine,
+                new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            File.Move(temporaryPath, statusPath, overwrite: true);
+        }
+        catch
+        {
+            // Canary diagnostics are cosmetic and must never affect game startup.
+        }
+    }
+
+    private static string? ResolveModDirectory(string modAssemblyPath)
+    {
+        if (string.IsNullOrWhiteSpace(modAssemblyPath))
+            return null;
+        try
+        {
+            return Path.GetDirectoryName(Path.GetFullPath(modAssemblyPath));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}
