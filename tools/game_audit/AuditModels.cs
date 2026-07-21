@@ -24,6 +24,8 @@ internal sealed class AuditQuerySet
 internal sealed class AuditQuery
 {
     public string Id { get; init; } = string.Empty;
+    public bool Priority { get; init; }
+    public List<string> ExactTypeNames { get; init; } = [];
     public List<string> TypeContains { get; init; } = [];
     public List<string> MethodContains { get; init; } = [];
     public List<string> MemberContains { get; init; } = [];
