@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,7 @@ REQUIRED_EVIDENCE = {
     "fallback_verified",
     "local_visual_only_verified",
 }
+METHOD_TOKEN_RE = re.compile(r"^0x06[0-9a-fA-F]{6}$")
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -39,7 +41,13 @@ def selected_candidate(binding: dict[str, Any]) -> dict[str, Any]:
     candidates = {candidate["candidate_id"]: candidate for candidate in binding.get("candidates", [])}
     if not selected_id or selected_id not in candidates:
         raise SystemExit(f"binding {binding.get('id')} does not select a listed candidate")
-    return candidates[selected_id]
+    candidate = candidates[selected_id]
+    if str(candidate.get("kind", "")).strip().lower() != "method":
+        raise SystemExit(f"binding {binding.get('id')} selected a non-method metadata target")
+    metadata_token = str(candidate.get("metadata_token", "")).strip()
+    if not METHOD_TOKEN_RE.fullmatch(metadata_token):
+        raise SystemExit(f"binding {binding.get('id')} selected a non-MethodDef metadata token")
+    return candidate
 
 
 def build_profile(
