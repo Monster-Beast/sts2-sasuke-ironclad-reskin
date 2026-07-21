@@ -166,8 +166,18 @@ public static class VisualRegistry
                 throw new InvalidOperationException($"Card {animation.CardId} uses unsupported animation mode {animation.AnimationMode}.");
             if (!actionIds.Contains(animation.BaseActionProfile) || !tierIds.Contains(animation.PresentationTier))
                 throw new InvalidOperationException($"Card {animation.CardId} references an unknown action profile or tier.");
-            if (!animation.UniqueTimeline || animation.DamageRole != "variant_parameter_only" || animation.HitSync != "original_hit_events")
-                throw new InvalidOperationException($"Card {animation.CardId} must own a unique timeline bound to original hit events.");
+            if (!animation.UniqueTimeline || animation.DamageRole != "variant_parameter_only")
+                throw new InvalidOperationException($"Card {animation.CardId} must own a unique card-identity timeline with read-only damage parameters.");
+
+            string expectedHitSync = animation.IsDamageCard
+                ? "original_hit_events"
+                : "timeline_local_events";
+            if (!string.Equals(animation.HitSync, expectedHitSync, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Card {animation.CardId} must use {expectedHitSync}; actual impact policy was {animation.HitSync}.");
+            }
+
             if (animation.Fallback != "original" || animation.Sequence.Count < 3)
                 throw new InvalidOperationException($"Card {animation.CardId} lacks a safe or sufficiently rich animation sequence.");
             if (animation.IsDamageCard && !requiredDamageVariants.IsSubsetOf(animation.Variants))
