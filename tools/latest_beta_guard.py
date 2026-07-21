@@ -68,13 +68,7 @@ def read_installed_metadata(game_path: Path) -> tuple[str, str]:
     return branch, build_id
 
 
-def _find_branch_block(text: str, branch: str) -> str:
-    branch_pattern = re.compile(rf'"{re.escape(branch)}"\s*\{{', re.IGNORECASE)
-    match = branch_pattern.search(text)
-    if not match:
-        raise LatestBetaError(f"SteamCMD output does not contain branch {branch!r}")
-
-    start = match.end() - 1
+def _balanced_block(text: str, start: int, branch: str) -> str:
     depth = 0
     in_string = False
     escaped = False
@@ -99,13 +93,34 @@ def _find_branch_block(text: str, branch: str) -> str:
     raise LatestBetaError(f"SteamCMD branch block for {branch!r} is incomplete")
 
 
+def _find_branch_blocks(text: str, branch: str) -> list[str]:
+    branch_pattern = re.compile(rf'"{re.escape(branch)}"\s*\{{', re.IGNORECASE)
+    matches = list(branch_pattern.finditer(text))
+    if not matches:
+        raise LatestBetaError(f"SteamCMD output does not contain branch {branch!r}")
+
+    blocks: list[str] = []
+    incomplete = False
+    for match in matches:
+        try:
+            blocks.append(_balanced_block(text, match.end() - 1, branch))
+        except LatestBetaError:
+            incomplete = True
+
+    if blocks:
+        return blocks
+    if incomplete:
+        raise LatestBetaError(f"SteamCMD branch block for {branch!r} is incomplete")
+    raise LatestBetaError(f"SteamCMD output does not contain a complete branch block for {branch!r}")
+
+
 def read_remote_build_id(steamcmd_output: Path, branch: str = DEFAULT_BRANCH) -> str:
     text = steamcmd_output.read_text(encoding="utf-8", errors="replace")
-    block = _find_branch_block(text, branch)
-    build_id = _first_value(block, "buildid")
-    if not build_id.isdigit():
-        raise LatestBetaError(f"remote buildid for {branch!r} is missing or invalid")
-    return build_id
+    for block in _find_branch_blocks(text, branch):
+        build_id = _first_value(block, "buildid")
+        if build_id.isdigit():
+            return build_id
+    raise LatestBetaError(f"remote buildid for {branch!r} is missing or invalid")
 
 
 def create_attestation(
