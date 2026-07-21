@@ -83,7 +83,7 @@ public static class RuntimeObservationBootstrap
             session = null;
             List<string> reasons = gate.Reasons.Concat(resolution.Reasons).ToList();
             reasons.Add("All probes are prefix/postfix observers; original arguments and return values are untouched.");
-            return new(true, patcher.OutputPath is null ? null : Path.GetFileNameWithoutExtension(patcher.OutputPath), patcher.OutputPath, reasons);
+            return new(true, patcher.SessionId, patcher.OutputPath, reasons);
         }
         catch (Exception exception)
         {
