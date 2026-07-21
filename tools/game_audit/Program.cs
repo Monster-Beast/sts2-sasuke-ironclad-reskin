@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 
 namespace SasukeIronclad.GameAudit;
 
@@ -157,6 +158,33 @@ internal static class Program
         AuditComparison comparison = ReportWriter.Compare(first, second);
         ReportWriter.WriteComparison(comparison, comparisonOutput);
 
+        string priorityType = typeof(AuditFixtureSymbols).FullName
+            ?? throw new InvalidOperationException("Priority fixture type name was unavailable.");
+        string priorityQueryPath = Path.Combine(outputRoot, "priority-query.json");
+        AuditQuerySet priorityQuery = new()
+        {
+            SchemaVersion = 1,
+            Queries =
+            [
+                new AuditQuery
+                {
+                    Id = "priority_self_test",
+                    Priority = true,
+                    ExactTypeNames = [priorityType],
+                },
+            ],
+        };
+        File.WriteAllText(
+            priorityQueryPath,
+            JsonSerializer.Serialize(priorityQuery, AuditJsonContext.Default.AuditQuerySet));
+        AuditReport priorityReport = AuditScanner.Scan(firstOptions with
+        {
+            QueryPath = priorityQueryPath,
+            MaxSymbols = 1,
+            Session = "priority-self-test",
+            OutputDirectory = Path.Combine(outputRoot, "priority"),
+        });
+
         string firstJson = File.ReadAllText(Path.Combine(firstOutput, "audit-report.json"));
         if (first.Symbols.Count == 0 || first.Assets.Count == 0)
             throw new InvalidOperationException("Self-test did not produce symbol and asset candidates.");
@@ -164,6 +192,13 @@ internal static class Program
             string.IsNullOrWhiteSpace(first.Game.BaseLibManifestSha256))
         {
             throw new InvalidOperationException("Self-test did not discover the Workshop BaseLib manifest.");
+        }
+        if (priorityReport.Symbols.Count != 1 ||
+            !priorityReport.Symbols[0].DeclaringType.StartsWith(priorityType, StringComparison.Ordinal) ||
+            !priorityReport.Symbols[0].Categories.Contains("priority_self_test", StringComparer.Ordinal) ||
+            priorityReport.Symbols[0].Score < 100_000)
+        {
+            throw new InvalidOperationException("Exact priority symbol retention did not survive a one-symbol limit.");
         }
         if (!comparison.Equivalent)
             throw new InvalidOperationException("Two identical self-test scans did not compare as equivalent.");
@@ -175,7 +210,8 @@ internal static class Program
         }
 
         Console.WriteLine(
-            $"GAME_AUDIT_SELF_TEST_OK symbols={first.Symbols.Count} assets={first.Assets.Count} equivalent={comparison.Equivalent} baselib={first.Game.BaseLibVersion}");
+            $"GAME_AUDIT_SELF_TEST_OK symbols={first.Symbols.Count} assets={first.Assets.Count} " +
+            $"equivalent={comparison.Equivalent} baselib={first.Game.BaseLibVersion} priority=true");
         return 0;
     }
 
