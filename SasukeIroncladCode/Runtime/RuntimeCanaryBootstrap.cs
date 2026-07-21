@@ -24,6 +24,7 @@ public static class RuntimeCanaryBootstrap
         IRuntimeBuildFingerprintProvider fingerprintProvider,
         Assembly gameAssembly,
         IRuntimeCanaryPatcher patcher,
+        string modAssemblyPath,
         bool observationEnabled)
     {
         ArgumentNullException.ThrowIfNull(review);
@@ -35,6 +36,8 @@ public static class RuntimeCanaryBootstrap
         ArgumentNullException.ThrowIfNull(fingerprintProvider);
         ArgumentNullException.ThrowIfNull(gameAssembly);
         ArgumentNullException.ThrowIfNull(patcher);
+        if (string.IsNullOrWhiteSpace(modAssemblyPath))
+            return Disabled("Runtime canary Mod assembly path is unavailable.");
 
         SafeReset(patcher);
         RuntimeBuildFingerprintCollectionResult collection;
@@ -76,11 +79,16 @@ public static class RuntimeCanaryBootstrap
         RuntimeCanarySession? session = null;
         try
         {
-            session = new RuntimeCanarySession(scope, optIn);
+            session = new RuntimeCanarySession(scope, optIn, modAssemblyPath);
             patcher.Install(session, resolution.Targets);
             session = null;
             List<string> reasons = gate.Reasons.Concat(resolution.Reasons).ToList();
             reasons.Add("Canary adapters are postfix-only and preserve the already-completed original game method.");
+            if (gate.AnimationsEnabled)
+            {
+                reasons.Add("The Sasuke overlay remains hidden until a unique local-player combat visual anchor is resolved from a local card-play callback.");
+                reasons.Add("The original Ironclad visual remains visible during this anchor canary and is never hidden or modified.");
+            }
             reasons.Add("Demon Form animation, form removal and character-state presentation remain disabled pending targeted evidence.");
             return new(
                 true,
