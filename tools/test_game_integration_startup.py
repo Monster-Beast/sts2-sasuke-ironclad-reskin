@@ -14,6 +14,7 @@ def main() -> int:
     main_file = read("SasukeIroncladCode/MainFile.cs")
     bootstrap = read("SasukeIroncladCode/Runtime/GameIntegrationBootstrap.cs")
     collector = read("SasukeIroncladCode/Runtime/RuntimeBuildFingerprintCollector.cs")
+    resolver = read("SasukeIroncladCode/Runtime/AuditedMethodBindingResolver.cs")
     installer = read("SasukeIroncladCode/Adapters/PendingGameIntegrationInstaller.cs")
 
     assert "HarmonyLib" not in main_file
@@ -34,18 +35,32 @@ def main() -> int:
     for contract in [
         "SHA256.HashData",
         "ReadModuleMvid",
-        "ReadSteamBuildId",
+        "ReadSteamMetadata",
+        "NormalizeBranch",
         "ReadBaseLibVersion",
+        "workshop",
         "STS2_BRANCH",
         "The STS2 branch is unknown",
     ]:
         assert contract in collector, contract
 
+    for contract in [
+        "ResolveMethod",
+        "MethodDefinitionToken",
+        "ModuleVersionId",
+        "FormatMethodSignature",
+        "method signature does not match",
+    ]:
+        assert contract in resolver, contract
+
     assert "throw new InvalidOperationException" in installer
     assert "No audited game adapter is registered" in installer
-    assert "HarmonyPatch" not in bootstrap + collector + installer
+    assert "HarmonyPatch" not in bootstrap + collector + resolver + installer
 
-    print("GAME_INTEGRATION_STARTUP_OK patchall=false exact_fingerprint=true installer=fail_closed")
+    print(
+        "GAME_INTEGRATION_STARTUP_OK patchall=false exact_fingerprint=true "
+        "methoddef_resolver=true installer=fail_closed"
+    )
     return 0
 
 
