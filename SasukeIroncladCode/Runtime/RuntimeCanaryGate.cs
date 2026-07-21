@@ -12,6 +12,9 @@ public sealed record RuntimeCanaryGateResult(
 
 public static class RuntimeCanaryGate
 {
+    public const string RequiredReplacementAcknowledgement =
+        "public-beta-24251656-local-ironclad-replacement";
+
     private const string RequiredMode = "local_visual_only";
     private const string RequiredBranch = "public-beta";
     private static readonly HashSet<string> RequiredVisualBindings =
@@ -94,6 +97,22 @@ public static class RuntimeCanaryGate
         {
             return Disabled("Animation canary requires bounded local-player anchoring, scale and offsets.");
         }
+        if (optIn.HideOriginalVisual)
+        {
+            if (!optIn.EnableAnimations || !optIn.AnchorToLocalPlayer)
+                return Disabled("Original visual replacement requires the anchored animation layer.");
+            if (!string.Equals(
+                    optIn.ReplacementAcknowledgement,
+                    RequiredReplacementAcknowledgement,
+                    StringComparison.Ordinal))
+            {
+                return Disabled("Original visual replacement lacks the exact-build acknowledgement written by the explicit replacement switch.");
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(optIn.ReplacementAcknowledgement))
+        {
+            return Disabled("Replacement acknowledgement is present while original visual replacement is disabled.");
+        }
         if (!string.Equals(optIn.ExpectedBranch, runtime.Branch, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(optIn.ExpectedBuildId, runtime.SteamBuildId, StringComparison.Ordinal))
         {
@@ -159,7 +178,16 @@ public static class RuntimeCanaryGate
         {
             reasons.Add(
                 $"Local-player anchor required; scale={optIn.AnchorScale:R}; " +
-                $"offset=({optIn.AnchorOffsetX:R},{optIn.AnchorOffsetY:R}); original_visual_hidden=false."
+                $"offset=({optIn.AnchorOffsetX:R},{optIn.AnchorOffsetY:R}); replacement_requested={optIn.HideOriginalVisual}."
+            );
+        }
+        if (optIn.HideOriginalVisual)
+        {
+            reasons.Add(
+                "Original visual replacement is explicit, exact-build-only and restricted to the uniquely resolved local Ironclad NCreatureVisuals node."
+            );
+            reasons.Add(
+                "The original visibility value must be captured and restored on playback fallback, anchor loss, combat end and Mod disposal."
             );
         }
         reasons.Add("Only approved_for_canary postfix adapters are eligible; form_removed and character_state remain disabled.");
