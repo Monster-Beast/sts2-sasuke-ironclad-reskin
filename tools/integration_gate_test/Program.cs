@@ -62,6 +62,27 @@ internal static class Program
         Expect(staleDecision.Reasons.Any(reason => reason.Contains("stale", StringComparison.OrdinalIgnoreCase)),
             "stale beta attestation did not produce an explicit reason");
 
+        GameIntegrationContractMap supersededContract = CreateContract("verified", "verified", runtime, now);
+        RuntimeBuildFingerprint newerRuntime = new(
+            "public-beta",
+            "123457",
+            new string('b', 64),
+            "22222222-3333-4444-5555-666666666666",
+            "v3.1.9"
+        );
+        supersededContract.Profiles.Add(CreateProfile(
+            "newer-public-beta-known",
+            "pending_review",
+            newerRuntime,
+            now));
+        GameIntegrationDecision supersededDecision = GameIntegrationGate.Evaluate(
+            supersededContract,
+            runtime,
+            now);
+        Expect(!supersededDecision.AnyEnabled, "superseded beta profile unexpectedly enabled bindings");
+        Expect(supersededDecision.Reasons.Any(reason => reason.Contains("superseded", StringComparison.OrdinalIgnoreCase)),
+            "superseded beta profile did not produce an explicit reason");
+
         GameIntegrationContractMap duplicate = CreateContract("verified", "verified", runtime, now);
         duplicate.Profiles.Add(CreateProfile("duplicate-fixture", "verified", runtime, now));
         ExpectThrows(
@@ -103,7 +124,8 @@ internal static class Program
 
         Console.WriteLine(
             "INTEGRATION_GATE_OK pending=false exact=true mismatch=false stable=false stale=false " +
-            "partial_titles=false duplicate_rejected=true bootstrap=true collector=true fail_closed=true"
+            "superseded=false partial_titles=false duplicate_rejected=true bootstrap=true " +
+            "collector=true fail_closed=true"
         );
         return 0;
     }
