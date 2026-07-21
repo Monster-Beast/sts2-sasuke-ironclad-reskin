@@ -78,8 +78,28 @@ if ($isWindowsPlatform) {
         throw "native process stderr was not captured"
     }
 
-    Write-Output "STEAMCMD_QUERY_OK repeated_blocks=true windows_parser=true native_capture=true buildid=24251656"
+    $invalidPython = Test-Python3Candidate `
+        -FilePath $childPowerShell `
+        -Prefix @("-NoProfile", "-Command", "exit 9009")
+    if ($invalidPython.IsValid) {
+        throw "a non-Python command was accepted as Python 3"
+    }
+
+    $resolvedPython = Resolve-Python3Command
+    if ($resolvedPython.Version -notmatch '^3\.[0-9]+$') {
+        throw "a working Python 3 interpreter was not resolved"
+    }
+
+    Write-Output (
+        "STEAMCMD_QUERY_OK repeated_blocks=true windows_parser=true native_capture=true " +
+        "python_probe=true python_version=$($resolvedPython.Version) buildid=24251656"
+    )
     exit 0
+}
+
+$resolvedPython = Resolve-Python3Command
+if ($resolvedPython.Version -notmatch '^3\.[0-9]+$') {
+    throw "a working Python 3 interpreter was not resolved"
 }
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("sasuke-steamcmd-query-" + [Guid]::NewGuid().ToString("N"))
@@ -193,7 +213,10 @@ exit 7
         throw "invalid SteamCMD output with exit code 7 was accepted"
     }
 
-    Write-Output "STEAMCMD_QUERY_OK repeated_blocks=true valid_exit7=true invalid_exit7_rejected=true native_capture=true buildid=24251656"
+    Write-Output (
+        "STEAMCMD_QUERY_OK repeated_blocks=true valid_exit7=true invalid_exit7_rejected=true " +
+        "native_capture=true python_probe=true python_version=$($resolvedPython.Version) buildid=24251656"
+    )
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {
