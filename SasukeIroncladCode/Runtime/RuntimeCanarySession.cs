@@ -25,6 +25,8 @@ public sealed class RuntimeCanarySession : IDisposable
 
     private readonly Dictionary<string, string> _cardIdByModelType;
     private readonly RuntimeCanaryOptIn _optIn;
+    private readonly string _modAssemblyPath;
+    private readonly SceneTree? _sceneTree;
     private readonly GodotVisualSceneHost? _sceneHost;
     private readonly CardVisualPlaybackService? _playback;
     private readonly CardTitlePresentationService? _titleService;
@@ -35,11 +37,18 @@ public sealed class RuntimeCanarySession : IDisposable
     private bool _flameBarrierStateInstalled;
     private int _disposed;
 
-    public RuntimeCanarySession(CurrentBetaCardScopeMap scope, RuntimeCanaryOptIn optIn)
+    public RuntimeCanarySession(
+        CurrentBetaCardScopeMap scope,
+        RuntimeCanaryOptIn optIn,
+        string modAssemblyPath)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(optIn);
+        if (string.IsNullOrWhiteSpace(modAssemblyPath))
+            throw new ArgumentException("Mod assembly path is required for canary diagnostics.", nameof(modAssemblyPath));
+
         _optIn = optIn;
+        _modAssemblyPath = modAssemblyPath;
         _cardIdByModelType = scope.ActiveCards.ToDictionary(card => card.ModelType, card => card.CardId, StringComparer.Ordinal);
 
         if (optIn.EnableTitles)
@@ -47,15 +56,27 @@ public sealed class RuntimeCanarySession : IDisposable
 
         if (optIn.EnableAnimations)
         {
-            SceneTree tree = Engine.GetMainLoop() as SceneTree
+            _sceneTree = Engine.GetMainLoop() as SceneTree
                 ?? throw new InvalidOperationException("Godot SceneTree is unavailable for the runtime canary.");
             GodotVisualSceneHost host = new()
             {
                 Name = "SasukeIroncladRuntimeCanaryHost",
             };
-            tree.Root.AddChild(host);
+            _sceneTree.Root.AddChild(host);
             _sceneHost = host;
             _playback = new CardVisualPlaybackService(host, new PreserveOriginalAnimationFallback());
+            RuntimeCanaryLocalFiles.WriteAnchorStatus(
+                _modAssemblyPath,
+                _optIn,
+                attempted: false,
+                new RuntimePlayerAnchorResolution(
+                    false,
+                    null,
+                    "waiting_for_local_card_play",
+                    0,
+                    0,
+                    ["The animation overlay is hidden until a local card-play callback proves a unique local-player visual anchor."]),
+                host);
         }
     }
 
@@ -75,7 +96,7 @@ public sealed class RuntimeCanarySession : IDisposable
             switch (target.Decision.BindingId)
             {
                 case "card_visual_request":
-                    HandleCardVisualRequest(args);
+                    HandleCardVisualRequest(instance, args);
                     break;
                 case "original_impact":
                     HandleOriginalImpact(args);
@@ -133,9 +154,9 @@ public sealed class RuntimeCanarySession : IDisposable
         _flameBarrierStateInstalled = false;
     }
 
-    private void HandleCardVisualRequest(object?[]? args)
+    private void HandleCardVisualRequest(object? callbackInstance, object?[]? args)
     {
-        if (_playback is null || args is null || args.Length < 3)
+        if (_playback is null || _sceneHost is null || _sceneTree is null || args is null || args.Length < 3)
             return;
         object? model = args[2];
         if (!TryResolveCardId(model, out string cardId))
@@ -145,6 +166,14 @@ public sealed class RuntimeCanarySession : IDisposable
         // targeted run proves the exact form-removal event.
         if (string.Equals(cardId, DemonFormCardId, StringComparison.Ordinal))
             return;
+
+        if (!EnsureLocalPlayerAnchor(callbackInstance, args))
+        {
+            _activeCardModel = null;
+            _activeCardId = null;
+            _activeImpactIndex = 0;
+            return;
+        }
 
         bool upgraded = TryReadBoolean(args.ElementAtOrDefault(1), "IsShowingUpgradedCard") ??
                         TryReadBoolean(model, "IsUpgraded") ??
@@ -176,6 +205,51 @@ public sealed class RuntimeCanarySession : IDisposable
         _activeImpactIndex = 0;
         if (string.Equals(cardId, FlameBarrierCardId, StringComparison.Ordinal))
             _flameBarrierStateInstalled = true;
+    }
+
+    private bool EnsureLocalPlayerAnchor(object? callbackInstance, object?[] args)
+    {
+        if (_sceneHost is null || _sceneTree is null || !_optIn.AnchorToLocalPlayer)
+            return false;
+        if (_sceneHost.IsAnchorBound)
+            return true;
+
+        RuntimePlayerAnchorResolution resolution = RuntimePlayerVisualAnchorResolver.Resolve(
+            _sceneTree,
+            callbackInstance,
+            args);
+        if (!resolution.Success || resolution.Anchor is null)
+        {
+            _sceneHost.ClearAnchor();
+            RuntimeCanaryLocalFiles.WriteAnchorStatus(
+                _modAssemblyPath,
+                _optIn,
+                attempted: true,
+                resolution,
+                _sceneHost);
+            return false;
+        }
+
+        bool bound = _sceneHost.BindToAnchor(
+            resolution.Anchor,
+            new Vector2(_optIn.AnchorOffsetX, _optIn.AnchorOffsetY),
+            _optIn.AnchorScale);
+        RuntimePlayerAnchorResolution finalResolution = bound
+            ? resolution
+            : new RuntimePlayerAnchorResolution(
+                false,
+                null,
+                resolution.Strategy,
+                resolution.CandidateCount,
+                resolution.LocalPlayerReferenceCount,
+                resolution.Reasons.Concat(["The resolved node could not be bound by the local overlay host."]).ToArray());
+        RuntimeCanaryLocalFiles.WriteAnchorStatus(
+            _modAssemblyPath,
+            _optIn,
+            attempted: true,
+            finalResolution,
+            _sceneHost);
+        return bound;
     }
 
     private void HandleOriginalImpact(object?[]? args)
