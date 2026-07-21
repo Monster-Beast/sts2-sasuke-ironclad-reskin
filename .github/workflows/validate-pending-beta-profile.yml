@@ -1,0 +1,22 @@
+name: Validate pending beta profile
+on: [push, pull_request]
+
+jobs:
+  pending-profile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate exact-build fail-closed profile
+        run: |
+          python tools/test_pending_beta_profile.py | tee pending-beta-profile.log
+          grep -q "PENDING_BETA_PROFILE_OK" pending-beta-profile.log
+      - name: Upload profile validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pending-beta-profile-validation
+          path: pending-beta-profile.log
+          if-no-files-found: error
