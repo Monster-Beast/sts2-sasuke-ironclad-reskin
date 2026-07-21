@@ -25,6 +25,10 @@ offset Y      -150
 These values were approved on one display and UI-scale setup. Other resolutions
 must retain explicit overrides.
 
+The number of scene-wide anchor candidates is diagnostic rather than an identity
+field. Reviewed runs observed both two and three candidates while the exact local
+`Player` relationship, anchor type, anchor name and position remained stable.
+
 ## Explicit opt-in
 
 Replacement is never enabled by a normal animation canary. It requires:
@@ -115,15 +119,52 @@ After a completed combat or shutdown, `active` should become `false` and
 `restore_count` should increase. `ever_hidden` remains true so the successful
 replacement is not lost from the diagnostic history.
 
+## Reviewed local results
+
+The local replacement run confirmed both required transitions:
+
+1. a reviewed Sasuke timeline hid the exact local `Ironclad` visual after the
+   overlay had started successfully;
+2. playing a card outside the reviewed replacement scope restored the captured
+   original visibility and disabled replacement for the remainder of that combat.
+
+The structured review is stored at:
+
+```text
+SasukeIronclad/data/reviews/public-beta-24251656-replacement-canary-review.json
+```
+
+This evidence passes the activation and unsupported-card restoration checks, but
+it does not promote the production profile.
+
+## Original-impact synchronization follow-up
+
+A separate reviewed run safely restored the original character after
+`original_impact_timeout`. The timeout exposed an overly broad runtime policy:
+non-damage timelines such as Defend contain local visual impact beats but do not
+produce a card-damage callback that can release an external impact wait.
+
+The runtime selection now enables external original-impact synchronization only
+when both conditions are true:
+
+- the animation specification is a damage card;
+- its reviewed hit-sync mode is `original_hit_events`.
+
+Non-damage cards therefore execute their timeline impact beats on local authored
+timing, while damage cards continue to wait for the original game damage event.
+This code change remains subject to one local replacement retest before the
+follow-up is closed.
+
 ## Remaining limits
 
 This replacement canary is not a production release because it still needs:
 
+- a local retest proving non-damage timelines no longer produce false impact timeouts;
 - several combat and room-transition runs;
-- reviewed and unreviewed card fallback verification;
 - multiplayer local-player-only verification;
 - different resolutions and UI scales;
 - multi-Mod visibility ownership checks;
 - missing-resource and forced playback-failure tests;
+- targeted Demon Form removal and character-state evidence;
 - a separate audit and profile for the default public game branch;
 - final authored Sasuke art and animation assets instead of the graybox rig.
