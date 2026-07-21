@@ -16,6 +16,7 @@ REQUIRED_FILES = [
     ROOT / "tools/latest_beta_guard.py",
     ROOT / "tools/create_integration_profile.py",
     ROOT / "tools/build_audit_review.py",
+    ROOT / "tools/validate_real_audit_evidence.py",
     ROOT / "tools/compile_reviewed_profile.py",
 ]
 
