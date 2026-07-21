@@ -13,9 +13,11 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     private Node2D? _anchor;
     private Vector2 _anchorOffset;
     private float _anchorScale = 1.0f;
+    private bool _anchorInvalidationNotified;
 
     public event Action<AnimationPlaybackHandle>? PlaybackCompleted;
     public event Action<AnimationPlaybackHandle, string>? PlaybackFailed;
+    public event Action<string>? AnchorInvalidated;
 
     [Export(PropertyHint.File, "*.tscn")]
     public string RuntimeScenePath { get; set; } = DefaultRuntimeScene;
@@ -27,6 +29,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     public float ImpactTimeoutSeconds { get; set; } = 1.5f;
 
     public bool IsAnchorBound => HasValidAnchor();
+    public Node2D? AnchorNode => HasValidAnchor() ? _anchor : null;
     public string? AnchorType => HasValidAnchor() ? _anchor!.GetType().FullName : null;
     public string? AnchorName => HasValidAnchor() ? _anchor!.Name.ToString() : null;
     public Vector2? AnchorGlobalPosition => HasValidAnchor() ? _anchor!.GlobalPosition : null;
@@ -56,6 +59,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
         _anchor = anchor;
         _anchorOffset = offset;
         _anchorScale = scale;
+        _anchorInvalidationNotified = false;
         if (!EnsureMounted())
         {
             ClearAnchor();
@@ -68,6 +72,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     public void ClearAnchor()
     {
         _anchor = null;
+        _anchorInvalidationNotified = false;
         Visible = false;
         Position = Vector2.Zero;
         Rotation = 0.0f;
@@ -276,7 +281,10 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     {
         if (!HasValidAnchor())
         {
+            bool hadAnchor = _anchor is not null;
             Visible = false;
+            if (hadAnchor)
+                NotifyAnchorInvalidated("The verified local-player visual anchor left the scene tree.");
             return;
         }
 
@@ -294,6 +302,22 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
         catch
         {
             Visible = false;
+            NotifyAnchorInvalidated("The verified local-player visual anchor transform could not be synchronized.");
+        }
+    }
+
+    private void NotifyAnchorInvalidated(string reason)
+    {
+        if (_anchorInvalidationNotified)
+            return;
+        _anchorInvalidationNotified = true;
+        try
+        {
+            AnchorInvalidated?.Invoke(reason);
+        }
+        catch
+        {
+            // Replacement restoration listeners are cosmetic and fail closed.
         }
     }
 
