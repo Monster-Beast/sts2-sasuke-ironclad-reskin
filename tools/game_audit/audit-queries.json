@@ -26,6 +26,8 @@
     },
     {
       "id": "cards",
+      "priority": false,
+      "exactTypeNames": [],
       "typeContains": [
         "Card",
         "Ironclad",
@@ -95,6 +97,8 @@
     },
     {
       "id": "visuals",
+      "priority": false,
+      "exactTypeNames": [],
       "typeContains": [
         "Animation",
         "Player",
@@ -134,6 +138,8 @@
     },
     {
       "id": "titles",
+      "priority": false,
+      "exactTypeNames": [],
       "typeContains": [
         "Hand",
         "Deck",
@@ -175,6 +181,8 @@
     },
     {
       "id": "lifecycle",
+      "priority": false,
+      "exactTypeNames": [],
       "typeContains": ["Combat", "Power", "Status", "Player", "CardPlay", "CombatHistory"],
       "methodContains": [
         "End",
@@ -204,6 +212,8 @@
     },
     {
       "id": "audit_fixture",
+      "priority": false,
+      "exactTypeNames": [],
       "typeContains": ["Audit"],
       "methodContains": ["Scan", "Compare", "Write"],
       "memberContains": ["Fixture", "Card", "Impact", "Title", "Removed", "Ended", "State"],
