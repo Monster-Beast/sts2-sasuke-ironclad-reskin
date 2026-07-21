@@ -89,6 +89,17 @@ tooltip
 
 工具只做候选排序。它不会填写 `selected_candidate_id`，也不会把状态从 `unreviewed` 改成 `approved`。
 
+### Binding 只能选择 MethodDef
+
+字段、属性和事件会保留在审计报告中，用于理解卡牌 ID、UI 结构和生命周期，但不能直接成为正式 Hook 目标。正式 Binding 只能选择：
+
+```text
+kind == method
+metadata_token 以 0x06 开头
+```
+
+属性必须定位到对应 getter、setter 或刷新方法；事件必须定位到明确的触发、订阅或处理方法。`compile_reviewed_profile.py` 和运行时 `GameIntegrationGate` 都会拒绝 PropertyDef、EventDef、FieldDef 等非方法 Token。
+
 ## 3. 审阅卡牌 ID 候选
 
 审计工具会额外记录字段、属性、事件和安全的元数据常量。`binding-review.json` 中的 `card_id_candidates` 用于核验：
@@ -127,7 +138,8 @@ tooltip
 3. 多人模式只创建本地视觉节点；
 4. 不写入伤害、费用、目标、随机数或行动队列；
 5. `original_impact` 的 index 与原游戏真实段数一致；
-6. 标题入口只改显示文本，不改内部 `card_id` 和规则描述。
+6. 标题入口只改显示文本，不改内部 `card_id` 和规则描述；
+7. 被选目标是 MethodDef，并与报告中的声明类型、签名和 Token 完全一致。
 
 ## 5. 编译已审阅 Profile
 
@@ -166,10 +178,14 @@ python tools/compile_reviewed_profile.py \
 `MainFile` 不再调用全局 `Harmony.PatchAll()`。启动时会：
 
 1. 收集当前进程中 `sts2.dll` 的 SHA-256 和 MVID；
-2. 读取 Steam buildid、BaseLib 版本和 `STS2_BRANCH`；
-3. 通过 `GameIntegrationGate` 精确匹配 Profile；
-4. 使用默认拒绝安装的适配器；
-5. 在没有实际审阅适配器时保持所有接口禁用。
+2. 读取 Steam buildid；
+3. 优先读取显式分支或 `STS2_BRANCH`，否则从 Steam `BetaKey` 推断，公开分支按 `stable` 处理；
+4. 从游戏本地 Mods 目录和 `steamapps/workshop/content/2868840` 中定位 BaseLib 清单；
+5. 通过 `GameIntegrationGate` 精确匹配 Profile；
+6. 使用默认拒绝安装的适配器；
+7. 在没有实际审阅适配器时保持所有接口禁用。
+
+分支名只是指纹的一部分。即使分支推断成功，Steam buildid、程序集 SHA-256、MVID 和 BaseLib 版本仍必须全部一致。
 
 即使有人误把 Contract 改成 `verified`，未注册真实适配器时也不会安装游戏接口。
 
