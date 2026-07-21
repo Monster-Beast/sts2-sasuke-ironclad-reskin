@@ -130,7 +130,7 @@ def main() -> int:
     require("MaxSceneNodes" in resolver_text and "MaxReferenceObjects" in resolver_text, "anchor traversal is not bounded")
     require("Visible = false" in host_text and "BindToAnchor" in host_text, "visual host does not stay hidden before anchoring")
     require("AnchorInvalidated" in host_text and "GetGlobalTransformWithCanvas" in host_text, "visual host does not report anchor loss")
-    require(REPLACEMENT_ACK in gate_text and "Original visibility value must be captured" in gate_text, "replacement gate policy is incomplete")
+    require(REPLACEMENT_ACK in gate_text and "original visibility value must be captured" in gate_text.lower(), "replacement gate policy is incomplete")
     require("RequiredTargetType = \"MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals\"" in replacement_text, "replacement target type is not exact")
     require("RequiredTargetName = \"Ironclad\"" in replacement_text, "replacement target name is not exact")
     require("target.Visible = false" in replacement_text and "target.Visible = _originalVisibleBeforeHide.Value" in replacement_text, "replacement visibility is not captured and restored")
