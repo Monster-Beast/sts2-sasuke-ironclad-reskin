@@ -17,19 +17,51 @@ internal sealed record AuditOptions(
 
 internal sealed class AuditQuerySet
 {
+    private List<AuditQuery> _queries = [];
+
     public int SchemaVersion { get; init; }
-    public List<AuditQuery> Queries { get; init; } = [];
+    public List<AuditQuery> Queries
+    {
+        get => _queries;
+        init => _queries = value ?? [];
+    }
 }
 
 internal sealed class AuditQuery
 {
+    private List<string> _exactTypeNames = [];
+    private List<string> _typeContains = [];
+    private List<string> _methodContains = [];
+    private List<string> _memberContains = [];
+    private List<string> _assetContains = [];
+
     public string Id { get; init; } = string.Empty;
     public bool Priority { get; init; }
-    public List<string> ExactTypeNames { get; init; } = [];
-    public List<string> TypeContains { get; init; } = [];
-    public List<string> MethodContains { get; init; } = [];
-    public List<string> MemberContains { get; init; } = [];
-    public List<string> AssetContains { get; init; } = [];
+    public List<string> ExactTypeNames
+    {
+        get => _exactTypeNames;
+        init => _exactTypeNames = value ?? [];
+    }
+    public List<string> TypeContains
+    {
+        get => _typeContains;
+        init => _typeContains = value ?? [];
+    }
+    public List<string> MethodContains
+    {
+        get => _methodContains;
+        init => _methodContains = value ?? [];
+    }
+    public List<string> MemberContains
+    {
+        get => _memberContains;
+        init => _memberContains = value ?? [];
+    }
+    public List<string> AssetContains
+    {
+        get => _assetContains;
+        init => _assetContains = value ?? [];
+    }
 }
 
 internal sealed class AuditReport
