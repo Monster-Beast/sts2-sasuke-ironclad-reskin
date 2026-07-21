@@ -1,117 +1,238 @@
+using System.Reflection;
+using SasukeIronclad.SasukeIroncladCode.Adapters;
 using SasukeIronclad.SasukeIroncladCode.Runtime;
 using SasukeIronclad.SasukeIroncladCode.Visuals;
 
-string[] visualIds =
-[
-    "card_visual_request", "original_impact", "state_removed",
-    "form_removed", "combat_ended", "character_state"
-];
-string[] titleIds = ["card_art", "hand", "deck_list", "reward", "compendium", "tooltip"];
-RuntimeBuildFingerprint runtime = new(
-    "stable",
-    "123456",
-    new string('a', 64),
-    "11111111-2222-3333-4444-555555555555",
-    "v3.1.8");
+namespace SasukeIronclad.IntegrationGateTest;
 
-GameIntegrationContractMap CreateContract(string contractStatus, string profileStatus, string? pendingTitle = null)
+internal static class Program
 {
-    GameIntegrationProfile profile = new()
+    private static readonly string[] VisualIds =
+    [
+        "card_visual_request", "original_impact", "state_removed",
+        "form_removed", "combat_ended", "character_state"
+    ];
+
+    private static readonly string[] TitleIds =
+        ["card_art", "hand", "deck_list", "reward", "compendium", "tooltip"];
+
+    public static int Main()
     {
-        Id = "stable-fixture",
-        Status = profileStatus,
-        Branch = runtime.Branch,
-        Fingerprint = new GameBuildFingerprintSpec
+        RuntimeBuildFingerprint runtime = new(
+            "stable",
+            "123456",
+            new string('a', 64),
+            "11111111-2222-3333-4444-555555555555",
+            "v3.1.8"
+        );
+
+        GameIntegrationDecision pendingContract = GameIntegrationGate.Evaluate(
+            CreateContract("pending_local_audit", "verified", runtime), runtime);
+        Expect(!pendingContract.AnyEnabled, "pending global contract unexpectedly enabled bindings");
+
+        GameIntegrationDecision pendingProfile = GameIntegrationGate.Evaluate(
+            CreateContract("verified", "pending_review", runtime), runtime);
+        Expect(!pendingProfile.AnyEnabled, "pending profile unexpectedly enabled bindings");
+
+        GameIntegrationContractMap verifiedContract = CreateContract("verified", "verified", runtime);
+        GameIntegrationDecision enabled = GameIntegrationGate.Evaluate(verifiedContract, runtime);
+        Expect(enabled.EnableVisualBindings && enabled.EnableTitleBindings, "verified exact profile was not enabled");
+
+        RuntimeBuildFingerprint mismatched = runtime with { Sts2Sha256 = new string('b', 64) };
+        GameIntegrationDecision mismatchDecision = GameIntegrationGate.Evaluate(verifiedContract, mismatched);
+        Expect(!mismatchDecision.AnyEnabled, "mismatched assembly hash unexpectedly enabled bindings");
+
+        GameIntegrationDecision partial = GameIntegrationGate.Evaluate(
+            CreateContract("verified", "verified", runtime, pendingTitle: "tooltip"), runtime);
+        Expect(partial.EnableVisualBindings, "verified visual bindings should remain independently enabled");
+        Expect(!partial.EnableTitleBindings, "pending title surface unexpectedly enabled title bindings");
+
+        GameIntegrationContractMap duplicate = CreateContract("verified", "verified", runtime);
+        duplicate.Profiles.Add(CreateProfile("duplicate-fixture", "verified", runtime));
+        ExpectThrows(
+            () => GameIntegrationGate.Evaluate(duplicate, runtime),
+            "Duplicate build fingerprint",
+            "duplicate fingerprint was accepted"
+        );
+
+        RecordingInstaller installer = new();
+        GameIntegrationBootstrapResult bootstrapped = GameIntegrationBootstrap.Start(
+            verifiedContract,
+            new FixedProvider(new(true, runtime, ["fixture"])),
+            installer
+        );
+        Expect(bootstrapped.Installed, "verified exact profile was not installed");
+        Expect(installer.InstallCount == 1, "installer was not called exactly once");
+        Expect(installer.LastDecision?.EnableVisualBindings == true, "visual decision was not forwarded");
+        Expect(installer.LastDecision?.EnableTitleBindings == true, "title decision was not forwarded");
+
+        RecordingInstaller pendingInstaller = new();
+        GameIntegrationBootstrapResult pendingBootstrap = GameIntegrationBootstrap.Start(
+            CreateContract("pending_local_audit", "verified", runtime),
+            new FixedProvider(new(true, runtime, ["fixture"])),
+            pendingInstaller
+        );
+        Expect(!pendingBootstrap.Installed && pendingInstaller.InstallCount == 0, "pending contract reached installer");
+
+        RecordingInstaller failedInstaller = new() { ThrowOnInstall = true };
+        GameIntegrationBootstrapResult failedBootstrap = GameIntegrationBootstrap.Start(
+            verifiedContract,
+            new FixedProvider(new(true, runtime, ["fixture"])),
+            failedInstaller
+        );
+        Expect(!failedBootstrap.Installed, "throwing installer was reported as installed");
+        Expect(!failedBootstrap.Decision.AnyEnabled, "throwing installer did not fail closed");
+        Expect(failedInstaller.ResetCount >= 2, "throwing installer was not reset after failure");
+
+        TestRuntimeFingerprintCollector();
+
+        Console.WriteLine(
+            "INTEGRATION_GATE_OK pending=false exact=true mismatch=false partial_titles=false " +
+            "duplicate_rejected=true bootstrap=true collector=true fail_closed=true"
+        );
+        return 0;
+    }
+
+    private static void TestRuntimeFingerprintCollector()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"sasuke-integration-{Guid.NewGuid():N}");
+        try
         {
-            SteamBuildId = runtime.SteamBuildId,
-            Sts2Sha256 = runtime.Sts2Sha256,
-            ModuleMvid = runtime.ModuleMvid,
-            BaseLibVersion = runtime.BaseLibVersion,
-        },
-        VisualBindings = visualIds.Select((id, index) => new GameVisualBindingSpec
+            string steamApps = Path.Combine(root, "steamapps");
+            string gamePath = Path.Combine(steamApps, "common", "Slay the Spire 2");
+            string dataPath = Path.Combine(gamePath, "data_sts2_windows_x86_64");
+            string baseLibPath = Path.Combine(gamePath, "mods", "BaseLib");
+            Directory.CreateDirectory(dataPath);
+            Directory.CreateDirectory(baseLibPath);
+            string assemblyPath = Path.Combine(dataPath, "sts2.dll");
+            File.Copy(Assembly.GetExecutingAssembly().Location, assemblyPath);
+            File.WriteAllText(Path.Combine(baseLibPath, "BaseLib.json"), "{\"version\":\"v3.1.8\"}");
+            File.WriteAllText(
+                Path.Combine(steamApps, "appmanifest_2868840.acf"),
+                "\"AppState\"\n{\n  \"appid\" \"2868840\"\n  \"buildid\" \"123456\"\n}\n"
+            );
+
+            RuntimeBuildFingerprintCollectionResult collected = RuntimeBuildFingerprintCollector.Collect(
+                assemblyPath,
+                gamePath,
+                "stable"
+            );
+            Expect(collected.Success && collected.Fingerprint is not null, "runtime fingerprint fixture failed");
+            Expect(collected.Fingerprint!.SteamBuildId == "123456", "Steam buildid was not collected");
+            Expect(collected.Fingerprint.BaseLibVersion == "v3.1.8", "BaseLib version was not collected");
+            Expect(collected.Fingerprint.Sts2Sha256.Length == 64, "assembly SHA-256 was not collected");
+            Expect(Guid.TryParse(collected.Fingerprint.ModuleMvid, out _), "assembly MVID was not collected");
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static GameIntegrationContractMap CreateContract(
+        string contractStatus,
+        string profileStatus,
+        RuntimeBuildFingerprint runtime,
+        string? pendingTitle = null)
+    {
+        return new GameIntegrationContractMap
+        {
+            SchemaVersion = 1,
+            GameplayChanges = false,
+            Status = contractStatus,
+            Policy = new GameIntegrationPolicy
+            {
+                ExactBuildFingerprintRequired = true,
+                UnverifiedBindingsDisabled = true,
+                FallbackToOriginalOnMismatch = true,
+                MultiplayerLocalVisualsOnly = true,
+            },
+            RequiredVisualEvents = VisualIds.ToList(),
+            RequiredTitleSurfaces = TitleIds.ToList(),
+            Profiles = [CreateProfile("stable-fixture", profileStatus, runtime, pendingTitle)],
+        };
+    }
+
+    private static GameIntegrationProfile CreateProfile(
+        string id,
+        string status,
+        RuntimeBuildFingerprint runtime,
+        string? pendingTitle = null)
+    {
+        return new GameIntegrationProfile
         {
             Id = id,
-            DeclaringType = $"Fixture.Visual{index}",
-            MethodSignature = $"void Fixture.Visual{index}.Invoke()",
-            MetadataToken = $"0x{0x06000001 + index:X8}",
-            Status = "verified",
-            Fallback = "original_visual",
-        }).ToList(),
-        TitleBindings = titleIds.Select((id, index) => new GameTitleBindingSpec
-        {
-            SurfaceId = id,
-            DeclaringType = $"Fixture.Title{index}",
-            MethodSignature = $"void Fixture.Title{index}.Refresh()",
-            MetadataToken = $"0x{0x06000101 + index:X8}",
-            Status = id == pendingTitle ? "pending_review" : "verified",
-            Fallback = "original_title",
-        }).ToList(),
-    };
+            Status = status,
+            Branch = runtime.Branch,
+            Fingerprint = new GameBuildFingerprintSpec
+            {
+                SteamBuildId = runtime.SteamBuildId,
+                Sts2Sha256 = runtime.Sts2Sha256,
+                ModuleMvid = runtime.ModuleMvid,
+                BaseLibVersion = runtime.BaseLibVersion,
+            },
+            VisualBindings = VisualIds.Select((bindingId, index) => new GameVisualBindingSpec
+            {
+                Id = bindingId,
+                DeclaringType = $"Fixture.Visual{index}",
+                MethodSignature = $"void Fixture.Visual{index}.Invoke()",
+                MetadataToken = $"0x{0x06000001 + index:X8}",
+                Status = "verified",
+                Fallback = "original_visual",
+            }).ToList(),
+            TitleBindings = TitleIds.Select((surfaceId, index) => new GameTitleBindingSpec
+            {
+                SurfaceId = surfaceId,
+                DeclaringType = $"Fixture.Title{index}",
+                MethodSignature = $"void Fixture.Title{index}.Refresh()",
+                MetadataToken = $"0x{0x06000101 + index:X8}",
+                Status = surfaceId == pendingTitle ? "pending_review" : "verified",
+                Fallback = "original_title",
+            }).ToList(),
+        };
+    }
 
-    return new GameIntegrationContractMap
+    private static void Expect(bool condition, string message)
     {
-        SchemaVersion = 1,
-        GameplayChanges = false,
-        Status = contractStatus,
-        Policy = new GameIntegrationPolicy
+        if (!condition)
+            throw new InvalidOperationException(message);
+    }
+
+    private static void ExpectThrows(Action action, string expectedMessage, string failureMessage)
+    {
+        try
         {
-            ExactBuildFingerprintRequired = true,
-            UnverifiedBindingsDisabled = true,
-            FallbackToOriginalOnMismatch = true,
-            MultiplayerLocalVisualsOnly = true,
-        },
-        RequiredVisualEvents = visualIds.ToList(),
-        RequiredTitleSurfaces = titleIds.ToList(),
-        Profiles = [profile],
-    };
+            action();
+        }
+        catch (InvalidOperationException exception) when (exception.Message.Contains(expectedMessage, StringComparison.Ordinal))
+        {
+            return;
+        }
+        throw new InvalidOperationException(failureMessage);
+    }
+
+    private sealed class FixedProvider(RuntimeBuildFingerprintCollectionResult result) : IRuntimeBuildFingerprintProvider
+    {
+        public RuntimeBuildFingerprintCollectionResult Collect() => result;
+    }
+
+    private sealed class RecordingInstaller : IGameIntegrationInstaller
+    {
+        public int ResetCount { get; private set; }
+        public int InstallCount { get; private set; }
+        public bool ThrowOnInstall { get; init; }
+        public GameIntegrationDecision? LastDecision { get; private set; }
+
+        public void Reset() => ResetCount++;
+
+        public void Install(GameIntegrationProfile profile, GameIntegrationDecision decision)
+        {
+            _ = profile;
+            InstallCount++;
+            LastDecision = decision;
+            if (ThrowOnInstall)
+                throw new InvalidOperationException("fixture install failure");
+        }
+    }
 }
-
-void Expect(bool condition, string message)
-{
-    if (!condition)
-        throw new InvalidOperationException(message);
-}
-
-GameIntegrationDecision pendingContract = GameIntegrationGate.Evaluate(
-    CreateContract("pending_local_audit", "verified"), runtime);
-Expect(!pendingContract.AnyEnabled, "pending global contract unexpectedly enabled bindings");
-
-GameIntegrationDecision pendingProfile = GameIntegrationGate.Evaluate(
-    CreateContract("verified", "pending_review"), runtime);
-Expect(!pendingProfile.AnyEnabled, "pending profile unexpectedly enabled bindings");
-
-GameIntegrationDecision enabled = GameIntegrationGate.Evaluate(
-    CreateContract("verified", "verified"), runtime);
-Expect(enabled.EnableVisualBindings && enabled.EnableTitleBindings, "verified exact profile was not enabled");
-
-RuntimeBuildFingerprint mismatched = runtime with { Sts2Sha256 = new string('b', 64) };
-GameIntegrationDecision mismatchDecision = GameIntegrationGate.Evaluate(
-    CreateContract("verified", "verified"), mismatched);
-Expect(!mismatchDecision.AnyEnabled, "mismatched assembly hash unexpectedly enabled bindings");
-
-GameIntegrationDecision partial = GameIntegrationGate.Evaluate(
-    CreateContract("verified", "verified", pendingTitle: "tooltip"), runtime);
-Expect(partial.EnableVisualBindings, "verified visual bindings should remain independently enabled");
-Expect(!partial.EnableTitleBindings, "pending title surface unexpectedly enabled title bindings");
-
-GameIntegrationContractMap duplicate = CreateContract("verified", "verified");
-GameIntegrationProfile original = duplicate.Profiles[0];
-duplicate.Profiles.Add(new GameIntegrationProfile
-{
-    Id = "duplicate-fixture",
-    Status = original.Status,
-    Branch = original.Branch,
-    Fingerprint = original.Fingerprint,
-    VisualBindings = original.VisualBindings,
-    TitleBindings = original.TitleBindings,
-});
-try
-{
-    GameIntegrationGate.Evaluate(duplicate, runtime);
-    throw new InvalidOperationException("duplicate fingerprint was accepted");
-}
-catch (InvalidOperationException exception) when (exception.Message.Contains("Duplicate build fingerprint", StringComparison.Ordinal))
-{
-}
-
-Console.WriteLine("INTEGRATION_GATE_OK pending=false exact=true mismatch=false partial_titles=false duplicate_rejected=true");
