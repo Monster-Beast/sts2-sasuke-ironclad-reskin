@@ -40,7 +40,8 @@ internal static class RuntimeObservationTests
             "123456",
             new string('a', 64),
             assembly.ManifestModule.ModuleVersionId.ToString("D").ToLowerInvariant(),
-            "v3.3.7");
+            "v3.3.7",
+            new string('b', 64));
         RuntimeObservationManifestMap manifest = CreateManifest(runtime, method, now);
         GameIntegrationProfile profile = CreatePendingProfile(runtime, now);
         RuntimeObservationOptIn optIn = CreateOptIn(runtime);
@@ -66,6 +67,14 @@ internal static class RuntimeObservationTests
             runtime with { SteamBuildId = "123457" },
             now);
         Expect(!mismatch.Enabled, "mismatched build unexpectedly enabled observation");
+
+        RuntimeObservationGateResult baseLibHashMismatch = RuntimeObservationGate.Evaluate(
+            manifest,
+            profile,
+            optIn,
+            runtime with { BaseLibManifestSha256 = new string('c', 64) },
+            now);
+        Expect(!baseLibHashMismatch.Enabled, "mismatched BaseLib manifest unexpectedly enabled observation");
 
         RuntimeObservationManifestMap staleManifest = CreateManifest(runtime, method, now - TimeSpan.FromHours(73));
         GameIntegrationProfile staleProfile = CreatePendingProfile(runtime, now - TimeSpan.FromHours(73));
@@ -136,8 +145,8 @@ internal static class RuntimeObservationTests
         Expect(throwingPatcher.ResetCount >= 2, "failed observation install did not reset patches");
 
         Console.WriteLine(
-            "RUNTIME_OBSERVATION_GATE_OK exact=true opt_in_required=true mismatch=false stale=false " +
-            "privacy=true resolver=true bootstrap=true fail_closed=true");
+            "RUNTIME_OBSERVATION_GATE_OK exact=true opt_in_required=true mismatch=false baselib_hash=false " +
+            "stale=false privacy=true resolver=true bootstrap=true fail_closed=true");
     }
 
     private static RuntimeObservationManifestMap CreateManifest(
@@ -158,7 +167,7 @@ internal static class RuntimeObservationTests
                 Sts2Sha256 = runtime.Sts2Sha256,
                 ModuleMvid = runtime.ModuleMvid,
                 BaseLibVersion = runtime.BaseLibVersion,
-                BaseLibManifestSha256 = new string('b', 64),
+                BaseLibManifestSha256 = runtime.BaseLibManifestSha256,
             },
             BetaAttestation = new RuntimeObservationBetaAttestationSpec
             {
