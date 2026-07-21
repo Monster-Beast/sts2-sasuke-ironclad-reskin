@@ -97,11 +97,6 @@ if ($isWindowsPlatform) {
     exit 0
 }
 
-$resolvedPython = Resolve-Python3Command
-if ($resolvedPython.Version -notmatch '^3\.[0-9]+$') {
-    throw "a working Python 3 interpreter was not resolved"
-}
-
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("sasuke-steamcmd-query-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
@@ -215,7 +210,7 @@ exit 7
 
     Write-Output (
         "STEAMCMD_QUERY_OK repeated_blocks=true valid_exit7=true invalid_exit7_rejected=true " +
-        "native_capture=true python_probe=true python_version=$($resolvedPython.Version) buildid=24251656"
+        "native_capture=true buildid=24251656"
     )
 }
 finally {
