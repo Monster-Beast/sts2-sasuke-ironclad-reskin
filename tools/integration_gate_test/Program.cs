@@ -18,8 +18,9 @@ internal static class Program
 
     public static int Main()
     {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
         RuntimeBuildFingerprint runtime = new(
-            "stable",
+            "public-beta",
             "123456",
             new string('a', 64),
             "11111111-2222-3333-4444-555555555555",
@@ -27,30 +28,44 @@ internal static class Program
         );
 
         GameIntegrationDecision pendingContract = GameIntegrationGate.Evaluate(
-            CreateContract("pending_local_audit", "verified", runtime), runtime);
+            CreateContract("pending_local_audit", "verified", runtime, now), runtime, now);
         Expect(!pendingContract.AnyEnabled, "pending global contract unexpectedly enabled bindings");
 
         GameIntegrationDecision pendingProfile = GameIntegrationGate.Evaluate(
-            CreateContract("verified", "pending_review", runtime), runtime);
+            CreateContract("verified", "pending_review", runtime, now), runtime, now);
         Expect(!pendingProfile.AnyEnabled, "pending profile unexpectedly enabled bindings");
 
-        GameIntegrationContractMap verifiedContract = CreateContract("verified", "verified", runtime);
-        GameIntegrationDecision enabled = GameIntegrationGate.Evaluate(verifiedContract, runtime);
-        Expect(enabled.EnableVisualBindings && enabled.EnableTitleBindings, "verified exact profile was not enabled");
+        GameIntegrationContractMap verifiedContract = CreateContract("verified", "verified", runtime, now);
+        GameIntegrationDecision enabled = GameIntegrationGate.Evaluate(verifiedContract, runtime, now);
+        Expect(enabled.EnableVisualBindings && enabled.EnableTitleBindings, "verified latest-beta profile was not enabled");
 
         RuntimeBuildFingerprint mismatched = runtime with { Sts2Sha256 = new string('b', 64) };
-        GameIntegrationDecision mismatchDecision = GameIntegrationGate.Evaluate(verifiedContract, mismatched);
+        GameIntegrationDecision mismatchDecision = GameIntegrationGate.Evaluate(verifiedContract, mismatched, now);
         Expect(!mismatchDecision.AnyEnabled, "mismatched assembly hash unexpectedly enabled bindings");
 
+        RuntimeBuildFingerprint stableRuntime = runtime with { Branch = "stable" };
+        GameIntegrationDecision stableDecision = GameIntegrationGate.Evaluate(verifiedContract, stableRuntime, now);
+        Expect(!stableDecision.AnyEnabled, "stable branch unexpectedly enabled latest-beta bindings");
+
         GameIntegrationDecision partial = GameIntegrationGate.Evaluate(
-            CreateContract("verified", "verified", runtime, pendingTitle: "tooltip"), runtime);
+            CreateContract("verified", "verified", runtime, now, pendingTitle: "tooltip"), runtime, now);
         Expect(partial.EnableVisualBindings, "verified visual bindings should remain independently enabled");
         Expect(!partial.EnableTitleBindings, "pending title surface unexpectedly enabled title bindings");
 
-        GameIntegrationContractMap duplicate = CreateContract("verified", "verified", runtime);
-        duplicate.Profiles.Add(CreateProfile("duplicate-fixture", "verified", runtime));
+        GameIntegrationContractMap staleContract = CreateContract(
+            "verified",
+            "verified",
+            runtime,
+            now - TimeSpan.FromHours(73));
+        GameIntegrationDecision staleDecision = GameIntegrationGate.Evaluate(staleContract, runtime, now);
+        Expect(!staleDecision.AnyEnabled, "stale beta attestation unexpectedly enabled bindings");
+        Expect(staleDecision.Reasons.Any(reason => reason.Contains("stale", StringComparison.OrdinalIgnoreCase)),
+            "stale beta attestation did not produce an explicit reason");
+
+        GameIntegrationContractMap duplicate = CreateContract("verified", "verified", runtime, now);
+        duplicate.Profiles.Add(CreateProfile("duplicate-fixture", "verified", runtime, now));
         ExpectThrows(
-            () => GameIntegrationGate.Evaluate(duplicate, runtime),
+            () => GameIntegrationGate.Evaluate(duplicate, runtime, now),
             "Duplicate build fingerprint",
             "duplicate fingerprint was accepted"
         );
@@ -61,14 +76,14 @@ internal static class Program
             new FixedProvider(new(true, runtime, ["fixture"])),
             installer
         );
-        Expect(bootstrapped.Installed, "verified exact profile was not installed");
+        Expect(bootstrapped.Installed, "verified exact latest-beta profile was not installed");
         Expect(installer.InstallCount == 1, "installer was not called exactly once");
         Expect(installer.LastDecision?.EnableVisualBindings == true, "visual decision was not forwarded");
         Expect(installer.LastDecision?.EnableTitleBindings == true, "title decision was not forwarded");
 
         RecordingInstaller pendingInstaller = new();
         GameIntegrationBootstrapResult pendingBootstrap = GameIntegrationBootstrap.Start(
-            CreateContract("pending_local_audit", "verified", runtime),
+            CreateContract("pending_local_audit", "verified", runtime, now),
             new FixedProvider(new(true, runtime, ["fixture"])),
             pendingInstaller
         );
@@ -87,8 +102,8 @@ internal static class Program
         TestRuntimeFingerprintCollector();
 
         Console.WriteLine(
-            "INTEGRATION_GATE_OK pending=false exact=true mismatch=false partial_titles=false " +
-            "duplicate_rejected=true bootstrap=true collector=true fail_closed=true"
+            "INTEGRATION_GATE_OK pending=false exact=true mismatch=false stable=false stale=false " +
+            "partial_titles=false duplicate_rejected=true bootstrap=true collector=true fail_closed=true"
         );
         return 0;
     }
@@ -109,16 +124,17 @@ internal static class Program
             File.WriteAllText(Path.Combine(baseLibPath, "BaseLib.json"), "{\"version\":\"v3.1.8\"}");
             File.WriteAllText(
                 Path.Combine(steamApps, "appmanifest_2868840.acf"),
-                "\"AppState\"\n{\n  \"appid\" \"2868840\"\n  \"buildid\" \"123456\"\n}\n"
+                "\"AppState\"\n{\n  \"appid\" \"2868840\"\n  \"buildid\" \"123456\"\n  \"UserConfig\"\n  {\n    \"BetaKey\" \"public-beta\"\n  }\n}\n"
             );
 
             RuntimeBuildFingerprintCollectionResult collected = RuntimeBuildFingerprintCollector.Collect(
                 assemblyPath,
                 gamePath,
-                "stable"
+                branch: null
             );
             Expect(collected.Success && collected.Fingerprint is not null, "runtime fingerprint fixture failed");
-            Expect(collected.Fingerprint!.SteamBuildId == "123456", "Steam buildid was not collected");
+            Expect(collected.Fingerprint!.Branch == "public-beta", "public-beta branch was not collected");
+            Expect(collected.Fingerprint.SteamBuildId == "123456", "Steam buildid was not collected");
             Expect(collected.Fingerprint.BaseLibVersion == "v3.1.8", "BaseLib version was not collected");
             Expect(collected.Fingerprint.Sts2Sha256.Length == 64, "assembly SHA-256 was not collected");
             Expect(Guid.TryParse(collected.Fingerprint.ModuleMvid, out _), "assembly MVID was not collected");
@@ -134,6 +150,7 @@ internal static class Program
         string contractStatus,
         string profileStatus,
         RuntimeBuildFingerprint runtime,
+        DateTimeOffset attestedAt,
         string? pendingTitle = null)
     {
         return new GameIntegrationContractMap
@@ -147,10 +164,15 @@ internal static class Program
                 UnverifiedBindingsDisabled = true,
                 FallbackToOriginalOnMismatch = true,
                 MultiplayerLocalVisualsOnly = true,
+                RequiredBranch = "public-beta",
+                LatestBetaOnly = true,
+                RemoteBetaAttestationRequired = true,
+                StaleProfilesDisabled = true,
+                MaxBetaAttestationAgeHours = 72,
             },
             RequiredVisualEvents = VisualIds.ToList(),
             RequiredTitleSurfaces = TitleIds.ToList(),
-            Profiles = [CreateProfile("stable-fixture", profileStatus, runtime, pendingTitle)],
+            Profiles = [CreateProfile("public-beta-fixture", profileStatus, runtime, attestedAt, pendingTitle)],
         };
     }
 
@@ -158,6 +180,7 @@ internal static class Program
         string id,
         string status,
         RuntimeBuildFingerprint runtime,
+        DateTimeOffset attestedAt,
         string? pendingTitle = null)
     {
         return new GameIntegrationProfile
@@ -171,6 +194,16 @@ internal static class Program
                 Sts2Sha256 = runtime.Sts2Sha256,
                 ModuleMvid = runtime.ModuleMvid,
                 BaseLibVersion = runtime.BaseLibVersion,
+            },
+            BetaAttestation = new GameBetaAttestationSpec
+            {
+                Status = "verified",
+                Branch = "public-beta",
+                InstalledBuildId = runtime.SteamBuildId,
+                RemoteBuildId = runtime.SteamBuildId,
+                CheckedAtUtc = attestedAt.ToUniversalTime().ToString("O"),
+                Source = "steamcmd_app_info_print",
+                SteamCmdOutputSha256 = new string('d', 64),
             },
             VisualBindings = VisualIds.Select((bindingId, index) => new GameVisualBindingSpec
             {
