@@ -25,6 +25,7 @@ runtime-observation-*.jsonl
 SasukeIronclad.canary.json
 runtime-canary-status.json
 runtime-canary-anchor-status.json
+runtime-canary-replacement-status.json
 *.autosave
 *.bak
 .idea/
