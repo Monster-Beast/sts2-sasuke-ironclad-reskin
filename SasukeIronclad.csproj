@@ -5,11 +5,16 @@
     <ImplicitUsings>true</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
     <PathMap>$(AppOutputBase)=.\</PathMap>
     <GodotDisabledSourceGenerators>GodotPluginsInitializer</GodotDisabledSourceGenerators>
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="SasukeIroncladCode/**/*.cs" />
+  </ItemGroup>
 
   <ItemGroup Condition="Exists('$(Sts2DataDir)')">
     <Reference Include="0Harmony"><HintPath>$(Sts2DataDir)/0Harmony.dll</HintPath><Private>false</Private></Reference>
@@ -28,9 +33,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="SasukeIronclad/**" />
-    <Compile Remove="art/**" />
-    <Compile Remove="animation/**" />
     <EmbeddedResource Remove="SasukeIronclad/**" />
     <EmbeddedResource Remove="art/**" />
     <EmbeddedResource Remove="animation/**" />
