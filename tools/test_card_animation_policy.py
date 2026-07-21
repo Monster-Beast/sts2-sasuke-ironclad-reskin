@@ -58,7 +58,8 @@ def main() -> int:
         assert base == high_damage == many_hits == empowered, card_id
 
         assert card["unique_timeline"] is True, card_id
-        assert card["hit_sync"] == "original_hit_events", card_id
+        expected_sync = "original_hit_events" if card["is_damage_card"] else "timeline_local_events"
+        assert card["hit_sync"] == expected_sync, card_id
         assert card["damage_role"] == "variant_parameter_only", card_id
         if card["is_damage_card"]:
             assert {"base", "low_flash"}.issubset(card["variants"]), card_id
@@ -109,6 +110,10 @@ def main() -> int:
     assert '["low_flash"] = selection.LowFlashMode' in host_source
     assert '["external_impact_sync"] = selection.RequiresOriginalImpactSync' in host_source
     assert '["external_impact_sync"] = true' not in host_source
+
+    registry_source = (ROOT / "SasukeIroncladCode/Visuals/VisualRegistry.cs").read_text(encoding="utf-8")
+    assert 'animation.IsDamageCard' in registry_source
+    assert '"timeline_local_events"' in registry_source
 
     director_source = (ROOT / "SasukeIronclad/scripts/runtime/animation_director.gd").read_text(encoding="utf-8")
     for contract in ["_is_fast_mode", "_is_low_flash_mode", "content_scale * fast_scale"]:
