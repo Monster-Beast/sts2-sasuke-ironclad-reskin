@@ -139,7 +139,11 @@ public static partial class RuntimeObservationGate
         string.Equals(manifest.Fingerprint.SteamBuildId, runtime.SteamBuildId, StringComparison.Ordinal) &&
         string.Equals(manifest.Fingerprint.Sts2Sha256, runtime.Sts2Sha256, StringComparison.OrdinalIgnoreCase) &&
         string.Equals(manifest.Fingerprint.ModuleMvid, runtime.ModuleMvid, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(manifest.Fingerprint.BaseLibVersion, runtime.BaseLibVersion, StringComparison.Ordinal);
+        string.Equals(manifest.Fingerprint.BaseLibVersion, runtime.BaseLibVersion, StringComparison.Ordinal) &&
+        string.Equals(
+            manifest.Fingerprint.BaseLibManifestSha256,
+            runtime.BaseLibManifestSha256,
+            StringComparison.OrdinalIgnoreCase);
 
     private static bool Matches(GameIntegrationProfile profile, RuntimeBuildFingerprint runtime) =>
         string.Equals(profile.Branch, runtime.Branch, StringComparison.OrdinalIgnoreCase) &&
