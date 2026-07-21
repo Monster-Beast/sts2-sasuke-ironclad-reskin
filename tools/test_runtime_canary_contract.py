@@ -125,6 +125,8 @@ def main() -> int:
     require("FallbackActivated += OnPlaybackFallback" in session_text, "playback fallback does not restore the original visual")
     require("AnchorInvalidated += OnAnchorInvalidated" in session_text, "anchor loss does not restore the original visual")
     require("RestoreOriginalVisual(\"combat_ended\")" in session_text, "combat end does not restore the original visual")
+    require("card_not_in_reviewed_replacement_scope" in session_text, "unreviewed cards do not restore original presentation")
+    require("demon_form_replacement_remains_blocked" in session_text, "Demon Form does not restore original presentation")
     require("ReferenceEquals(local, associated)" in resolver_text, "anchor resolution is not tied to the local Player object")
     require("Multiple similarly ranked local-player visual nodes" in resolver_text, "ambiguous anchors do not fail closed")
     require("MaxSceneNodes" in resolver_text and "MaxReferenceObjects" in resolver_text, "anchor traversal is not bounded")
@@ -141,7 +143,7 @@ def main() -> int:
 
     print(
         "RUNTIME_CANARY_CONTRACT_OK sessions=2 events=10388 approved=10 blocked=2 "
-        "explicit_opt_in=true anchor=true calibration=1.2,0,-150 replacement=true restoration=true production=false"
+        "explicit_opt_in=true anchor=true calibration=1.2,0,-150 replacement=true restoration=true unreviewed_fallback=true production=false"
     )
     return 0
 
