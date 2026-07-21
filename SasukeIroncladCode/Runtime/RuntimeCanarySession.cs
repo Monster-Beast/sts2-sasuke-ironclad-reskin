@@ -186,16 +186,33 @@ public sealed class RuntimeCanarySession : IDisposable
 
     private void HandleCardVisualRequest(object? callbackInstance, object?[]? args)
     {
-        if (_playback is null || _sceneHost is null || _sceneTree is null || args is null || args.Length < 3)
+        if (_playback is null || _sceneHost is null || _sceneTree is null)
             return;
+        if (args is null || args.Length < 3)
+        {
+            FailReplacementForCombat("local_card_play_callback_shape_invalid");
+            return;
+        }
+
         object? model = args[2];
         if (!TryResolveCardId(model, out string cardId))
+        {
+            // Once the original character is hidden, an unreviewed card cannot
+            // be allowed to lose its original animation silently. Restore the
+            // Ironclad and remain in original-visual fallback for this combat.
+            FailReplacementForCombat("card_not_in_reviewed_replacement_scope");
             return;
+        }
 
         // Demon Form installs a persistent form. It remains title-only until a
-        // targeted run proves the exact form-removal event.
+        // targeted run proves the exact form-removal event. Replacement mode
+        // therefore restores the original character instead of hiding a card
+        // presentation for which no reviewed Sasuke timeline may be committed.
         if (string.Equals(cardId, DemonFormCardId, StringComparison.Ordinal))
+        {
+            FailReplacementForCombat("demon_form_replacement_remains_blocked");
             return;
+        }
 
         if (_optIn.HideOriginalVisual && _replacementDisabledForCombat)
             return;
