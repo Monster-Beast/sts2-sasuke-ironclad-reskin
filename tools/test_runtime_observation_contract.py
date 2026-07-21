@@ -11,6 +11,8 @@ SCOPE_PATH = ROOT / "SasukeIronclad/data/current_beta_card_scope.json"
 PROFILE_PATH = ROOT / "SasukeIronclad/data/integration_profiles/public-beta-24251656-ee45848ff631.pending-review.json"
 CONTRACT_PATH = ROOT / "SasukeIronclad/data/game_integration_contract.json"
 CONTROL_SCRIPT_PATH = ROOT / "tools/runtime-observation.ps1"
+MAIN_FILE_PATH = ROOT / "SasukeIroncladCode/MainFile.cs"
+BOOTSTRAP_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeObservationBootstrap.cs"
 METHOD_TOKEN_RE = re.compile(r"^0x06[0-9A-Fa-f]{6}$")
 
 
@@ -104,10 +106,18 @@ def main() -> int:
 
     script_bytes = CONTROL_SCRIPT_PATH.read_bytes()
     require(all(byte < 128 for byte in script_bytes), "PowerShell 5.1 control script must remain ASCII-only")
+    script_text = script_bytes.decode("ascii")
+    main_text = MAIN_FILE_PATH.read_text(encoding="utf-8")
+    bootstrap_text = BOOTSTRAP_PATH.read_text(encoding="utf-8")
+    require("runtime-observation-status.json" in script_text, "control script does not expose startup status")
+    require("Previous startup status was cleared" in script_text, "enable action can leave stale startup status")
+    require("RuntimeObservationLocalFiles.WriteStatus" in main_text, "Mod initializer does not persist observation status")
+    require("mod_initializer_reached" in bootstrap_text, "startup status lacks initializer evidence")
+    require("Path.GetFileName(status.OutputPath)" in bootstrap_text, "startup status may expose an absolute output path")
 
     print(
         f"RUNTIME_OBSERVATION_CONTRACT_OK targets={len(target_ids)} bindings={len(required_bindings)} "
-        "cards=10 default_enabled=false read_only=true"
+        "cards=10 default_enabled=false read_only=true startup_status=true"
     )
     return 0
 
