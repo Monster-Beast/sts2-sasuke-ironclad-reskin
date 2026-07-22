@@ -71,6 +71,8 @@ public static class RuntimeCanaryLocalFiles
             Enabled = status.Enabled,
             AnimationsEnabled = status.AnimationsEnabled,
             TitlesEnabled = status.TitlesEnabled,
+            SessionId = status.SessionId,
+            EventFile = status.EventFileName,
             PatchedBindingIds = status.PatchedBindingIds.Order(StringComparer.Ordinal).ToArray(),
             Reasons = status.Reasons,
         };
