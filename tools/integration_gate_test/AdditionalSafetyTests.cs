@@ -13,6 +13,60 @@ internal static class AdditionalSafetyTests
         VerifyNonMethodTokenIsRejected();
         VerifyBetaBranchAndWorkshopBaseLibDetection();
         VerifyAuditedMethodResolution();
+        VerifyFailureInjectionOneShot();
+    }
+
+    private static void VerifyFailureInjectionOneShot()
+    {
+        RuntimeCanaryFailureInjectionController controller = new(
+            RuntimeCanaryFailureScenarios.ForcedPlaybackFailure,
+            "Strike");
+        if (!controller.Requested ||
+            !controller.Matches(RuntimeCanaryFailureScenarios.ForcedPlaybackFailure, "Strike") ||
+            controller.Matches(RuntimeCanaryFailureScenarios.ForcedPlaybackFailure, "Defend"))
+        {
+            throw new InvalidOperationException("Failure injection target matching is not exact.");
+        }
+        if (!controller.TryTrigger(
+                RuntimeCanaryFailureScenarios.ForcedPlaybackFailure,
+                "Strike",
+                "after_replacement_hidden",
+                originalVisualHiddenAtTrigger: true))
+        {
+            throw new InvalidOperationException("The reviewed one-shot failure could not be triggered.");
+        }
+        if (controller.TryTrigger(
+                RuntimeCanaryFailureScenarios.ForcedPlaybackFailure,
+                "Strike",
+                "after_replacement_hidden",
+                originalVisualHiddenAtTrigger: true))
+        {
+            throw new InvalidOperationException("The one-shot failure triggered more than once.");
+        }
+        if (!controller.ConfirmRecovery(
+                recovered: true,
+                transition: "original_visual_restored:fixture"))
+        {
+            throw new InvalidOperationException("Failure recovery was not confirmed.");
+        }
+        RuntimeCanaryFailureInjectionSnapshot snapshot = controller.Snapshot();
+        if (!snapshot.Triggered || snapshot.TriggerCount != 1 || snapshot.Armed ||
+            !snapshot.OriginalVisualHiddenAtTrigger || !snapshot.RecoveryConfirmed)
+        {
+            throw new InvalidOperationException("Failure injection snapshot lost one-shot recovery evidence.");
+        }
+
+        RuntimeCanaryFailureInjectionController disabled = new(
+            RuntimeCanaryFailureScenarios.None,
+            string.Empty);
+        if (disabled.Requested || disabled.TryTrigger(
+                RuntimeCanaryFailureScenarios.MissingTimeline,
+                "Strike",
+                "can_play",
+                originalVisualHiddenAtTrigger: false))
+        {
+            throw new InvalidOperationException("Disabled failure injection accepted a trigger.");
+        }
     }
 
     private static void VerifyNonMethodTokenIsRejected()
