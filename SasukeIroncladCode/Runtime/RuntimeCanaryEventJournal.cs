@@ -20,6 +20,8 @@ public sealed record RuntimeCanaryEventData(
     bool? AnchorBound = null,
     bool? OverlayVisible = null,
     int? RestoreCount = null,
+    string? FailureScenario = null,
+    string? FailureCardId = null,
     string? Reason = null
 );
 
@@ -44,6 +46,8 @@ public sealed class RuntimeCanaryEventDocument
     [JsonPropertyName("anchor_bound")] public bool? AnchorBound { get; init; }
     [JsonPropertyName("overlay_visible")] public bool? OverlayVisible { get; init; }
     [JsonPropertyName("restore_count")] public int? RestoreCount { get; init; }
+    [JsonPropertyName("failure_scenario")] public string? FailureScenario { get; init; }
+    [JsonPropertyName("failure_card_id")] public string? FailureCardId { get; init; }
     [JsonPropertyName("reason")] public string? Reason { get; init; }
 }
 
@@ -142,6 +146,8 @@ public sealed class RuntimeCanaryEventJournal : IDisposable
                     AnchorBound = data.AnchorBound,
                     OverlayVisible = data.OverlayVisible,
                     RestoreCount = data.RestoreCount,
+                    FailureScenario = Sanitize(data.FailureScenario),
+                    FailureCardId = Sanitize(data.FailureCardId),
                     Reason = Sanitize(data.Reason),
                 };
                 File.AppendAllText(
