@@ -152,54 +152,67 @@ compendium
 tooltip
 ```
 
-## Reviewed combined run
+## Reviewed combined runs
 
-The first user-provided combined archive is recorded at:
+The structured result is recorded at:
 
 ```text
 SasukeIronclad/data/reviews/public-beta-24251656-combined-presentation-review.json
 ```
 
-It established, in one exact-build game process:
+The first combined run established the core coexistence path in one exact-build process:
 
 - both title and animation layers enabled;
-- nine successful title applications;
 - title evidence on `card_art`, `hand` and `deck_list`;
 - three completed animations for Strike and Defend;
 - two original damage-impact forwards for Strike;
 - exact local-player anchor binding;
 - three successful original-Ironclad hide transitions;
 - restoration after one unreviewed card;
-- four later cards intentionally left on the original presentation for that combat;
 - combat-end cleanup;
 - zero hard failures and zero analysis errors;
-- a final checkpoint with `process_count=0` and `process.json=[]`.
+- clean-process checkpoint closure.
 
-The original analyzer returned `partial` only because the runtime journal lacked `session_stop`. The final checkpoint proves the game process had exited, so the combined core coexistence result is accepted. The remaining follow-up is limited to combined evidence for `reward`, `compendium` and `tooltip`; a full combat stability rerun is not required.
+A focused follow-up then completed all six reviewed title surfaces in combined mode. The follow-up recorded:
 
-## Focused UI-surface follow-up
-
-For the follow-up, enable another combined session and cover only the missing UI surfaces:
-
-1. open the compendium and select a reviewed card;
-2. hover or open a tooltip for a reviewed card;
-3. finish one short combat and inspect a card reward containing a reviewed card when available;
-4. exit normally and save one clean-process checkpoint.
-
-Then analyze with:
-
-```powershell
-python .\tools\analyze_runtime_canary_journal.py `
-  --input $journal.FullName `
-  --checkpoint-root "$checkpointRoot" `
-  --require-combined `
-  --require-title-surface compendium `
-  --require-title-surface tooltip `
-  --require-title-surface reward `
-  --output .\runtime-canary-combined-ui-review
+```text
+events                       170
+combats                      3
+title_applied               47
+playback_started            24
+playback_completed          15
+original_impact_forwarded   23
+replacement_hidden          24
+replacement_restored         3
+hard failures                0
+expected fallbacks           0
 ```
 
-This is a targeted UI evidence run. It does not need to repeat the earlier multi-combat replacement matrix.
+The observed title surfaces were:
+
+```text
+card_art
+compendium
+deck_list
+hand
+reward
+tooltip
+```
+
+The observed animation cards were:
+
+```text
+Anger
+Bash
+Defend
+Strike
+Thunderclap
+Whirlwind
+```
+
+The runtime journal again lacked `session_stop`, but the checkpoint recorded a successful process query, zero game processes, sequence `170` and final event `combat_ended`. The analyzer therefore closed the session through `clean_process_checkpoint` and returned `status=passed`.
+
+The combined presentation stage is complete for all six reviewed title surfaces on this exact Beta build. No additional combined UI-surface follow-up or full combat rerun is required for this stage.
 
 ## Remaining boundary
 
