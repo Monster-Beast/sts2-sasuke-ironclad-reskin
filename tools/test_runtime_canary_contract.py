@@ -15,9 +15,13 @@ CONTRACT_PATH = ROOT / "SasukeIronclad/data/game_integration_contract.json"
 PROFILE_PATH = ROOT / "SasukeIronclad/data/integration_profiles/public-beta-24251656-ee45848ff631.pending-review.json"
 SCOPE_PATH = ROOT / "SasukeIronclad/data/current_beta_card_scope.json"
 SCRIPT_PATH = ROOT / "tools/runtime-canary.ps1"
+CHECKPOINT_SCRIPT_PATH = ROOT / "tools/runtime-canary-checkpoint.ps1"
+JOURNAL_ANALYZER_PATH = ROOT / "tools/analyze_runtime_canary_journal.py"
+JOURNAL_TEST_PATH = ROOT / "tools/test_runtime_canary_journal.py"
 MAIN_PATH = ROOT / "SasukeIroncladCode/MainFile.cs"
 LOCAL_FILES_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryLocalFiles.cs"
 SESSION_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanarySession.cs"
+JOURNAL_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryEventJournal.cs"
 ANCHOR_RESOLVER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimePlayerVisualAnchorResolver.cs"
 SCENE_HOST_PATH = ROOT / "SasukeIroncladCode/Adapters/GodotVisualSceneHost.cs"
 SELECTOR_PATH = ROOT / "SasukeIroncladCode/Runtime/CardAnimationSelector.cs"
@@ -170,11 +174,15 @@ def main() -> int:
     ), "damage and non-damage impact synchronization policies diverged")
 
     script_bytes = SCRIPT_PATH.read_bytes()
+    checkpoint_bytes = CHECKPOINT_SCRIPT_PATH.read_bytes()
     require(all(byte < 128 for byte in script_bytes), "runtime-canary.ps1 must remain ASCII-only")
+    require(all(byte < 128 for byte in checkpoint_bytes), "runtime-canary-checkpoint.ps1 must remain ASCII-only")
     script_text = script_bytes.decode("ascii")
+    checkpoint_text = checkpoint_bytes.decode("ascii")
     main_text = MAIN_PATH.read_text(encoding="utf-8")
     local_text = LOCAL_FILES_PATH.read_text(encoding="utf-8")
     session_text = SESSION_PATH.read_text(encoding="utf-8")
+    journal_text = JOURNAL_PATH.read_text(encoding="utf-8")
     resolver_text = ANCHOR_RESOLVER_PATH.read_text(encoding="utf-8")
     host_text = SCENE_HOST_PATH.read_text(encoding="utf-8")
     selector_text = SELECTOR_PATH.read_text(encoding="utf-8")
@@ -184,12 +192,20 @@ def main() -> int:
     runtime_contract_text = RUNTIME_CONTRACT_PROJECT_PATH.read_text(encoding="utf-8")
 
     require("local_visual_only" in script_text, "canary marker mode changed")
+    require("session_label" in script_text and "SessionLabel" in script_text, "canary session label is missing")
+    require("Combined" in script_text and '"combined"' in script_text, "explicit combined canary control is missing")
+    require("canary-output" in script_text, "canary event journal discovery is missing")
     require("anchor_to_local_player" in script_text and "anchor_scale" in script_text, "local-player anchor marker fields are missing")
     require("[double]$AnchorScale = 1.2" in script_text and "[double]$AnchorOffsetY = -150.0" in script_text, "approved calibration is not the local default")
     require("ReplaceOriginal" in script_text and "hide_original_visual" in script_text, "replacement canary control is missing")
     require(REPLACEMENT_ACK in script_text, "replacement acknowledgement changed")
+    require("process_count" in checkpoint_text and '"[]"' in checkpoint_text, "checkpoint tool does not record a deterministic empty process list")
+    require("event_file" in checkpoint_text and "checkpoint.json" in checkpoint_text, "checkpoint tool does not capture journal identity")
+    require(JOURNAL_ANALYZER_PATH.exists() and JOURNAL_TEST_PATH.exists(), "journal analyzer or regression test is missing")
     require("RuntimeCanaryLocalFiles.LoadOptIn" in main_text and "RuntimeCanaryLocalFiles.WriteStatus" in main_text, "canary startup wiring is missing")
+    require("events={CanaryStatus.EventFileName" in main_text, "Mod startup log does not report the journal file")
     require("SasukeIronclad.canary.json" in local_text and "runtime-canary-status.json" in local_text, "canary local filenames changed")
+    require("EventFile = status.EventFileName" in local_text, "startup status does not publish the event file")
     require("runtime-canary-anchor-status.json" in local_text, "anchor diagnostics filename is missing")
     require("runtime-canary-replacement-status.json" in local_text, "replacement diagnostics filename is missing")
     require("Runtime observation marker is present" in local_text, "simultaneous observation is not rejected")
@@ -202,6 +218,14 @@ def main() -> int:
     require("RestoreOriginalVisual(\"combat_ended\")" in session_text, "combat end does not restore the original visual")
     require("card_not_in_reviewed_replacement_scope" in session_text, "unreviewed cards do not restore original presentation")
     require("demon_form_replacement_remains_blocked" in session_text, "Demon Form does not restore original presentation")
+    for event_name in [
+        "session_start", "title_applied", "playback_started", "replacement_hidden",
+        "original_impact_forwarded", "combat_ended", "session_stop",
+    ]:
+        require(f'"{event_name}"' in session_text, f"canary journal event is missing: {event_name}")
+    require("RuntimeCanaryEventJournal.TryCreate" in session_text, "canary session does not create a journal")
+    require("MaxEvents = 20_000" in journal_text and "DefaultIgnoreCondition" in journal_text, "journal is not bounded or compact")
+    require("absolute paths" in journal_text and "game objects" in journal_text, "journal privacy boundary is undocumented")
     require("ReferenceEquals(local, associated)" in resolver_text, "anchor resolution is not tied to the local Player object")
     require("Multiple similarly ranked local-player visual nodes" in resolver_text, "ambiguous anchors do not fail closed")
     require("MaxSceneNodes" in resolver_text and "MaxReferenceObjects" in resolver_text, "anchor traversal is not bounded")
@@ -211,6 +235,7 @@ def main() -> int:
     require('["external_impact_sync"] = true' not in host_text, "scene host still forces external impact sync for every card")
     require("RequiresOriginalImpactSync = spec.IsDamageCard && string.Equals" in selector_text, "non-damage timelines can still wait for original damage impacts")
     require(REPLACEMENT_ACK in gate_text and "original visibility value must be captured" in gate_text.lower(), "replacement gate policy is incomplete")
+    require("IsValidSessionLabel" in gate_text, "manually edited canary session labels are not validated")
     require("RequiredTargetType = \"MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals\"" in replacement_text, "replacement target type is not exact")
     require("RequiredTargetName = \"Ironclad\"" in replacement_text, "replacement target name is not exact")
     require("target.Visible = false" in replacement_text and "target.Visible = _originalVisibleBeforeHide.Value" in replacement_text, "replacement visibility is not captured and restored")
@@ -223,7 +248,8 @@ def main() -> int:
         "RUNTIME_CANARY_CONTRACT_OK sessions=2 events=10388 approved=10 blocked=2 "
         "explicit_opt_in=true anchor=true candidate_counts=2,3 calibration=1.2,0,-150 "
         "replacement=true restoration=true unreviewed_fallback=true damage_only_impact_sync=true "
-        "impact_retest_passed=true multi_combat_stability=true capture_caveats=true production=false"
+        "impact_retest_passed=true multi_combat_stability=true capture_caveats=true "
+        "combined_journal=true deterministic_checkpoint=true production=false"
     )
     return 0
 
