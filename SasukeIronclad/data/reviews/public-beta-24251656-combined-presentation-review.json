@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-07-22T03:40:00+00:00",
+  "status": "combined_core_passed_with_exit_and_surface_followup",
+  "profile_id": "public-beta-24251656-ee45848ff631",
+  "runtime": {
+    "branch": "public-beta",
+    "steam_build_id": "24251656",
+    "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+    "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+    "baselib_version": "v3.3.7"
+  },
+  "source": {
+    "kind": "user_provided_privacy_safe_checkpoint_archive",
+    "archive_file_name": "combined-run-1.zip",
+    "archive_sha256": "a483b1a9b4de1745a2d6d65e58d10961be0a03fd3592f8bd3e2f509f004ef951",
+    "archive_size_bytes": 26472,
+    "submitted_review_file_name": "runtime-canary-journal-review.json",
+    "submitted_review_sha256": "2e82fdcf504770d3fae4a28fcdbfcad8613b9a7c7b22d5b28deb2d73df945659",
+    "submitted_review_size_bytes": 2236,
+    "raw_archive_committed": false,
+    "contains_absolute_local_paths": false
+  },
+  "session": {
+    "session_id": "combined-run-1-20260722T032415959Z-f77b35e9099e495cbc32ef04a9805f5e",
+    "journal_file_name": "runtime-canary-combined-run-1-20260722T032415959Z-f77b35e9099e495cbc32ef04a9805f5e.jsonl",
+    "journal_sha256": "6f76c9d51576d9696a2734e77888deaa29a17f3f6a19500349f51d10619ca4fc",
+    "journal_size_bytes": 14845,
+    "event_count": 38,
+    "combat_count": 1,
+    "combined": true,
+    "animations_enabled": true,
+    "titles_enabled": true,
+    "replacement_requested": true
+  },
+  "event_counts": {
+    "session_start": 1,
+    "session_stop": 0,
+    "combat_started": 1,
+    "combat_ended": 1,
+    "title_applied": 9,
+    "playback_started": 3,
+    "playback_completed": 3,
+    "original_impact_forwarded": 2,
+    "anchor_bound": 1,
+    "replacement_hidden": 3,
+    "replacement_restored": 1,
+    "unreviewed_card_fallback": 1,
+    "replacement_disabled_for_combat": 1,
+    "card_play_original_fallback": 4
+  },
+  "title_layer": {
+    "observed_surfaces": [
+      "card_art",
+      "deck_list",
+      "hand"
+    ],
+    "pending_combined_surfaces": [
+      "compendium",
+      "reward",
+      "tooltip"
+    ],
+    "observed_cards": [
+      "Bash",
+      "Defend",
+      "Strike"
+    ],
+    "title_applied_count": 9,
+    "core_combined_title_evidence_passed": true,
+    "all_six_surfaces_passed": false
+  },
+  "animation_layer": {
+    "observed_cards": [
+      "Defend",
+      "Strike"
+    ],
+    "observed_animation_ids": [
+      "defend_wire_parry_guard",
+      "strike_kusanagi_draw_slash"
+    ],
+    "playback_started_count": 3,
+    "playback_completed_count": 3,
+    "original_impact_forwarded_count": 2,
+    "non_damage_local_timing_passed": true,
+    "damage_impact_forwarding_passed": true
+  },
+  "replacement_layer": {
+    "anchor_strategy": "callback_local_player_reference",
+    "anchor_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals",
+    "anchor_name": "Ironclad",
+    "candidate_count": 2,
+    "local_player_reference_count": 1,
+    "replacement_hidden_count": 3,
+    "replacement_restored_count": 1,
+    "restore_reason": "card_not_in_reviewed_replacement_scope",
+    "combat_end_cleanup_observed": true,
+    "passed": true
+  },
+  "fallback_classification": {
+    "expected_fallback_count": 5,
+    "unreviewed_card_fallback_count": 1,
+    "subsequent_original_fallback_count": 4,
+    "hard_failure_count": 0,
+    "hard_failures": [],
+    "errors": []
+  },
+  "checkpoints": {
+    "checkpoint_count": 4,
+    "names": [
+      "01-combined-active",
+      "02-unreviewed-fallback",
+      "03-reward-and-cleanup",
+      "04-clean-process-exit"
+    ],
+    "single_game_process_id": 744,
+    "clean_exit_checkpoint": "04-clean-process-exit",
+    "clean_exit_process_count": 0,
+    "clean_exit_process_document": "[]",
+    "runtime_session_stop_present": false,
+    "external_clean_process_exit_evidence_passed": true,
+    "closure_mode": "legacy_clean_process_checkpoint"
+  },
+  "conclusions": {
+    "combined_title_and_animation_coexistence_passed": true,
+    "replacement_and_restoration_passed": true,
+    "damage_and_non_damage_timing_passed": true,
+    "hard_failure_free": true,
+    "clean_process_exit_evidence_passed": true,
+    "all_six_title_surfaces_combined_passed": false,
+    "targeted_ui_surface_followup_required": true,
+    "full_combat_retest_required": false,
+    "production_profile_ready": false
+  },
+  "capture_caveats": [
+    "The runtime journal did not contain session_stop even though the final checkpoint recorded process_count=0 and process.json as an empty array.",
+    "The original analyzer treated session_stop as the only closure signal and therefore reported status=partial.",
+    "The run produced combined evidence for card_art, hand and deck_list; reward, compendium and tooltip were not present in this journal.",
+    "Expected fallback count includes one unreviewed-card transition and four later reviewed cards intentionally left on the original presentation for the remainder of that combat."
+  ],
+  "safety": {
+    "exact_build_only": true,
+    "explicit_local_opt_in_required": true,
+    "postfix_only": true,
+    "gameplay_changes": false,
+    "production_contract_promoted": false,
+    "form_removed_enabled": false,
+    "character_state_enabled": false,
+    "demon_form_replacement_enabled": false
+  }
+}
