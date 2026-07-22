@@ -51,7 +51,9 @@
 - [x] 本地 Ironclad 战斗锚点、位置校准和安全替换；
 - [x] 未适配牌、战斗结束和连续多场战斗的恢复/重新激活；
 - [x] 伤害牌真实 impact 同步与非伤害牌本地节拍拆分；
-- [x] 标题与动画组合 Canary、隐私安全 JSONL 日志和确定性检查点工具。
+- [x] 标题与动画组合 Canary、隐私安全 JSONL 日志和确定性检查点工具；
+- [x] 组合模式在真实游戏中完成 `card_art`、`hand`、`deck_list` 标题与 Strike/Defend 动画共存验证；
+- [x] 使用 clean-process checkpoint 补足运行时未落盘 `session_stop` 的关闭证据。
 
 待在真实游戏电脑完成：
 
@@ -59,7 +61,7 @@
 - [ ] 战士头像、选人立绘及非战斗人物场景锚点；
 - [ ] Demon Form 精确 Form 移除事件；
 - [ ] 人物轻/重受击、死亡和胜利精确事件；
-- [ ] 组合标题/动画的真实游戏验收；
+- [ ] 组合标题/动画的 `reward`、`compendium`、`tooltip` 聚焦验收；
 - [ ] 多人本地玩家、远端玩家和多 Mod 共存证据；
 - [ ] 第一个最新 Beta 精确版本 `pending_review` Profile 的完整人工签署；
 - [ ] 每次 Beta 更新后重新审计并替换唯一当前 Profile。
@@ -83,7 +85,8 @@
 - [x] .NET 9 Runtime/Adapters/Visuals 编译；
 - [x] 精确 Beta MethodDef 二次解析与 Postfix-only Canary 适配器；
 - [x] 本地玩家锚定、原角色隐藏和捕获原可见性的故障恢复；
-- [x] 组合标题/动画事件日志及自动分析工具。
+- [x] 组合标题/动画事件日志及自动分析工具；
+- [x] 检查点进程查询、游戏进程计数、日志尾事件和外部关闭证据。
 
 待完成：
 
