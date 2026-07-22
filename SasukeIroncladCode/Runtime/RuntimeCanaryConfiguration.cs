@@ -142,6 +142,7 @@ public sealed class RuntimeCanaryReplacementStatusDocument
     [JsonPropertyName("target_type")] public string? TargetType { get; init; }
     [JsonPropertyName("target_name")] public string? TargetName { get; init; }
     [JsonPropertyName("original_visible_before_hide")] public bool? OriginalVisibleBeforeHide { get; init; }
+    [JsonPropertyName("original_visibility_restored")] public bool? OriginalVisibilityRestored { get; init; }
     [JsonPropertyName("anchor_bound")] public bool AnchorBound { get; init; }
     [JsonPropertyName("overlay_visible")] public bool OverlayVisible { get; init; }
     [JsonPropertyName("anchor_scale")] public float AnchorScale { get; init; } = 1.2f;
@@ -166,6 +167,7 @@ public sealed class RuntimeCanaryFailureStatusDocument
     [JsonPropertyName("replacement_active_after_fault")] public bool ReplacementActiveAfterFault { get; init; }
     [JsonPropertyName("replacement_ever_hidden")] public bool ReplacementEverHidden { get; init; }
     [JsonPropertyName("restore_count_after_fault")] public int RestoreCountAfterFault { get; init; }
+    [JsonPropertyName("original_visibility_restored_after_fault")] public bool? OriginalVisibilityRestoredAfterFault { get; init; }
     [JsonPropertyName("anchor_bound_after_fault")] public bool AnchorBoundAfterFault { get; init; }
     [JsonPropertyName("overlay_visible_after_fault")] public bool OverlayVisibleAfterFault { get; init; }
     [JsonPropertyName("replacement_disabled_for_combat")] public bool ReplacementDisabledForCombat { get; init; }
