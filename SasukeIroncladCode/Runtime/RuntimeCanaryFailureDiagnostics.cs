@@ -108,11 +108,15 @@ public static class RuntimeCanaryFailureDiagnostics
         lock (Sync)
         {
             _replacementSnapshot = snapshot;
-            if (_controller?.Snapshot().Triggered == true)
+            RuntimeCanaryFailureInjectionSnapshot? failure = _controller?.Snapshot();
+            if (failure?.Triggered == true)
             {
                 _replacementDisabledForCombat = true;
-                _controller.ConfirmRecovery(
-                    recovered: !snapshot.Active,
+                bool recovered = !snapshot.Active &&
+                    (!failure.OriginalVisualHiddenAtTrigger ||
+                     snapshot.OriginalVisibilityRestored == true);
+                _controller!.ConfirmRecovery(
+                    recovered,
                     transition: snapshot.LastTransition);
             }
             WriteStatusLocked();
