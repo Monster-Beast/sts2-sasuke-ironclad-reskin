@@ -14,9 +14,12 @@ public static class RuntimeCanaryGate
 {
     public const string RequiredReplacementAcknowledgement =
         "public-beta-24251656-local-ironclad-replacement";
+    public const string RequiredFailureInjectionAcknowledgement =
+        "public-beta-24251656-local-visual-failure-injection";
 
     private const string RequiredMode = "local_visual_only";
     private const string RequiredBranch = "public-beta";
+    private const string DemonFormCardId = "Demon Form";
     private static readonly HashSet<string> RequiredVisualBindings =
     [
         "card_visual_request", "original_impact", "state_removed", "form_removed",
@@ -115,6 +118,37 @@ public static class RuntimeCanaryGate
         {
             return Disabled("Replacement acknowledgement is present while original visual replacement is disabled.");
         }
+
+        if (!RuntimeCanaryFailureScenarios.IsSupported(optIn.FailureInjectionScenario))
+            return Disabled("Runtime canary failure_injection_scenario is unsupported.");
+        bool failureRequested = RuntimeCanaryFailureScenarios.IsFailure(optIn.FailureInjectionScenario);
+        if (failureRequested)
+        {
+            if (!optIn.EnableAnimations || !optIn.AnchorToLocalPlayer || !optIn.HideOriginalVisual)
+                return Disabled("Failure injection requires anchored animation replacement so original-visual recovery can be verified.");
+            if (!optIn.FailureInjectionOnce)
+                return Disabled("Failure injection must remain one-shot for the current process.");
+            if (!string.Equals(
+                    optIn.FailureInjectionAcknowledgement,
+                    RequiredFailureInjectionAcknowledgement,
+                    StringComparison.Ordinal))
+            {
+                return Disabled("Failure injection lacks the exact-build acknowledgement written by the explicit failure switch.");
+            }
+            if (string.IsNullOrWhiteSpace(optIn.FailureInjectionCardId) ||
+                string.Equals(optIn.FailureInjectionCardId, DemonFormCardId, StringComparison.Ordinal) ||
+                !scope.ActiveCards.Any(card =>
+                    string.Equals(card.CardId, optIn.FailureInjectionCardId, StringComparison.Ordinal)))
+            {
+                return Disabled("Failure injection target must be a reviewed active card other than Demon Form.");
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(optIn.FailureInjectionCardId) ||
+                 !string.IsNullOrWhiteSpace(optIn.FailureInjectionAcknowledgement))
+        {
+            return Disabled("Failure injection fields are populated while failure_injection_scenario is none.");
+        }
+
         if (!string.Equals(optIn.ExpectedBranch, runtime.Branch, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(optIn.ExpectedBuildId, runtime.SteamBuildId, StringComparison.Ordinal))
         {
@@ -192,6 +226,14 @@ public static class RuntimeCanaryGate
             reasons.Add(
                 "The original visibility value must be captured and restored on playback fallback, anchor loss, combat end and Mod disposal."
             );
+        }
+        if (failureRequested)
+        {
+            reasons.Add(
+                $"One-shot presentation failure injection armed: scenario={optIn.FailureInjectionScenario}; " +
+                $"target_card={optIn.FailureInjectionCardId}."
+            );
+            reasons.Add("Failure injection is diagnostic-only and may not mutate card rules, combat state or game resources on disk.");
         }
         reasons.Add("Only approved_for_canary postfix adapters are eligible; form_removed and character_state remain disabled.");
         reasons.Add("Original game methods, arguments, return values, card IDs and gameplay state remain untouched.");
