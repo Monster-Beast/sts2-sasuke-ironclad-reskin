@@ -178,6 +178,7 @@ def write_checkpoint(
                 "replacement_active_after_fault": False,
                 "replacement_ever_hidden": not missing,
                 "restore_count_after_fault": 0 if missing else 1,
+                "original_visibility_restored_after_fault": None if missing else True,
                 "anchor_bound_after_fault": False,
                 "overlay_visible_after_fault": False,
                 "replacement_disabled_for_combat": True,
@@ -261,12 +262,14 @@ def main() -> int:
     assert "runtime-canary-failure-status.json" in checkpoint_source
     assert "RuntimeCanaryFailureDiagnostics.NotifyOriginalVisualHidden" in replacement_source
     assert "RuntimeCanaryFailureDiagnostics.NotifyReplacementRestored" in replacement_source
+    assert "OriginalVisibilityRestored" in replacement_source
     assert "File.Delete" not in host_source
     assert "File.Move" not in host_source
 
     print(
         "RUNTIME_CANARY_FAILURE_TEST_OK scenarios=3 one_shot=true "
-        "recovery_required=true unexpected_failure_rejected=true in_memory_only=true"
+        "recovery_required=true visibility_verified=true "
+        "unexpected_failure_rejected=true in_memory_only=true"
     )
     return 0
 
