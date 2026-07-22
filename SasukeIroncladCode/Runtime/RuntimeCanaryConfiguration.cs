@@ -70,6 +70,10 @@ public sealed class RuntimeCanaryOptIn
     [JsonPropertyName("anchor_offset_y")] public float AnchorOffsetY { get; init; } = -150.0f;
     [JsonPropertyName("hide_original_visual")] public bool HideOriginalVisual { get; init; }
     [JsonPropertyName("replacement_acknowledgement")] public string ReplacementAcknowledgement { get; init; } = string.Empty;
+    [JsonPropertyName("failure_injection_scenario")] public string FailureInjectionScenario { get; init; } = RuntimeCanaryFailureScenarios.None;
+    [JsonPropertyName("failure_injection_card_id")] public string FailureInjectionCardId { get; init; } = string.Empty;
+    [JsonPropertyName("failure_injection_once")] public bool FailureInjectionOnce { get; init; } = true;
+    [JsonPropertyName("failure_injection_acknowledgement")] public string FailureInjectionAcknowledgement { get; init; } = string.Empty;
 }
 
 public sealed class CurrentBetaCardScopeMap
@@ -98,6 +102,8 @@ public sealed class RuntimeCanaryStatusDocument
     [JsonPropertyName("titles_enabled")] public bool TitlesEnabled { get; init; }
     [JsonPropertyName("session_id")] public string? SessionId { get; init; }
     [JsonPropertyName("event_file")] public string? EventFile { get; init; }
+    [JsonPropertyName("failure_injection_scenario")] public string FailureInjectionScenario { get; init; } = RuntimeCanaryFailureScenarios.None;
+    [JsonPropertyName("failure_injection_card_id")] public string? FailureInjectionCardId { get; init; }
     [JsonPropertyName("patched_binding_ids")] public IReadOnlyList<string> PatchedBindingIds { get; init; } = [];
     [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
 }
@@ -141,5 +147,28 @@ public sealed class RuntimeCanaryReplacementStatusDocument
     [JsonPropertyName("anchor_scale")] public float AnchorScale { get; init; } = 1.2f;
     [JsonPropertyName("anchor_offset_x")] public float AnchorOffsetX { get; init; }
     [JsonPropertyName("anchor_offset_y")] public float AnchorOffsetY { get; init; } = -150.0f;
+    [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
+}
+
+public sealed class RuntimeCanaryFailureStatusDocument
+{
+    [JsonPropertyName("schema_version")] public int SchemaVersion { get; init; } = 1;
+    [JsonPropertyName("generated_at_utc")] public string GeneratedAtUtc { get; init; } = string.Empty;
+    [JsonPropertyName("requested")] public bool Requested { get; init; }
+    [JsonPropertyName("scenario")] public string Scenario { get; init; } = RuntimeCanaryFailureScenarios.None;
+    [JsonPropertyName("target_card_id")] public string? TargetCardId { get; init; }
+    [JsonPropertyName("armed")] public bool Armed { get; init; }
+    [JsonPropertyName("triggered")] public bool Triggered { get; init; }
+    [JsonPropertyName("trigger_count")] public int TriggerCount { get; init; }
+    [JsonPropertyName("trigger_stage")] public string? TriggerStage { get; init; }
+    [JsonPropertyName("original_visual_hidden_at_trigger")] public bool OriginalVisualHiddenAtTrigger { get; init; }
+    [JsonPropertyName("recovery_confirmed")] public bool RecoveryConfirmed { get; init; }
+    [JsonPropertyName("replacement_active_after_fault")] public bool ReplacementActiveAfterFault { get; init; }
+    [JsonPropertyName("replacement_ever_hidden")] public bool ReplacementEverHidden { get; init; }
+    [JsonPropertyName("restore_count_after_fault")] public int RestoreCountAfterFault { get; init; }
+    [JsonPropertyName("anchor_bound_after_fault")] public bool AnchorBoundAfterFault { get; init; }
+    [JsonPropertyName("overlay_visible_after_fault")] public bool OverlayVisibleAfterFault { get; init; }
+    [JsonPropertyName("replacement_disabled_for_combat")] public bool ReplacementDisabledForCombat { get; init; }
+    [JsonPropertyName("last_transition")] public string LastTransition { get; init; } = string.Empty;
     [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
 }
