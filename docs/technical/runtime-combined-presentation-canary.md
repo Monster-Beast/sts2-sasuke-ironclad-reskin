@@ -86,9 +86,24 @@ the current runtime-canary-*.jsonl journal  (when present)
 
 An empty game-process result is written as `[]`, so a clean exit always has a concrete process snapshot. The process snapshot omits executable paths. `status.txt` replaces the local game and Mod roots with `<GAME_PATH>` and `<MOD_PATH>`, while `checkpoint.json` records only checkpoint metadata and file names.
 
+New checkpoints also record:
+
+```text
+process_query_succeeded
+game_process_count
+auxiliary_process_count
+process_absent_at_capture
+journal_session_id
+journal_event_count
+journal_last_sequence
+journal_last_event_type
+```
+
+This distinguishes a verified empty process query from a failed WMI query and makes the journal boundary independently reviewable.
+
 ## Analysis
 
-After a clean exit, analyze the journal:
+After a clean exit, analyze the journal together with the checkpoint directory:
 
 ```powershell
 $journal = Get-ChildItem `
@@ -100,13 +115,15 @@ Select-Object -First 1
 
 python .\tools\analyze_runtime_canary_journal.py `
   --input $journal.FullName `
+  --checkpoint-root ".\runtime-canary-checkpoints\combined-run-1" `
   --require-combined `
   --output .\runtime-canary-combined-review
 ```
 
-The analyzer validates contiguous sequence numbers, one session per file, schema version and path redaction. A combined run passes only when it contains:
+The analyzer validates contiguous sequence numbers, one session per file, schema version and path redaction. A combined core run passes only when it contains:
 
-- exactly one `session_start` and `session_stop`;
+- exactly one `session_start`;
+- either one runtime `session_stop` or a checkpoint proving the game process is absent;
 - both title and animation layers enabled;
 - at least one `title_applied` event;
 - at least one `playback_started` event;
@@ -114,26 +131,79 @@ The analyzer validates contiguous sequence numbers, one session per file, schema
 - replacement activation when replacement was requested;
 - no hard adapter, anchor or playback failure.
 
+The game runtime does not consistently emit `AppDomain.ProcessExit` early enough to append `session_stop`. A checkpoint with a successful process query and zero `SlayTheSpire2.exe` processes is therefore accepted as external closure evidence. The report exposes whether closure came from `runtime_session_stop` or `clean_process_checkpoint`.
+
 An unreviewed-card fallback is expected and is reported separately from a hard failure.
 
-## First local test matrix
+To require all six reviewed title surfaces in the same session, add:
 
-The first combined run should cover:
+```powershell
+--require-all-title-surfaces
+```
 
-1. hand titles for Strike, Defend and Bash;
-2. deck view and card tooltip titles;
-3. one Defend animation using local timeline timing;
-4. one Strike or Bash animation synchronized to an original damage event;
-5. original-Ironclad concealment after verified playback starts;
-6. restoration after an unreviewed card;
-7. card reward and compendium titles;
-8. combat end, room transition and clean process exit.
+The six surfaces are:
 
-The exact game methods remain postfix-only. Internal card IDs, rules, save identity and gameplay state remain unchanged.
+```text
+card_art
+hand
+deck_list
+reward
+compendium
+tooltip
+```
+
+## Reviewed combined run
+
+The first user-provided combined archive is recorded at:
+
+```text
+SasukeIronclad/data/reviews/public-beta-24251656-combined-presentation-review.json
+```
+
+It established, in one exact-build game process:
+
+- both title and animation layers enabled;
+- nine successful title applications;
+- title evidence on `card_art`, `hand` and `deck_list`;
+- three completed animations for Strike and Defend;
+- two original damage-impact forwards for Strike;
+- exact local-player anchor binding;
+- three successful original-Ironclad hide transitions;
+- restoration after one unreviewed card;
+- four later cards intentionally left on the original presentation for that combat;
+- combat-end cleanup;
+- zero hard failures and zero analysis errors;
+- a final checkpoint with `process_count=0` and `process.json=[]`.
+
+The original analyzer returned `partial` only because the runtime journal lacked `session_stop`. The final checkpoint proves the game process had exited, so the combined core coexistence result is accepted. The remaining follow-up is limited to combined evidence for `reward`, `compendium` and `tooltip`; a full combat stability rerun is not required.
+
+## Focused UI-surface follow-up
+
+For the follow-up, enable another combined session and cover only the missing UI surfaces:
+
+1. open the compendium and select a reviewed card;
+2. hover or open a tooltip for a reviewed card;
+3. finish one short combat and inspect a card reward containing a reviewed card when available;
+4. exit normally and save one clean-process checkpoint.
+
+Then analyze with:
+
+```powershell
+python .\tools\analyze_runtime_canary_journal.py `
+  --input $journal.FullName `
+  --checkpoint-root "$checkpointRoot" `
+  --require-combined `
+  --require-title-surface compendium `
+  --require-title-surface tooltip `
+  --require-title-surface reward `
+  --output .\runtime-canary-combined-ui-review
+```
+
+This is a targeted UI evidence run. It does not need to repeat the earlier multi-combat replacement matrix.
 
 ## Remaining boundary
 
-Passing this canary proves that the two reviewed presentation layers coexist in one local exact-build process. It does not establish:
+Passing the complete combined canary proves that the two reviewed presentation layers coexist in one local exact-build process. It does not establish:
 
 - multiplayer local-player-only behavior;
 - compatibility with another Mod that manages the same visual node or title label;
