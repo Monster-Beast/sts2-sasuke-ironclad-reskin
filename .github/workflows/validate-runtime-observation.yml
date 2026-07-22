@@ -18,6 +18,8 @@ jobs:
         run: python tools/test_runtime_canary_contract.py
       - name: Validate combined canary journal analyzer
         run: python tools/test_runtime_canary_journal.py
+      - name: Validate one-shot failure recovery analyzer
+        run: python tools/test_runtime_canary_failure.py
       - name: Validate redacted evidence analysis
         run: python tools/test_runtime_observation_analysis.py
       - name: Restore observation behavior matrix
@@ -135,7 +137,8 @@ jobs:
               [double]$canaryMarker.anchor_offset_x -ne 12 -or
               [double]$canaryMarker.anchor_offset_y -ne -8 -or
               $canaryMarker.hide_original_visual -ne $false -or
-              -not [string]::IsNullOrEmpty([string]$canaryMarker.replacement_acknowledgement)) {
+              -not [string]::IsNullOrEmpty([string]$canaryMarker.replacement_acknowledgement) -or
+              $canaryMarker.failure_injection_scenario -ne "none") {
             throw "overlay canary controls are incorrect"
           }
 
@@ -174,20 +177,43 @@ jobs:
             throw "combined canary marker is incorrect"
           }
 
+          powershell -NoProfile -ExecutionPolicy Bypass -File $canaryPath `
+            -Action enable `
+            -GamePath $game `
+            -ModDirectory $mod `
+            -AnimationsOnly `
+            -SessionLabel "ci-failure" `
+            -ReplaceOriginal `
+            -FailureScenario missing_timeline `
+            -FailureCardId Strike
+
+          $failureMarker = Get-Content -LiteralPath $canaryMarkerPath -Raw | ConvertFrom-Json
+          if ($failureMarker.enable_animations -ne $true -or
+              $failureMarker.enable_titles -ne $false -or
+              $failureMarker.hide_original_visual -ne $true -or
+              $failureMarker.failure_injection_scenario -ne "missing_timeline" -or
+              $failureMarker.failure_injection_card_id -ne "Strike" -or
+              $failureMarker.failure_injection_once -ne $true -or
+              $failureMarker.failure_injection_acknowledgement -ne "public-beta-24251656-local-visual-failure-injection") {
+            throw "failure canary acknowledgement or one-shot marker is incorrect"
+          }
+
           $eventDirectory = Join-Path $mod "canary-output"
           New-Item -ItemType Directory -Force -Path $eventDirectory | Out-Null
-          $eventFile = "runtime-canary-ci-combined.jsonl"
-          '{"schema_version":1,"session_id":"ci-combined","sequence":1,"combat_index":0,"event_type":"session_start"}' |
+          $eventFile = "runtime-canary-ci-failure.jsonl"
+          '{"schema_version":1,"session_id":"ci-failure","sequence":1,"combat_index":0,"event_type":"session_start"}' |
             Set-Content -LiteralPath (Join-Path $eventDirectory $eventFile) -Encoding UTF8
           @{
             schema_version = 1
             generated_at_utc = [DateTimeOffset]::UtcNow.ToString("O")
             enabled = $true
             animations_enabled = $true
-            titles_enabled = $true
-            session_id = "ci-combined"
+            titles_enabled = $false
+            session_id = "ci-failure"
             event_file = $eventFile
-            patched_binding_ids = @("card_art", "card_visual_request")
+            failure_injection_scenario = "missing_timeline"
+            failure_injection_card_id = "Strike"
+            patched_binding_ids = @("card_visual_request")
             reasons = @("fixture")
           } | ConvertTo-Json -Depth 4 |
             Set-Content -LiteralPath (Join-Path $mod "runtime-canary-status.json") -Encoding UTF8
@@ -214,6 +240,28 @@ jobs:
             reasons = @("fixture")
           } | ConvertTo-Json -Depth 4 |
             Set-Content -LiteralPath (Join-Path $mod "runtime-canary-replacement-status.json") -Encoding UTF8
+          @{
+            schema_version = 1
+            generated_at_utc = [DateTimeOffset]::UtcNow.ToString("O")
+            requested = $true
+            scenario = "missing_timeline"
+            target_card_id = "Strike"
+            armed = $false
+            triggered = $true
+            trigger_count = 1
+            trigger_stage = "can_play"
+            original_visual_hidden_at_trigger = $false
+            recovery_confirmed = $true
+            replacement_active_after_fault = $false
+            replacement_ever_hidden = $false
+            restore_count_after_fault = 0
+            anchor_bound_after_fault = $false
+            overlay_visible_after_fault = $false
+            replacement_disabled_for_combat = $true
+            last_transition = "failure_recovery_confirmed:fixture"
+            reasons = @("fixture")
+          } | ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $mod "runtime-canary-failure-status.json") -Encoding UTF8
 
           $checkpointRoot = Join-Path $root "checkpoints"
           powershell -NoProfile -ExecutionPolicy Bypass -File $checkpointPath `
@@ -222,7 +270,13 @@ jobs:
             -Name "ci-checkpoint" `
             -OutputDirectory $checkpointRoot
           $checkpointDirectory = Join-Path $checkpointRoot "ci-checkpoint"
-          foreach ($required in @("checkpoint.json", "process.json", "status.txt", $eventFile)) {
+          foreach ($required in @(
+            "checkpoint.json",
+            "process.json",
+            "status.txt",
+            "runtime-canary-failure-status.json",
+            $eventFile
+          )) {
             if (-not (Test-Path -LiteralPath (Join-Path $checkpointDirectory $required) -PathType Leaf)) {
               throw "checkpoint capture is missing $required"
             }
@@ -248,4 +302,4 @@ jobs:
             throw "canary marker was not removed"
           }
 
-          Write-Output "RUNTIME_CONTROLS_POWERSHELL_OK observation=true canary=true combined=true journal=true checkpoint=true anchor=true replacement=true status=true disable=true"
+          Write-Output "RUNTIME_CONTROLS_POWERSHELL_OK observation=true canary=true combined=true failure=true journal=true checkpoint=true anchor=true replacement=true status=true disable=true"
