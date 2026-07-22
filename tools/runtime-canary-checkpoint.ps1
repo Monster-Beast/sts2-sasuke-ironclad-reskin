@@ -136,6 +136,10 @@ $statusText = (& powershell -NoProfile -ExecutionPolicy Bypass `
     -Action status `
     -GamePath $resolvedGamePath `
     -ModDirectory $resolvedModDirectory 2>&1 | Out-String)
+# Redact the longer Mod path before the containing game path. Checkpoint
+# evidence may be shared for review without exposing local installation roots.
+$statusText = $statusText.Replace($resolvedModDirectory, "<MOD_PATH>")
+$statusText = $statusText.Replace($resolvedGamePath, "<GAME_PATH>")
 Write-Utf8NoBom `
     -Path (Join-Path $checkpointDirectory "status.txt") `
     -Content $statusText
