@@ -18,12 +18,17 @@ SCRIPT_PATH = ROOT / "tools/runtime-canary.ps1"
 CHECKPOINT_SCRIPT_PATH = ROOT / "tools/runtime-canary-checkpoint.ps1"
 JOURNAL_ANALYZER_PATH = ROOT / "tools/analyze_runtime_canary_journal.py"
 JOURNAL_TEST_PATH = ROOT / "tools/test_runtime_canary_journal.py"
+FAILURE_ANALYZER_PATH = ROOT / "tools/analyze_runtime_canary_failure.py"
+FAILURE_TEST_PATH = ROOT / "tools/test_runtime_canary_failure.py"
 MAIN_PATH = ROOT / "SasukeIroncladCode/MainFile.cs"
 LOCAL_FILES_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryLocalFiles.cs"
 SESSION_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanarySession.cs"
 JOURNAL_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryEventJournal.cs"
+FAILURE_CONTROLLER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryFailureInjection.cs"
+FAILURE_DIAGNOSTICS_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryFailureDiagnostics.cs"
 ANCHOR_RESOLVER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimePlayerVisualAnchorResolver.cs"
 SCENE_HOST_PATH = ROOT / "SasukeIroncladCode/Adapters/GodotVisualSceneHost.cs"
+FAILURE_SOURCE_PATH = ROOT / "SasukeIroncladCode/Adapters/IRuntimeCanaryFailureSource.cs"
 SELECTOR_PATH = ROOT / "SasukeIroncladCode/Runtime/CardAnimationSelector.cs"
 GATE_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryGate.cs"
 REPLACEMENT_CONTROLLER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeOriginalVisualReplacementController.cs"
@@ -41,6 +46,7 @@ EXPECTED_LOG_HASHES = {
 }
 EXPECTED_STABILITY_ARCHIVE_HASH = "8b74fc4e9bf0abb6567e68e672a186909f6fe7c7ac5cd51eff47af1960d17026"
 REPLACEMENT_ACK = "public-beta-24251656-local-ironclad-replacement"
+FAILURE_ACK = "public-beta-24251656-local-visual-failure-injection"
 
 
 def load(path: Path) -> dict:
@@ -183,8 +189,11 @@ def main() -> int:
     local_text = LOCAL_FILES_PATH.read_text(encoding="utf-8")
     session_text = SESSION_PATH.read_text(encoding="utf-8")
     journal_text = JOURNAL_PATH.read_text(encoding="utf-8")
+    failure_controller_text = FAILURE_CONTROLLER_PATH.read_text(encoding="utf-8")
+    failure_diagnostics_text = FAILURE_DIAGNOSTICS_PATH.read_text(encoding="utf-8")
     resolver_text = ANCHOR_RESOLVER_PATH.read_text(encoding="utf-8")
     host_text = SCENE_HOST_PATH.read_text(encoding="utf-8")
+    failure_source_text = FAILURE_SOURCE_PATH.read_text(encoding="utf-8")
     selector_text = SELECTOR_PATH.read_text(encoding="utf-8")
     gate_text = GATE_PATH.read_text(encoding="utf-8")
     replacement_text = REPLACEMENT_CONTROLLER_PATH.read_text(encoding="utf-8")
@@ -199,15 +208,24 @@ def main() -> int:
     require("[double]$AnchorScale = 1.2" in script_text and "[double]$AnchorOffsetY = -150.0" in script_text, "approved calibration is not the local default")
     require("ReplaceOriginal" in script_text and "hide_original_visual" in script_text, "replacement canary control is missing")
     require(REPLACEMENT_ACK in script_text, "replacement acknowledgement changed")
+    require(FAILURE_ACK in script_text and FAILURE_ACK in gate_text, "failure injection acknowledgement changed")
+    for scenario in ["missing_timeline", "forced_playback_failure", "anchor_invalidation"]:
+        require(scenario in script_text and scenario in failure_controller_text, f"failure scenario is missing: {scenario}")
+    require("FailureScenario" in script_text and "failure_injection_once" in script_text, "one-shot failure controls are missing")
+    require("Failure injection requires anchored animation replacement" in gate_text, "failure injection can bypass replacement recovery")
+    require("target must be a reviewed active card other than Demon Form" in gate_text, "failure target scope is not fail-closed")
     require("process_count" in checkpoint_text and '"[]"' in checkpoint_text, "checkpoint tool does not record a deterministic empty process list")
     require("event_file" in checkpoint_text and "checkpoint.json" in checkpoint_text, "checkpoint tool does not capture journal identity")
+    require("runtime-canary-failure-status.json" in checkpoint_text, "checkpoint does not capture failure status")
     require(JOURNAL_ANALYZER_PATH.exists() and JOURNAL_TEST_PATH.exists(), "journal analyzer or regression test is missing")
+    require(FAILURE_ANALYZER_PATH.exists() and FAILURE_TEST_PATH.exists(), "failure analyzer or regression test is missing")
     require("RuntimeCanaryLocalFiles.LoadOptIn" in main_text and "RuntimeCanaryLocalFiles.WriteStatus" in main_text, "canary startup wiring is missing")
     require("events={CanaryStatus.EventFileName" in main_text, "Mod startup log does not report the journal file")
     require("SasukeIronclad.canary.json" in local_text and "runtime-canary-status.json" in local_text, "canary local filenames changed")
     require("EventFile = status.EventFileName" in local_text, "startup status does not publish the event file")
     require("runtime-canary-anchor-status.json" in local_text, "anchor diagnostics filename is missing")
     require("runtime-canary-replacement-status.json" in local_text, "replacement diagnostics filename is missing")
+    require("runtime-canary-failure-status.json" in local_text, "failure diagnostics filename is missing")
     require("Runtime observation marker is present" in local_text, "simultaneous observation is not rejected")
     require("Demon Form" in session_text and "targeted run proves the exact form-removal event" in session_text, "Demon Form is not fail-closed")
     require("ReferenceEquals(sourceCardModel, _activeCardModel)" in session_text, "impact forwarding is not scoped to the active local card")
@@ -226,11 +244,19 @@ def main() -> int:
     require("RuntimeCanaryEventJournal.TryCreate" in session_text, "canary session does not create a journal")
     require("MaxEvents = 20_000" in journal_text and "DefaultIgnoreCondition" in journal_text, "journal is not bounded or compact")
     require("absolute paths" in journal_text and "game objects" in journal_text, "journal privacy boundary is undocumented")
+    require("TryTrigger" in failure_controller_text and "TriggerCount: _triggered ? 1 : 0" in failure_controller_text, "failure controller is not one-shot")
+    require("ConfirmRecovery" in failure_controller_text, "failure controller does not require recovery confirmation")
+    require("WeakReference<GodotVisualSceneHost>" in failure_diagnostics_text, "failure diagnostics owns the Godot host strongly")
+    require("TryTriggerMissingTimeline" in failure_diagnostics_text and "TryTakePostHideFailure" in failure_diagnostics_text, "failure diagnostics do not separate pre-hide and post-hide faults")
     require("ReferenceEquals(local, associated)" in resolver_text, "anchor resolution is not tied to the local Player object")
     require("Multiple similarly ranked local-player visual nodes" in resolver_text, "ambiguous anchors do not fail closed")
     require("MaxSceneNodes" in resolver_text and "MaxReferenceObjects" in resolver_text, "anchor traversal is not bounded")
     require("Visible = false" in host_text and "BindToAnchor" in host_text, "visual host does not stay hidden before anchoring")
     require("AnchorInvalidated" in host_text and "GetGlobalTransformWithCanvas" in host_text, "visual host does not report anchor loss")
+    require("RuntimeCanaryFailureDiagnostics.TryTriggerMissingTimeline" in host_text, "missing timeline fault is not injected in memory")
+    require("RuntimeCanaryFailureDiagnostics.TryTakePostHideFailure" in host_text, "post-hide failure is not deferred until replacement activates")
+    require("File.Delete" not in host_text and "File.Move" not in host_text, "failure injection modifies files from the Godot host")
+    require("ConsumeCanPlayFailureReason" in failure_source_text and "IRuntimeCanaryFailureSource" in playback_text, "missing-resource reason does not reach normal fallback")
     require('["external_impact_sync"] = selection.RequiresOriginalImpactSync' in host_text, "scene host does not use the selected impact-sync policy")
     require('["external_impact_sync"] = true' not in host_text, "scene host still forces external impact sync for every card")
     require("RequiresOriginalImpactSync = spec.IsDamageCard && string.Equals" in selector_text, "non-damage timelines can still wait for original damage impacts")
@@ -240,6 +266,7 @@ def main() -> int:
     require("RequiredTargetName = \"Ironclad\"" in replacement_text, "replacement target name is not exact")
     require("target.Visible = false" in replacement_text and "target.Visible = _originalVisibleBeforeHide.Value" in replacement_text, "replacement visibility is not captured and restored")
     require("already hidden by the game or another Mod" in replacement_text, "replacement does not reject an externally hidden target")
+    require("NotifyOriginalVisualHidden" in replacement_text and "NotifyReplacementRestored" in replacement_text, "failure diagnostics do not observe hide and restore transitions")
     require("FallbackActivated?.Invoke" in playback_text, "playback fallback notification is missing")
     require("SasukeIroncladCode/MainFile.cs" in runtime_contract_text, "runtime contract does not compile the Mod initializer")
     require("Sts2ModdingStubs.cs" in runtime_contract_text, "runtime contract does not compile the STS2 Mod stubs")
@@ -249,7 +276,8 @@ def main() -> int:
         "explicit_opt_in=true anchor=true candidate_counts=2,3 calibration=1.2,0,-150 "
         "replacement=true restoration=true unreviewed_fallback=true damage_only_impact_sync=true "
         "impact_retest_passed=true multi_combat_stability=true capture_caveats=true "
-        "combined_journal=true deterministic_checkpoint=true production=false"
+        "combined_journal=true deterministic_checkpoint=true failure_injection=true "
+        "failure_scenarios=3 in_memory_only=true production=false"
     )
     return 0
 
