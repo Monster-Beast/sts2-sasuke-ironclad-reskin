@@ -32,3 +32,13 @@
 - Restricted verified bindings to MethodDef metadata tokens.
 - Added a second MethodDef resolution pass checking token, module MVID, declaring type and method signature.
 - Added Bash and PowerShell audit-helper syntax checks plus automatic review generation after equivalent scans.
+
+### Exact-build presentation canaries
+
+- Added two-run read-only runtime observation and a manual binding review for the reviewed public Beta.
+- Added explicit title-only, animation-only and local-Ironclad replacement canaries with fail-safe restoration.
+- Added local-player anchor calibration, same-process multi-combat stability evidence and damage-only original-impact synchronization.
+- Added an explicit combined title-and-animation canary with a bounded privacy-safe JSONL event journal.
+- Added deterministic checkpoint capture that always records an empty process list and copies the active journal by startup-session identity.
+- Added a journal analyzer that separates expected unreviewed-card fallback from hard adapter, anchor or playback failure.
+- Kept the production integration contract disabled and retained `form_removed`, `character_state` and Demon Form replacement as blocked work.
