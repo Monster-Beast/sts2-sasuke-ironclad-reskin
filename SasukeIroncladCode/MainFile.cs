@@ -50,6 +50,7 @@ public partial class MainFile : Node
         GD.Print(
             $"[{ModId}] canary enabled={CanaryStatus.Enabled}; " +
             $"animations={CanaryStatus.AnimationsEnabled}; titles={CanaryStatus.TitlesEnabled}; " +
+            $"session={CanaryStatus.SessionId ?? "none"}; events={CanaryStatus.EventFileName ?? "none"}; " +
             $"bindings={string.Join(",", CanaryStatus.PatchedBindingIds)}; " +
             $"reasons={string.Join("; ", CanaryStatus.Reasons)}"
         );
