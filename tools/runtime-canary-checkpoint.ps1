@@ -122,9 +122,34 @@ if (Test-Path -LiteralPath $statusPath -PathType Leaf) {
         $eventFileName = $null
     }
 }
+
+$eventPath = $null
+$journalEventCount = $null
+$journalLastSequence = $null
+$journalLastEventType = $null
+$journalSessionId = $null
 if (-not [string]::IsNullOrWhiteSpace($eventFileName)) {
     $eventPath = Join-Path (Join-Path $resolvedModDirectory $EventDirectoryName) $eventFileName
     if (Test-Path -LiteralPath $eventPath -PathType Leaf) {
+        try {
+            $journalLines = @(
+                Get-Content -LiteralPath $eventPath |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            )
+            $journalEventCount = $journalLines.Count
+            if ($journalLines.Count -gt 0) {
+                $lastEvent = $journalLines[-1] | ConvertFrom-Json
+                $journalLastSequence = [int]$lastEvent.sequence
+                $journalLastEventType = [string]$lastEvent.event_type
+                $journalSessionId = [string]$lastEvent.session_id
+            }
+        }
+        catch {
+            $journalEventCount = $null
+            $journalLastSequence = $null
+            $journalLastEventType = $null
+            $journalSessionId = $null
+        }
         Copy-Item -LiteralPath $eventPath -Destination (Join-Path $checkpointDirectory $eventFileName) -Force
         [void]$copiedFiles.Add($eventFileName)
     }
@@ -146,6 +171,7 @@ Write-Utf8NoBom `
 [void]$copiedFiles.Add("status.txt")
 
 $processes = @()
+$processQuerySucceeded = $false
 try {
     $processes = @(
         Get-CimInstance Win32_Process -ErrorAction Stop |
@@ -158,10 +184,20 @@ try {
         } |
         Select-Object Name, ProcessId, WorkingSetSize
     )
+    $processQuerySucceeded = $true
 }
 catch {
     $processes = @()
+    $processQuerySucceeded = $false
 }
+$gameProcesses = @(
+    $processes |
+    Where-Object { [string]::Equals($_.Name, "SlayTheSpire2.exe", [System.StringComparison]::OrdinalIgnoreCase) }
+)
+$auxiliaryProcesses = @(
+    $processes |
+    Where-Object { -not [string]::Equals($_.Name, "SlayTheSpire2.exe", [System.StringComparison]::OrdinalIgnoreCase) }
+)
 $processJson = if ($processes.Count -eq 0) {
     "[]" + [Environment]::NewLine
 }
@@ -179,8 +215,16 @@ $checkpoint = [ordered]@{
     name = $Name
     canary_marker_present = Test-Path -LiteralPath (Join-Path $resolvedModDirectory $MarkerFileName) -PathType Leaf
     observation_marker_present = Test-Path -LiteralPath (Join-Path $resolvedModDirectory $ObservationMarkerFileName) -PathType Leaf
+    process_query_succeeded = $processQuerySucceeded
     process_count = $processes.Count
+    game_process_count = $gameProcesses.Count
+    auxiliary_process_count = $auxiliaryProcesses.Count
+    process_absent_at_capture = ($processQuerySucceeded -and $gameProcesses.Count -eq 0)
     event_file = $eventFileName
+    journal_session_id = $journalSessionId
+    journal_event_count = $journalEventCount
+    journal_last_sequence = $journalLastSequence
+    journal_last_event_type = $journalLastEventType
     copied_files = @($copiedFiles)
 }
 Write-Utf8NoBom `
@@ -189,6 +233,9 @@ Write-Utf8NoBom `
 
 Write-Host "Runtime canary checkpoint saved." -ForegroundColor Green
 Write-Host "Checkpoint: $checkpointDirectory"
+Write-Host "Process query succeeded: $processQuerySucceeded"
 Write-Host "Process count: $($processes.Count)"
+Write-Host "Game process count: $($gameProcesses.Count)"
 Write-Host "Event file: $(if ($eventFileName) { $eventFileName } else { 'none' })"
+Write-Host "Journal last event: $(if ($journalLastEventType) { $journalLastEventType } else { 'none' })"
 Write-Host "Files: $([string]::Join(', ', @($copiedFiles)))"
