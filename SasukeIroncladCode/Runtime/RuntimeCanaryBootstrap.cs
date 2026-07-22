@@ -9,7 +9,9 @@ public sealed record RuntimeCanaryBootstrapResult(
     bool AnimationsEnabled,
     bool TitlesEnabled,
     IReadOnlyList<string> PatchedBindingIds,
-    IReadOnlyList<string> Reasons
+    IReadOnlyList<string> Reasons,
+    string? SessionId = null,
+    string? EventFileName = null
 );
 
 public static class RuntimeCanaryBootstrap
@@ -80,10 +82,16 @@ public static class RuntimeCanaryBootstrap
         try
         {
             session = new RuntimeCanarySession(scope, optIn, modAssemblyPath);
+            string? sessionId = session.SessionId;
+            string? eventFileName = session.EventFileName;
             patcher.Install(session, resolution.Targets);
             session = null;
             List<string> reasons = gate.Reasons.Concat(resolution.Reasons).ToList();
             reasons.Add("Canary adapters are postfix-only and preserve the already-completed original game method.");
+            if (!string.IsNullOrWhiteSpace(eventFileName))
+                reasons.Add($"Privacy-safe presentation event journal created: {eventFileName}.");
+            else
+                reasons.Add("Presentation event journal was unavailable; the canary remains fail-safe and continues without diagnostics.");
             if (gate.AnimationsEnabled)
             {
                 reasons.Add("The Sasuke overlay remains hidden until a unique local-player combat visual anchor is resolved from a local card-play callback.");
@@ -103,7 +111,9 @@ public static class RuntimeCanaryBootstrap
                 gate.AnimationsEnabled,
                 gate.TitlesEnabled,
                 patcher.PatchedBindingIds,
-                reasons);
+                reasons,
+                sessionId,
+                eventFileName);
         }
         catch (Exception exception)
         {
