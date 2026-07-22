@@ -12,6 +12,7 @@ REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-combined-
 DOC_PATH = ROOT / "docs/technical/runtime-combined-presentation-canary.md"
 EXPECTED_ARCHIVE_HASH = "a483b1a9b4de1745a2d6d65e58d10961be0a03fd3592f8bd3e2f509f004ef951"
 EXPECTED_JOURNAL_HASH = "6f76c9d51576d9696a2734e77888deaa29a17f3f6a19500349f51d10619ca4fc"
+EXPECTED_FOLLOWUP_SESSION_ID = "combined-ui-run-1-20260722T035819005Z-45522ae308f54425bb4047cdf602ab38"
 
 
 def write_events(path: Path, events: list[dict]) -> None:
@@ -201,27 +202,44 @@ def main() -> int:
     assert '"--require-all-title-surfaces"' in analyzer_source
     assert '"clean_process_checkpoint"' in analyzer_source
     assert "--checkpoint-root" in documentation
-    assert "reward", "compendium"
+    assert "all six reviewed title surfaces" in documentation
 
     assert review["schema_version"] == 1
-    assert review["status"] == "combined_core_passed_with_exit_and_surface_followup"
+    assert review["status"] == "combined_presentation_passed_all_reviewed_surfaces"
     assert review["source"]["archive_sha256"] == EXPECTED_ARCHIVE_HASH
-    assert review["session"]["journal_sha256"] == EXPECTED_JOURNAL_HASH
-    assert review["session"]["event_count"] == 38
-    assert set(review["title_layer"]["observed_surfaces"]) == {"card_art", "deck_list", "hand"}
-    assert set(review["title_layer"]["pending_combined_surfaces"]) == {"compendium", "reward", "tooltip"}
+    assert review["initial_session"]["journal_sha256"] == EXPECTED_JOURNAL_HASH
+    assert review["initial_session"]["event_count"] == 38
+    assert review["ui_surface_followup"]["session_id"] == EXPECTED_FOLLOWUP_SESSION_ID
+    assert review["ui_surface_followup"]["analyzer_status"] == "passed"
+    assert review["ui_surface_followup"]["event_count"] == 170
+    assert review["ui_surface_followup"]["combat_count"] == 3
+    assert review["ui_surface_followup"]["event_counts"]["title_applied"] == 47
+    assert review["ui_surface_followup"]["event_counts"]["playback_started"] == 24
+    assert review["ui_surface_followup"]["event_counts"]["original_impact_forwarded"] == 23
+    assert review["ui_surface_followup"]["hard_failure_count"] == 0
+    assert review["ui_surface_followup"]["expected_fallback_count"] == 0
+    assert review["ui_surface_followup"]["closure"]["mode"] == "clean_process_checkpoint"
+    assert review["ui_surface_followup"]["closure"]["process_query_succeeded"] is True
+    assert review["ui_surface_followup"]["closure"]["game_process_count"] == 0
+    assert review["ui_surface_followup"]["closure"]["journal_last_sequence"] == 170
+    assert set(review["title_layer"]["observed_surfaces"]) == ALL_TITLE_SURFACES
+    assert review["title_layer"]["pending_combined_surfaces"] == []
+    assert review["title_layer"]["all_six_surfaces_passed"] is True
+    assert set(review["animation_layer"]["observed_cards"]) == {
+        "Anger", "Bash", "Defend", "Strike", "Thunderclap", "Whirlwind"
+    }
     assert review["fallback_classification"]["hard_failure_count"] == 0
-    assert review["checkpoints"]["clean_exit_process_count"] == 0
-    assert review["checkpoints"]["external_clean_process_exit_evidence_passed"] is True
     assert review["conclusions"]["combined_title_and_animation_coexistence_passed"] is True
-    assert review["conclusions"]["all_six_title_surfaces_combined_passed"] is False
+    assert review["conclusions"]["all_six_title_surfaces_combined_passed"] is True
+    assert review["conclusions"]["targeted_ui_surface_followup_required"] is False
     assert review["conclusions"]["full_combat_retest_required"] is False
     assert review["conclusions"]["production_profile_ready"] is False
 
     print(
         "RUNTIME_CANARY_JOURNAL_TEST_OK combined=true checkpoint_closure=true "
-        "surface_coverage=true reviewed_evidence=true fallback_classified=true "
-        "redaction=true checkpoint_redaction=true sequence=true production=false"
+        "surface_coverage=true all_six_surfaces=true reviewed_evidence=true "
+        "fallback_classified=true redaction=true checkpoint_redaction=true "
+        "sequence=true production=false"
     )
     return 0
 
