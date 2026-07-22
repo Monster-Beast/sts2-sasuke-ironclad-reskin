@@ -8,6 +8,10 @@ from pathlib import Path
 from analyze_runtime_canary_journal import ALL_TITLE_SURFACES, analyze_files
 
 ROOT = Path(__file__).resolve().parents[1]
+REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-combined-presentation-review.json"
+DOC_PATH = ROOT / "docs/technical/runtime-combined-presentation-canary.md"
+EXPECTED_ARCHIVE_HASH = "a483b1a9b4de1745a2d6d65e58d10961be0a03fd3592f8bd3e2f509f004ef951"
+EXPECTED_JOURNAL_HASH = "6f76c9d51576d9696a2734e77888deaa29a17f3f6a19500349f51d10619ca4fc"
 
 
 def write_events(path: Path, events: list[dict]) -> None:
@@ -182,6 +186,10 @@ def main() -> int:
         assert any("sequence is not contiguous" in error for error in invalid["errors"])
 
     checkpoint_source = (ROOT / "tools/runtime-canary-checkpoint.ps1").read_text(encoding="ascii")
+    analyzer_source = (ROOT / "tools/analyze_runtime_canary_journal.py").read_text(encoding="utf-8")
+    documentation = DOC_PATH.read_text(encoding="utf-8")
+    review = json.loads(REVIEW_PATH.read_text(encoding="utf-8"))
+
     assert '$statusText.Replace($resolvedModDirectory, "<MOD_PATH>")' in checkpoint_source
     assert '$statusText.Replace($resolvedGamePath, "<GAME_PATH>")' in checkpoint_source
     assert '"[]" + [Environment]::NewLine' in checkpoint_source
@@ -189,11 +197,31 @@ def main() -> int:
     assert "game_process_count" in checkpoint_source
     assert "journal_last_event_type" in checkpoint_source
     assert "ExecutablePath" not in checkpoint_source.split("Select-Object", 1)[1].split(")", 1)[0]
+    assert '"--checkpoint-root"' in analyzer_source
+    assert '"--require-all-title-surfaces"' in analyzer_source
+    assert '"clean_process_checkpoint"' in analyzer_source
+    assert "--checkpoint-root" in documentation
+    assert "reward", "compendium"
+
+    assert review["schema_version"] == 1
+    assert review["status"] == "combined_core_passed_with_exit_and_surface_followup"
+    assert review["source"]["archive_sha256"] == EXPECTED_ARCHIVE_HASH
+    assert review["session"]["journal_sha256"] == EXPECTED_JOURNAL_HASH
+    assert review["session"]["event_count"] == 38
+    assert set(review["title_layer"]["observed_surfaces"]) == {"card_art", "deck_list", "hand"}
+    assert set(review["title_layer"]["pending_combined_surfaces"]) == {"compendium", "reward", "tooltip"}
+    assert review["fallback_classification"]["hard_failure_count"] == 0
+    assert review["checkpoints"]["clean_exit_process_count"] == 0
+    assert review["checkpoints"]["external_clean_process_exit_evidence_passed"] is True
+    assert review["conclusions"]["combined_title_and_animation_coexistence_passed"] is True
+    assert review["conclusions"]["all_six_title_surfaces_combined_passed"] is False
+    assert review["conclusions"]["full_combat_retest_required"] is False
+    assert review["conclusions"]["production_profile_ready"] is False
 
     print(
         "RUNTIME_CANARY_JOURNAL_TEST_OK combined=true checkpoint_closure=true "
-        "surface_coverage=true fallback_classified=true redaction=true "
-        "checkpoint_redaction=true sequence=true"
+        "surface_coverage=true reviewed_evidence=true fallback_classified=true "
+        "redaction=true checkpoint_redaction=true sequence=true production=false"
     )
     return 0
 
