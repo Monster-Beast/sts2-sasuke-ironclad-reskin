@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "replacement_canary_passed_with_runtime_followup",
+  "status": "replacement_canary_and_multi_combat_stability_passed",
   "profile_id": "public-beta-24251656-ee45848ff631",
   "runtime": {
     "branch": "public-beta",
@@ -10,10 +10,11 @@
     "baselib_version": "v3.3.7"
   },
   "source": {
-    "kind": "user_provided_local_status_transcript",
+    "kind": "user_provided_local_status_transcript_and_checkpoint_archive",
     "raw_transcript_committed": false,
+    "raw_archive_committed": false,
     "contains_absolute_local_paths": false,
-    "review_note": "The user confirmed that both the active replacement state and the unsupported-card restoration state matched the expected behavior."
+    "review_note": "The user confirmed successful replacement activation, unsupported-card restoration and a later same-process multi-combat stability run."
   },
   "activation": {
     "observed_at_utc": "2026-07-21T21:56:52.1875910+00:00",
@@ -57,7 +58,19 @@
     "restore_count": 1,
     "diagnosis": "The runtime selection path could request external original-impact synchronization for non-damage timelines whose impact markers are timeline-local visual beats.",
     "code_resolution": "Original-impact synchronization now requires both an is_damage_card animation specification and the reviewed original_hit_events mode.",
-    "local_retest_required": true
+    "local_retest_required": false,
+    "local_retest": {
+      "archive_file_name": "local-canary-stability-20260722-100455.zip",
+      "archive_sha256": "8b74fc4e9bf0abb6567e68e672a186909f6fe7c7ac5cd51eff47af1960d17026",
+      "tested_mod_commit": "ab76ff43c285e65fac94022d6acae9d49dcf9b72",
+      "same_process_multi_combat": true,
+      "original_impact_timeout_occurrences": 0,
+      "playback_fallback_occurrences": 0,
+      "replacement_reactivation_observed": true,
+      "combat_end_restoration_observed": true,
+      "unsupported_card_restoration_observed": true,
+      "passed": true
+    }
   },
   "anchor_observation": {
     "stable_identity": {
@@ -71,11 +84,21 @@
     "candidate_counts_seen": [2, 3],
     "candidate_count_is_identity_invariant": false
   },
+  "stability_review": {
+    "path": "SasukeIronclad/data/reviews/public-beta-24251656-multi-combat-stability-review.json",
+    "status": "multi_combat_stability_passed_with_capture_caveats",
+    "replacement_hide_cycles_observed": 4,
+    "final_restore_count": 4,
+    "same_process_id_across_active_checkpoints": true,
+    "capture_caveats_do_not_contradict_runtime_transitions": true
+  },
   "conclusions": {
     "replacement_activation_passed": true,
     "unsupported_card_restoration_passed": true,
     "captured_original_visibility_restoration_passed": true,
     "exact_local_player_anchor_identity_passed": true,
+    "impact_sync_regression_closed": true,
+    "same_process_multi_combat_stability_passed": true,
     "production_profile_ready": false
   },
   "safety": {
