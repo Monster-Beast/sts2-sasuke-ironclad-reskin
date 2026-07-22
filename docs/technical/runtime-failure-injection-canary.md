@@ -43,11 +43,12 @@ must run before the original character is hidden.
 Expected evidence:
 
 ```text
-trigger_stage                       can_play
-original_visual_hidden_at_trigger   false
-replacement_ever_hidden             false
-restore_count_after_fault            0
-recovery_confirmed                  true
+trigger_stage                              can_play
+original_visual_hidden_at_trigger          false
+replacement_ever_hidden                    false
+restore_count_after_fault                   0
+original_visibility_restored_after_fault   null
+recovery_confirmed                         true
 ```
 
 ### `forced_playback_failure`
@@ -60,11 +61,12 @@ visibility and disable replacement for the rest of the combat.
 Expected evidence:
 
 ```text
-trigger_stage                       after_replacement_hidden
-original_visual_hidden_at_trigger   true
-replacement_ever_hidden             true
-restore_count_after_fault           >= 1
-recovery_confirmed                  true
+trigger_stage                              after_replacement_hidden
+original_visual_hidden_at_trigger          true
+replacement_ever_hidden                    true
+restore_count_after_fault                  >= 1
+original_visibility_restored_after_fault   true
+recovery_confirmed                         true
 ```
 
 ### `anchor_invalidation`
@@ -170,6 +172,7 @@ A passing post-hide fault should contain values equivalent to:
   "replacement_active_after_fault": false,
   "replacement_ever_hidden": true,
   "restore_count_after_fault": 1,
+  "original_visibility_restored_after_fault": true,
   "anchor_bound_after_fault": false,
   "overlay_visible_after_fault": false,
   "replacement_disabled_for_combat": true
@@ -214,6 +217,7 @@ Change `--expected-scenario` for the other two runs. A pass requires:
 - the expected hard event and reason marker;
 - no unrelated hard failures;
 - original-presentation recovery confirmed;
+- captured original visibility verified after post-hide faults;
 - replacement inactive after the fault;
 - anchor and overlay cleared;
 - replacement disabled for the current combat;
