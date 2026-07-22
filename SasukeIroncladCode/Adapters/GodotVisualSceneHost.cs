@@ -3,18 +3,20 @@ using SasukeIronclad.SasukeIroncladCode.Runtime;
 
 namespace SasukeIronclad.SasukeIroncladCode.Adapters;
 
-public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSceneHostNotifications
+public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSceneHostNotifications, IRuntimeCanaryFailureSource
 {
     private const string DefaultRuntimeScene = "res://SasukeIronclad/scenes/runtime/animation_director.tscn";
 
     private AnimationPlaybackHandle? _activeHandle;
+    private AnimationPlaybackHandle? _pendingFailureHandle;
+    private string? _pendingFailureCardId;
+    private string? _lastCanPlayFailureReason;
     private Node? _runtimeRoot;
     private Node? _director;
     private Node2D? _anchor;
     private Vector2 _anchorOffset;
     private float _anchorScale = 1.0f;
     private bool _anchorInvalidationNotified;
-    private string? _missingTimelineFailureCardId;
 
     public event Action<AnimationPlaybackHandle>? PlaybackCompleted;
     public event Action<AnimationPlaybackHandle, string>? PlaybackFailed;
@@ -39,12 +41,27 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     {
         Visible = false;
         SetProcess(true);
+        try
+        {
+            string assemblyPath = typeof(GodotVisualSceneHost).Assembly.Location;
+            RuntimeCanaryOptInLoadResult loaded = RuntimeCanaryLocalFiles.LoadOptIn(assemblyPath);
+            if (loaded.OptIn is { } optIn &&
+                RuntimeCanaryFailureScenarios.IsFailure(optIn.FailureInjectionScenario))
+            {
+                RuntimeCanaryFailureDiagnostics.Configure(assemblyPath, optIn, this);
+            }
+        }
+        catch
+        {
+            // Failure diagnostics are optional and can never affect the host.
+        }
     }
 
     public override void _Process(double delta)
     {
         _ = delta;
         SyncAnchorTransform();
+        ProcessPendingFailureInjection();
     }
 
     public bool BindToAnchor(Node2D anchor, Vector2 offset, float scale)
@@ -78,39 +95,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
         Position = Vector2.Zero;
         Rotation = 0.0f;
         Scale = Vector2.One;
-    }
-
-    /// <summary>
-    /// Arms a one-shot in-memory missing-timeline result. No PCK or game file is
-    /// changed; the next matching CanPlay call follows the normal asset fallback.
-    /// </summary>
-    public void ArmMissingTimelineFailureForCanary(string cardId)
-    {
-        if (string.IsNullOrWhiteSpace(cardId))
-            throw new ArgumentException("Failure target card ID is required.", nameof(cardId));
-        _missingTimelineFailureCardId = cardId;
-    }
-
-    public bool InjectPlaybackFailureForCanary(AnimationPlaybackHandle handle, string reason)
-    {
-        ArgumentNullException.ThrowIfNull(handle);
-        if (string.IsNullOrWhiteSpace(reason) || handle.IsReleased || _activeHandle?.Id != handle.Id)
-            return false;
-        RetireCompletedHandle(handle.AnimationId, reason);
-        return true;
-    }
-
-    public bool InjectAnchorInvalidationForCanary(string reason)
-    {
-        if (string.IsNullOrWhiteSpace(reason) || !HasValidAnchor())
-            return false;
-        _anchor = null;
-        Visible = false;
-        Position = Vector2.Zero;
-        Rotation = 0.0f;
-        Scale = Vector2.One;
-        NotifyAnchorInvalidated(reason);
-        return true;
+        RuntimeCanaryFailureDiagnostics.RefreshStatus();
     }
 
     public bool CanPlay(CardAnimationSelection selection)
@@ -118,11 +103,17 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
         ArgumentNullException.ThrowIfNull(selection);
         if (!HasValidAnchor() || !EnsureMounted() || _director is null)
             return false;
-        if (string.Equals(_missingTimelineFailureCardId, selection.CardId, StringComparison.Ordinal))
+
+        bool originalVisualHidden = false;
+        try { originalVisualHidden = _anchor is not null && !_anchor.Visible; } catch { }
+        if (RuntimeCanaryFailureDiagnostics.TryTriggerMissingTimeline(
+                selection.CardId,
+                originalVisualHidden))
         {
-            _missingTimelineFailureCardId = null;
+            _lastCanPlayFailureReason = "fault_injection:missing_timeline";
             return false;
         }
+
         try
         {
             return _director.Call("has_timeline", selection.AnimationId).AsBool();
@@ -131,6 +122,13 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
         {
             return false;
         }
+    }
+
+    public string? ConsumeCanPlayFailureReason()
+    {
+        string? reason = _lastCanPlayFailureReason;
+        _lastCanPlayFailureReason = null;
+        return reason;
     }
 
     public AnimationPlaybackHandle Play(CardAnimationSelection selection, AnimationContext context)
@@ -167,12 +165,18 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
                 ToVariantName(selection.Variant),
                 runtimeContext
             );
+            if (RuntimeCanaryFailureDiagnostics.ShouldArmPostHideFailure(selection.CardId))
+            {
+                _pendingFailureHandle = handle;
+                _pendingFailureCardId = selection.CardId;
+            }
             return handle;
         }
         catch
         {
             if (_activeHandle?.Id == handle.Id)
                 _activeHandle = null;
+            ClearPendingFailure(handle);
             handle.MarkReleased();
             TryCancelDirector();
             throw;
@@ -243,6 +247,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
             return;
         if (_activeHandle?.Id != handle.Id)
         {
+            ClearPendingFailure(handle);
             handle.MarkReleased();
             return;
         }
@@ -253,7 +258,9 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     {
         AnimationPlaybackHandle? handle = _activeHandle;
         _activeHandle = null;
-        _missingTimelineFailureCardId = null;
+        _pendingFailureHandle = null;
+        _pendingFailureCardId = null;
+        _lastCanPlayFailureReason = null;
         try
         {
             _director?.Call("release_combat_resources");
@@ -267,6 +274,55 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
             _director = null;
             ClearAnchor();
         }
+    }
+
+    private void ProcessPendingFailureInjection()
+    {
+        AnimationPlaybackHandle? handle = _pendingFailureHandle;
+        string? cardId = _pendingFailureCardId;
+        if (handle is null || string.IsNullOrWhiteSpace(cardId))
+            return;
+        if (handle.IsReleased || _activeHandle?.Id != handle.Id)
+        {
+            ClearPendingFailure(handle);
+            return;
+        }
+        if (!RuntimeCanaryFailureDiagnostics.TryTakePostHideFailure(cardId, out string scenario))
+            return;
+
+        _pendingFailureHandle = null;
+        _pendingFailureCardId = null;
+        if (string.Equals(scenario, RuntimeCanaryFailureScenarios.ForcedPlaybackFailure, StringComparison.Ordinal))
+        {
+            InjectPlaybackFailureForCanary(handle, "fault_injection:forced_playback_failure");
+        }
+        else if (string.Equals(scenario, RuntimeCanaryFailureScenarios.AnchorInvalidation, StringComparison.Ordinal))
+        {
+            InjectAnchorInvalidationForCanary("fault_injection:anchor_invalidation");
+        }
+        RuntimeCanaryFailureDiagnostics.RefreshStatus();
+    }
+
+    private bool InjectPlaybackFailureForCanary(AnimationPlaybackHandle handle, string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason) || handle.IsReleased || _activeHandle?.Id != handle.Id)
+            return false;
+        RetireCompletedHandle(handle.AnimationId, reason);
+        return true;
+    }
+
+    private bool InjectAnchorInvalidationForCanary(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason) || !HasValidAnchor())
+            return false;
+        ReleaseActiveHandle(cancelDirector: true);
+        _anchor = null;
+        Visible = false;
+        Position = Vector2.Zero;
+        Rotation = 0.0f;
+        Scale = Vector2.One;
+        NotifyAnchorInvalidated(reason);
+        return true;
     }
 
     private bool EnsureMounted()
@@ -378,6 +434,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
             return;
 
         _activeHandle = null;
+        ClearPendingFailure(handle);
         try
         {
             if (failureReason is null)
@@ -400,6 +457,8 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     {
         AnimationPlaybackHandle? handle = _activeHandle;
         _activeHandle = null;
+        if (handle is not null)
+            ClearPendingFailure(handle);
         try
         {
             if (cancelDirector)
@@ -409,6 +468,14 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
         {
             handle?.MarkReleased();
         }
+    }
+
+    private void ClearPendingFailure(AnimationPlaybackHandle handle)
+    {
+        if (_pendingFailureHandle?.Id != handle.Id)
+            return;
+        _pendingFailureHandle = null;
+        _pendingFailureCardId = null;
     }
 
     private void TryCancelDirector()
