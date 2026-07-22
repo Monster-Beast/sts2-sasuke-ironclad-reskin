@@ -193,12 +193,14 @@ def analyze_failure(
             latest_status.get("original_visual_hidden_at_trigger") is False
             and latest_status.get("replacement_ever_hidden") is False
             and int(latest_status.get("restore_count_after_fault") or 0) == 0
+            and latest_status.get("original_visibility_restored_after_fault") is None
         )
     elif latest_status:
         status_requirements["post_hide_restoration"] = (
             latest_status.get("original_visual_hidden_at_trigger") is True
             and latest_status.get("replacement_ever_hidden") is True
             and int(latest_status.get("restore_count_after_fault") or 0) >= 1
+            and latest_status.get("original_visibility_restored_after_fault") is True
         )
 
     journal_requirements = {
