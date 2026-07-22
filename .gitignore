@@ -26,10 +26,13 @@ SasukeIronclad.canary.json
 runtime-canary-status.json
 runtime-canary-anchor-status.json
 runtime-canary-replacement-status.json
+runtime-canary-failure-status.json
 canary-output/
 runtime-canary-checkpoints/
 runtime-canary-combined-review/
+runtime-canary-failure-review/
 local-combined-canary*/
+local-failure-canary*/
 *.autosave
 *.bak
 .idea/
