@@ -59,6 +59,7 @@ public sealed class RuntimeCanaryOptIn
     [JsonPropertyName("mode")] public string Mode { get; init; } = string.Empty;
     [JsonPropertyName("expected_branch")] public string ExpectedBranch { get; init; } = string.Empty;
     [JsonPropertyName("expected_build_id")] public string ExpectedBuildId { get; init; } = string.Empty;
+    [JsonPropertyName("session_label")] public string SessionLabel { get; init; } = "runtime-canary";
     [JsonPropertyName("enable_animations")] public bool EnableAnimations { get; init; } = true;
     [JsonPropertyName("enable_titles")] public bool EnableTitles { get; init; } = true;
     [JsonPropertyName("low_flash")] public bool LowFlash { get; init; } = true;
@@ -95,6 +96,8 @@ public sealed class RuntimeCanaryStatusDocument
     [JsonPropertyName("enabled")] public bool Enabled { get; init; }
     [JsonPropertyName("animations_enabled")] public bool AnimationsEnabled { get; init; }
     [JsonPropertyName("titles_enabled")] public bool TitlesEnabled { get; init; }
+    [JsonPropertyName("session_id")] public string? SessionId { get; init; }
+    [JsonPropertyName("event_file")] public string? EventFile { get; init; }
     [JsonPropertyName("patched_binding_ids")] public IReadOnlyList<string> PatchedBindingIds { get; init; } = [];
     [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
 }
