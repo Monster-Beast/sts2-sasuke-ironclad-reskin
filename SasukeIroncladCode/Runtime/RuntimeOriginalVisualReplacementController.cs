@@ -101,6 +101,7 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
         _lastTransition = "original_visual_hidden_after_verified_overlay_playback";
         AddReason("The exact local Ironclad NCreatureVisuals node was hidden after a reviewed Sasuke timeline started successfully.");
         AddReason("The original visibility value was captured and is registered for fail-safe restoration.");
+        RuntimeCanaryFailureDiagnostics.NotifyOriginalVisualHidden();
         return true;
     }
 
@@ -164,6 +165,7 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
             ? "original_visual_restored"
             : $"original_visual_restored:{SanitizeReason(reason)}";
         AddReason($"Original Ironclad visibility restoration requested: {SanitizeReason(reason)}.");
+        RuntimeCanaryFailureDiagnostics.NotifyReplacementRestored(Snapshot(requested: true));
     }
 
     public RuntimeOriginalVisualReplacementSnapshot Snapshot(bool requested) => new(
