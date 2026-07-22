@@ -84,7 +84,7 @@ runtime-canary-replacement-status.json      (when present)
 the current runtime-canary-*.jsonl journal  (when present)
 ```
 
-An empty game-process result is written as `[]`, so a clean exit always has a concrete process snapshot. `checkpoint.json` records only checkpoint metadata and file names, not local absolute paths.
+An empty game-process result is written as `[]`, so a clean exit always has a concrete process snapshot. The process snapshot omits executable paths. `status.txt` replaces the local game and Mod roots with `<GAME_PATH>` and `<MOD_PATH>`, while `checkpoint.json` records only checkpoint metadata and file names.
 
 ## Analysis
 
