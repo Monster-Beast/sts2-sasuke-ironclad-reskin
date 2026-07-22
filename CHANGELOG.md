@@ -46,4 +46,6 @@
 - Recorded a real combined core run with nine title applications, three completed animations, two original-impact forwards, successful replacement/restoration and no hard failures.
 - Completed a focused three-combat combined follow-up with 170 contiguous events, 47 title applications and all six reviewed title surfaces: `card_art`, `hand`, `deck_list`, `reward`, `compendium` and `tooltip`.
 - Recorded six reviewed animation cards in the combined follow-up: Anger, Bash, Defend, Strike, Thunderclap and Whirlwind, with zero hard failures and clean-process checkpoint closure.
+- Added exact-build, one-shot, in-memory `missing_timeline`, `forced_playback_failure` and `anchor_invalidation` scenarios.
+- Added `runtime-canary-failure-status.json`, checkpoint capture and an analyzer that requires original-visual recovery with no unrelated hard failures.
 - Kept the production integration contract disabled and retained `form_removed`, `character_state` and Demon Form replacement as blocked work.
