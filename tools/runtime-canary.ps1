@@ -6,11 +6,15 @@ param(
     [string]$GamePath = "",
     [string]$ModDirectory = "",
 
+    [switch]$Combined,
     [switch]$TitlesOnly,
     [switch]$AnimationsOnly,
     [switch]$NoLowFlash,
     [switch]$FastMode,
     [switch]$ReplaceOriginal,
+
+    [ValidatePattern("^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")]
+    [string]$SessionLabel = "presentation-canary",
 
     [ValidateRange(0.25, 3.0)]
     [double]$AnchorScale = 1.2,
@@ -31,6 +35,7 @@ $MarkerFileName = "SasukeIronclad.canary.json"
 $StatusFileName = "runtime-canary-status.json"
 $AnchorStatusFileName = "runtime-canary-anchor-status.json"
 $ReplacementStatusFileName = "runtime-canary-replacement-status.json"
+$EventDirectoryName = "canary-output"
 $ObservationMarkerFileName = "SasukeIronclad.observe.json"
 
 function Resolve-Sts2GamePath {
@@ -101,11 +106,25 @@ function Write-Utf8NoBom {
     )
 }
 
-if ($TitlesOnly -and $AnimationsOnly) {
-    throw "-TitlesOnly and -AnimationsOnly cannot be used together."
+if (($Combined -and $TitlesOnly) -or
+    ($Combined -and $AnimationsOnly) -or
+    ($TitlesOnly -and $AnimationsOnly)) {
+    throw "-Combined, -TitlesOnly and -AnimationsOnly are mutually exclusive."
 }
 if ($TitlesOnly -and $ReplaceOriginal) {
     throw "-ReplaceOriginal requires the animation layer and cannot be combined with -TitlesOnly."
+}
+
+$enableAnimations = (-not $TitlesOnly.IsPresent)
+$enableTitles = (-not $AnimationsOnly.IsPresent)
+$presentationMode = if ($enableAnimations -and $enableTitles) {
+    "combined"
+}
+elseif ($enableAnimations) {
+    "animations_only"
+}
+else {
+    "titles_only"
 }
 
 $resolvedGamePath = Resolve-Sts2GamePath -ExplicitPath $GamePath
@@ -116,6 +135,7 @@ $markerPath = Join-Path $resolvedModDirectory $MarkerFileName
 $statusPath = Join-Path $resolvedModDirectory $StatusFileName
 $anchorStatusPath = Join-Path $resolvedModDirectory $AnchorStatusFileName
 $replacementStatusPath = Join-Path $resolvedModDirectory $ReplacementStatusFileName
+$eventDirectoryPath = Join-Path $resolvedModDirectory $EventDirectoryName
 $observationMarkerPath = Join-Path $resolvedModDirectory $ObservationMarkerFileName
 
 Write-Host "Game path: $resolvedGamePath" -ForegroundColor Cyan
@@ -136,8 +156,9 @@ switch ($Action) {
             mode = "local_visual_only"
             expected_branch = $RequiredBranch
             expected_build_id = $RequiredBuildId
-            enable_animations = (-not $TitlesOnly.IsPresent)
-            enable_titles = (-not $AnimationsOnly.IsPresent)
+            session_label = $SessionLabel
+            enable_animations = $enableAnimations
+            enable_titles = $enableTitles
             low_flash = (-not $NoLowFlash.IsPresent)
             fast_mode = $FastMode.IsPresent
             anchor_to_local_player = $true
@@ -157,8 +178,10 @@ switch ($Action) {
         Write-Host "Runtime presentation canary enabled for the next game launch." -ForegroundColor Green
         Write-Host "Marker: $markerPath"
         Write-Host "Expected build: $RequiredBranch / $RequiredBuildId"
-        Write-Host "Animations: $(-not $TitlesOnly.IsPresent)"
-        Write-Host "Titles: $(-not $AnimationsOnly.IsPresent)"
+        Write-Host "Session label: $SessionLabel"
+        Write-Host "Presentation mode: $presentationMode"
+        Write-Host "Animations: $enableAnimations"
+        Write-Host "Titles: $enableTitles"
         Write-Host "Low flash: $(-not $NoLowFlash.IsPresent)"
         Write-Host "Fast mode: $($FastMode.IsPresent)"
         Write-Host "Anchor to local player: True"
@@ -166,12 +189,15 @@ switch ($Action) {
         Write-Host "Anchor offset: ($AnchorOffsetX, $AnchorOffsetY)"
         Write-Host "Replace original Ironclad visual: $($ReplaceOriginal.IsPresent)"
         Write-Host "Previous canary startup, anchor and replacement status were cleared."
-        Write-Host "The overlay remains hidden until a unique local-player combat anchor is found."
+        Write-Host "Existing JSONL journals were preserved at: $eventDirectoryPath"
+        if ($enableAnimations) {
+            Write-Host "The overlay remains hidden until a unique local-player combat anchor is found."
+        }
         if ($ReplaceOriginal.IsPresent) {
             Write-Host "The exact local Ironclad NCreatureVisuals node will be hidden only after a reviewed Sasuke timeline starts." -ForegroundColor Yellow
             Write-Host "Playback fallback, anchor loss, combat end and Mod disposal request restoration of the captured original visibility." -ForegroundColor Yellow
         }
-        else {
+        elseif ($enableAnimations) {
             Write-Host "This overlay canary leaves the original Ironclad visual visible and unchanged."
         }
         Write-Host "Changing the marker requires a complete game restart."
@@ -187,6 +213,7 @@ switch ($Action) {
         Write-Host "Existing startup status was preserved at: $statusPath"
         Write-Host "Existing anchor status was preserved at: $anchorStatusPath"
         Write-Host "Existing replacement status was preserved at: $replacementStatusPath"
+        Write-Host "Existing JSONL journals were preserved at: $eventDirectoryPath"
         Write-Host "A running game must be exited before the installed patches are reset."
     }
     "status" {
@@ -220,6 +247,19 @@ switch ($Action) {
         }
         else {
             Write-Host "No replacement status has been written. Use -ReplaceOriginal, restart the game and play a reviewed local Ironclad card." -ForegroundColor Yellow
+        }
+
+        Write-Host "Runtime presentation event journals: $eventDirectoryPath"
+        if (Test-Path -LiteralPath $eventDirectoryPath -PathType Container) {
+            Get-ChildItem `
+                -LiteralPath $eventDirectoryPath `
+                -Filter "runtime-canary-*.jsonl" `
+                -File |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 10 Name, Length, LastWriteTime
+        }
+        else {
+            Write-Host "No event journal directory has been created yet." -ForegroundColor Yellow
         }
     }
 }
