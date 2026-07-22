@@ -16,6 +16,8 @@ jobs:
         run: python tools/test_runtime_observation_contract.py
       - name: Validate reviewed exact-build canary contract
         run: python tools/test_runtime_canary_contract.py
+      - name: Validate combined canary journal analyzer
+        run: python tools/test_runtime_canary_journal.py
       - name: Validate redacted evidence analysis
         run: python tools/test_runtime_observation_analysis.py
       - name: Restore observation behavior matrix
@@ -50,7 +52,8 @@ jobs:
         run: |
           $observationPath = Resolve-Path "tools/runtime-observation.ps1"
           $canaryPath = Resolve-Path "tools/runtime-canary.ps1"
-          foreach ($path in @($observationPath, $canaryPath)) {
+          $checkpointPath = Resolve-Path "tools/runtime-canary-checkpoint.ps1"
+          foreach ($path in @($observationPath, $canaryPath, $checkpointPath)) {
             $bytes = [System.IO.File]::ReadAllBytes($path)
             if (@($bytes | Where-Object { $_ -gt 127 }).Count -gt 0) {
               throw "$path must remain ASCII-only."
@@ -105,6 +108,7 @@ jobs:
             -GamePath $game `
             -ModDirectory $mod `
             -TitlesOnly `
+            -SessionLabel "ci-titles" `
             -AnchorScale 1.25 `
             -AnchorOffsetX 12 `
             -AnchorOffsetY -8
@@ -119,6 +123,9 @@ jobs:
           }
           if ($canaryMarker.enable_animations -ne $false -or $canaryMarker.enable_titles -ne $true) {
             throw "canary layer selection is incorrect"
+          }
+          if ($canaryMarker.session_label -ne "ci-titles") {
+            throw "canary session label was not written"
           }
           if ($canaryMarker.expected_branch -ne "public-beta" -or $canaryMarker.expected_build_id -ne "24251656") {
             throw "canary marker does not acknowledge the exact Beta build"
@@ -137,6 +144,7 @@ jobs:
             -GamePath $game `
             -ModDirectory $mod `
             -AnimationsOnly `
+            -SessionLabel "ci-animation" `
             -ReplaceOriginal
 
           $replacementMarker = Get-Content -LiteralPath $canaryMarkerPath -Raw | ConvertFrom-Json
@@ -151,6 +159,84 @@ jobs:
           }
 
           powershell -NoProfile -ExecutionPolicy Bypass -File $canaryPath `
+            -Action enable `
+            -GamePath $game `
+            -ModDirectory $mod `
+            -Combined `
+            -SessionLabel "ci-combined" `
+            -ReplaceOriginal
+
+          $combinedMarker = Get-Content -LiteralPath $canaryMarkerPath -Raw | ConvertFrom-Json
+          if ($combinedMarker.enable_animations -ne $true -or
+              $combinedMarker.enable_titles -ne $true -or
+              $combinedMarker.session_label -ne "ci-combined" -or
+              $combinedMarker.hide_original_visual -ne $true) {
+            throw "combined canary marker is incorrect"
+          }
+
+          $eventDirectory = Join-Path $mod "canary-output"
+          New-Item -ItemType Directory -Force -Path $eventDirectory | Out-Null
+          $eventFile = "runtime-canary-ci-combined.jsonl"
+          '{"schema_version":1,"session_id":"ci-combined","sequence":1,"combat_index":0,"event_type":"session_start"}' |
+            Set-Content -LiteralPath (Join-Path $eventDirectory $eventFile) -Encoding UTF8
+          @{
+            schema_version = 1
+            generated_at_utc = [DateTimeOffset]::UtcNow.ToString("O")
+            enabled = $true
+            animations_enabled = $true
+            titles_enabled = $true
+            session_id = "ci-combined"
+            event_file = $eventFile
+            patched_binding_ids = @("card_art", "card_visual_request")
+            reasons = @("fixture")
+          } | ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $mod "runtime-canary-status.json") -Encoding UTF8
+          @{
+            schema_version = 1
+            generated_at_utc = [DateTimeOffset]::UtcNow.ToString("O")
+            attempted = $false
+            bound = $false
+            overlay_visible = $false
+            strategy = "fixture"
+            candidate_count = 0
+            local_player_reference_count = 0
+            reasons = @("fixture")
+          } | ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $mod "runtime-canary-anchor-status.json") -Encoding UTF8
+          @{
+            schema_version = 1
+            generated_at_utc = [DateTimeOffset]::UtcNow.ToString("O")
+            requested = $true
+            active = $false
+            ever_hidden = $false
+            restore_count = 0
+            last_transition = "fixture"
+            reasons = @("fixture")
+          } | ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $mod "runtime-canary-replacement-status.json") -Encoding UTF8
+
+          $checkpointRoot = Join-Path $root "checkpoints"
+          powershell -NoProfile -ExecutionPolicy Bypass -File $checkpointPath `
+            -GamePath $game `
+            -ModDirectory $mod `
+            -Name "ci-checkpoint" `
+            -OutputDirectory $checkpointRoot
+          $checkpointDirectory = Join-Path $checkpointRoot "ci-checkpoint"
+          foreach ($required in @("checkpoint.json", "process.json", "status.txt", $eventFile)) {
+            if (-not (Test-Path -LiteralPath (Join-Path $checkpointDirectory $required) -PathType Leaf)) {
+              throw "checkpoint capture is missing $required"
+            }
+          }
+          $checkpoint = Get-Content -LiteralPath (Join-Path $checkpointDirectory "checkpoint.json") -Raw | ConvertFrom-Json
+          if ($checkpoint.process_count -ne 0 -or $checkpoint.event_file -ne $eventFile) {
+            throw "checkpoint metadata is not deterministic"
+          }
+          $processDocument = Get-Content -LiteralPath (Join-Path $checkpointDirectory "process.json") -Raw | ConvertFrom-Json
+          if (@($processDocument).Count -ne 0) {
+            throw "empty process snapshot was not recorded as an empty array"
+          }
+
+          powershell -NoProfile -ExecutionPolicy Bypass -File $canaryPath `
             -Action status `
             -GamePath $game `
             -ModDirectory $mod
@@ -162,4 +248,4 @@ jobs:
             throw "canary marker was not removed"
           }
 
-          Write-Output "RUNTIME_CONTROLS_POWERSHELL_OK observation=true canary=true anchor=true replacement=true status=true disable=true"
+          Write-Output "RUNTIME_CONTROLS_POWERSHELL_OK observation=true canary=true combined=true journal=true checkpoint=true anchor=true replacement=true status=true disable=true"
