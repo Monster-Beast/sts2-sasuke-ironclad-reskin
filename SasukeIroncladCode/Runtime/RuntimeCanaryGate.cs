@@ -89,6 +89,8 @@ public static class RuntimeCanaryGate
         {
             return Disabled("Runtime canary requires an explicit schema-1 local_visual_only marker with at least one presentation layer enabled.");
         }
+        if (!IsValidSessionLabel(optIn.SessionLabel))
+            return Disabled("Runtime canary session_label must contain 1-48 ASCII letters, digits, dots, underscores or hyphens and start with a letter or digit.");
         if (optIn.EnableAnimations &&
             (!optIn.AnchorToLocalPlayer ||
              !float.IsFinite(optIn.AnchorScale) || optIn.AnchorScale is < 0.25f or > 3.0f ||
@@ -172,7 +174,8 @@ public static class RuntimeCanaryGate
 
         reasons.Add(
             $"Exact-build runtime canary enabled for {runtime.Branch} build {runtime.SteamBuildId}; " +
-            $"animations={optIn.EnableAnimations}; titles={optIn.EnableTitles}; low_flash={optIn.LowFlash}; fast_mode={optIn.FastMode}."
+            $"session={optIn.SessionLabel}; animations={optIn.EnableAnimations}; titles={optIn.EnableTitles}; " +
+            $"low_flash={optIn.LowFlash}; fast_mode={optIn.FastMode}."
         );
         if (optIn.EnableAnimations)
         {
@@ -193,6 +196,18 @@ public static class RuntimeCanaryGate
         reasons.Add("Only approved_for_canary postfix adapters are eligible; form_removed and character_state remain disabled.");
         reasons.Add("Original game methods, arguments, return values, card IDs and gameplay state remain untouched.");
         return new(true, optIn.EnableAnimations, optIn.EnableTitles, selected, reasons);
+    }
+
+    private static bool IsValidSessionLabel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 48 || !char.IsAsciiLetterOrDigit(value[0]))
+            return false;
+        foreach (char character in value)
+        {
+            if (!(char.IsAsciiLetterOrDigit(character) || character is '.' or '_' or '-'))
+                return false;
+        }
+        return true;
     }
 
     private static bool Matches(RuntimeCanaryFingerprintSpec expected, RuntimeBuildFingerprint runtime) =>
