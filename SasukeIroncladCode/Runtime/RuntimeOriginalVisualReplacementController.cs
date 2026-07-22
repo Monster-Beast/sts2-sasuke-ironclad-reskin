@@ -11,6 +11,7 @@ public sealed record RuntimeOriginalVisualReplacementSnapshot(
     string? TargetType,
     string? TargetName,
     bool? OriginalVisibleBeforeHide,
+    bool? OriginalVisibilityRestored,
     IReadOnlyList<string> Reasons
 );
 
@@ -29,6 +30,7 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
     private string? _lastTargetType;
     private string? _lastTargetName;
     private bool? _originalVisibleBeforeHide;
+    private bool? _originalVisibilityRestored;
     private bool _active;
     private bool _everHidden;
     private int _restoreCount;
@@ -74,6 +76,7 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
             return Fail("The original Ironclad visibility state could not be read.");
         }
         _originalVisibleBeforeHide = originalVisible;
+        _originalVisibilityRestored = null;
         if (!originalVisible)
             return Fail("The original Ironclad visual was already hidden by the game or another Mod; replacement remains disabled.");
 
@@ -132,6 +135,7 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
 
         _active = false;
         _target = null;
+        _originalVisibilityRestored = null;
         _lastTransition = "original_visibility_changed_externally";
         AddReason("The original Ironclad became visible outside the replacement controller; the canary stopped managing it.");
         return false;
@@ -146,18 +150,23 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
 
         if (wasActive)
         {
+            bool restored = false;
             try
             {
                 if (target is not null && GodotObject.IsInstanceValid(target) &&
                     _originalVisibleBeforeHide.HasValue)
                 {
                     target.Visible = _originalVisibleBeforeHide.Value;
+                    restored = target.Visible == _originalVisibleBeforeHide.Value;
                 }
             }
             catch
             {
                 AddReason("Restoring the original Ironclad visibility threw and was contained.");
             }
+            _originalVisibilityRestored = restored;
+            if (!restored)
+                AddReason("The captured original Ironclad visibility could not be verified after restoration.");
             _restoreCount++;
         }
 
@@ -177,6 +186,7 @@ public sealed class RuntimeOriginalVisualReplacementController : IDisposable
         _lastTargetType,
         _lastTargetName,
         _originalVisibleBeforeHide,
+        _originalVisibilityRestored,
         _reasons.ToArray()
     );
 
