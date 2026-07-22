@@ -13,6 +13,12 @@ param(
     [switch]$FastMode,
     [switch]$ReplaceOriginal,
 
+    [ValidateSet("none", "missing_timeline", "forced_playback_failure", "anchor_invalidation")]
+    [string]$FailureScenario = "none",
+
+    [ValidateSet("Strike", "Defend", "Bash", "Anger", "Thunderclap", "Flame Barrier", "Whirlwind", "Burning Pact", "Fiend Fire")]
+    [string]$FailureCardId = "Strike",
+
     [ValidatePattern("^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")]
     [string]$SessionLabel = "presentation-canary",
 
@@ -31,10 +37,12 @@ $AppId = "2868840"
 $RequiredBranch = "public-beta"
 $RequiredBuildId = "24251656"
 $ReplacementAcknowledgement = "public-beta-24251656-local-ironclad-replacement"
+$FailureAcknowledgement = "public-beta-24251656-local-visual-failure-injection"
 $MarkerFileName = "SasukeIronclad.canary.json"
 $StatusFileName = "runtime-canary-status.json"
 $AnchorStatusFileName = "runtime-canary-anchor-status.json"
 $ReplacementStatusFileName = "runtime-canary-replacement-status.json"
+$FailureStatusFileName = "runtime-canary-failure-status.json"
 $EventDirectoryName = "canary-output"
 $ObservationMarkerFileName = "SasukeIronclad.observe.json"
 
@@ -126,6 +134,13 @@ elseif ($enableAnimations) {
 else {
     "titles_only"
 }
+$failureRequested = -not [string]::Equals($FailureScenario, "none", [System.StringComparison]::Ordinal)
+if ($failureRequested -and -not $enableAnimations) {
+    throw "-FailureScenario requires the animation layer."
+}
+if ($failureRequested -and -not $ReplaceOriginal.IsPresent) {
+    throw "-FailureScenario requires -ReplaceOriginal so original-visual recovery can be verified."
+}
 
 $resolvedGamePath = Resolve-Sts2GamePath -ExplicitPath $GamePath
 $resolvedModDirectory = Resolve-ModDirectory `
@@ -135,6 +150,7 @@ $markerPath = Join-Path $resolvedModDirectory $MarkerFileName
 $statusPath = Join-Path $resolvedModDirectory $StatusFileName
 $anchorStatusPath = Join-Path $resolvedModDirectory $AnchorStatusFileName
 $replacementStatusPath = Join-Path $resolvedModDirectory $ReplacementStatusFileName
+$failureStatusPath = Join-Path $resolvedModDirectory $FailureStatusFileName
 $eventDirectoryPath = Join-Path $resolvedModDirectory $EventDirectoryName
 $observationMarkerPath = Join-Path $resolvedModDirectory $ObservationMarkerFileName
 
@@ -149,6 +165,12 @@ switch ($Action) {
         $replacementAck = ""
         if ($ReplaceOriginal.IsPresent) {
             $replacementAck = $ReplacementAcknowledgement
+        }
+        $failureAck = ""
+        $failureTarget = ""
+        if ($failureRequested) {
+            $failureAck = $FailureAcknowledgement
+            $failureTarget = $FailureCardId
         }
         $marker = [ordered]@{
             schema_version = 1
@@ -167,10 +189,14 @@ switch ($Action) {
             anchor_offset_y = $AnchorOffsetY
             hide_original_visual = $ReplaceOriginal.IsPresent
             replacement_acknowledgement = $replacementAck
+            failure_injection_scenario = $FailureScenario
+            failure_injection_card_id = $failureTarget
+            failure_injection_once = $true
+            failure_injection_acknowledgement = $failureAck
         }
         $json = ($marker | ConvertTo-Json -Depth 4) + [Environment]::NewLine
         Write-Utf8NoBom -Path $markerPath -Content $json
-        foreach ($oldStatus in @($statusPath, $anchorStatusPath, $replacementStatusPath)) {
+        foreach ($oldStatus in @($statusPath, $anchorStatusPath, $replacementStatusPath, $failureStatusPath)) {
             if (Test-Path -LiteralPath $oldStatus -PathType Leaf) {
                 Remove-Item -LiteralPath $oldStatus -Force
             }
@@ -188,7 +214,9 @@ switch ($Action) {
         Write-Host "Anchor scale: $AnchorScale"
         Write-Host "Anchor offset: ($AnchorOffsetX, $AnchorOffsetY)"
         Write-Host "Replace original Ironclad visual: $($ReplaceOriginal.IsPresent)"
-        Write-Host "Previous canary startup, anchor and replacement status were cleared."
+        Write-Host "Failure injection scenario: $FailureScenario"
+        Write-Host "Failure injection target card: $(if ($failureRequested) { $FailureCardId } else { 'none' })"
+        Write-Host "Previous canary startup, anchor, replacement and failure status were cleared."
         Write-Host "Existing JSONL journals were preserved at: $eventDirectoryPath"
         if ($enableAnimations) {
             Write-Host "The overlay remains hidden until a unique local-player combat anchor is found."
@@ -199,6 +227,10 @@ switch ($Action) {
         }
         elseif ($enableAnimations) {
             Write-Host "This overlay canary leaves the original Ironclad visual visible and unchanged."
+        }
+        if ($failureRequested) {
+            Write-Host "The selected failure is injected once in memory; no game or PCK file is modified." -ForegroundColor Yellow
+            Write-Host "The current combat must restore the original Ironclad and remain on original presentation after the injected failure." -ForegroundColor Yellow
         }
         Write-Host "Changing the marker requires a complete game restart."
     }
@@ -213,6 +245,7 @@ switch ($Action) {
         Write-Host "Existing startup status was preserved at: $statusPath"
         Write-Host "Existing anchor status was preserved at: $anchorStatusPath"
         Write-Host "Existing replacement status was preserved at: $replacementStatusPath"
+        Write-Host "Existing failure status was preserved at: $failureStatusPath"
         Write-Host "Existing JSONL journals were preserved at: $eventDirectoryPath"
         Write-Host "A running game must be exited before the installed patches are reset."
     }
@@ -247,6 +280,14 @@ switch ($Action) {
         }
         else {
             Write-Host "No replacement status has been written. Use -ReplaceOriginal, restart the game and play a reviewed local Ironclad card." -ForegroundColor Yellow
+        }
+
+        Write-Host "Last injected-failure recovery status: $failureStatusPath"
+        if (Test-Path -LiteralPath $failureStatusPath -PathType Leaf) {
+            Get-Content -LiteralPath $failureStatusPath -Raw
+        }
+        else {
+            Write-Host "No failure status has been written. Use -FailureScenario with -ReplaceOriginal, restart the game and play the target card." -ForegroundColor Yellow
         }
 
         Write-Host "Runtime presentation event journals: $eventDirectoryPath"
