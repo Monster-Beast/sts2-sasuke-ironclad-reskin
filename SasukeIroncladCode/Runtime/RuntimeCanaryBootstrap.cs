@@ -11,7 +11,9 @@ public sealed record RuntimeCanaryBootstrapResult(
     IReadOnlyList<string> PatchedBindingIds,
     IReadOnlyList<string> Reasons,
     string? SessionId = null,
-    string? EventFileName = null
+    string? EventFileName = null,
+    string FailureInjectionScenario = RuntimeCanaryFailureScenarios.None,
+    string? FailureInjectionCardId = null
 );
 
 public static class RuntimeCanaryBootstrap
@@ -105,6 +107,12 @@ public static class RuntimeCanaryBootstrap
                     reasons.Add("Overlay mode leaves the original Ironclad visual visible and unchanged.");
                 }
             }
+            if (RuntimeCanaryFailureScenarios.IsFailure(optIn.FailureInjectionScenario))
+            {
+                reasons.Add(
+                    $"One-shot failure injection is armed for {optIn.FailureInjectionScenario} on {optIn.FailureInjectionCardId}; " +
+                    "the original presentation must be restored and the current combat must fail closed.");
+            }
             reasons.Add("Demon Form animation, form removal and character-state presentation remain disabled pending targeted evidence.");
             return new(
                 true,
@@ -113,7 +121,11 @@ public static class RuntimeCanaryBootstrap
                 patcher.PatchedBindingIds,
                 reasons,
                 sessionId,
-                eventFileName);
+                eventFileName,
+                optIn.FailureInjectionScenario,
+                RuntimeCanaryFailureScenarios.IsFailure(optIn.FailureInjectionScenario)
+                    ? optIn.FailureInjectionCardId
+                    : null);
         }
         catch (Exception exception)
         {
