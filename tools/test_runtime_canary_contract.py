@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-runtime-binding-review.json"
 CALIBRATION_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-anchor-calibration.json"
 REPLACEMENT_REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-replacement-canary-review.json"
+STABILITY_REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-multi-combat-stability-review.json"
 ANIMATION_MANIFEST_PATH = ROOT / "SasukeIronclad/data/card_animation_manifest.json"
 MANIFEST_PATH = ROOT / "SasukeIronclad/data/runtime_observation_targets.json"
 CONTRACT_PATH = ROOT / "SasukeIronclad/data/game_integration_contract.json"
@@ -34,6 +35,7 @@ EXPECTED_LOG_HASHES = {
     "338d85a75625876ffdaa8c29fc3452aacc2c48b35fce6e1d0153e66869b4a5b6",
     "bd22300d335cb6292051f0bb6d54e9e77837d5926a7b94c049bd001eb35f9392",
 }
+EXPECTED_STABILITY_ARCHIVE_HASH = "8b74fc4e9bf0abb6567e68e672a186909f6fe7c7ac5cd51eff47af1960d17026"
 REPLACEMENT_ACK = "public-beta-24251656-local-ironclad-replacement"
 
 
@@ -50,6 +52,7 @@ def main() -> int:
     review = load(REVIEW_PATH)
     calibration = load(CALIBRATION_PATH)
     replacement_review = load(REPLACEMENT_REVIEW_PATH)
+    stability_review = load(STABILITY_REVIEW_PATH)
     animation_manifest = load(ANIMATION_MANIFEST_PATH)
     manifest = load(MANIFEST_PATH)
     contract = load(CONTRACT_PATH)
@@ -105,7 +108,7 @@ def main() -> int:
     require(calibration["safety"]["production_profile_promoted"] is False, "calibration promoted production bindings")
 
     require(replacement_review["schema_version"] == 1, "replacement review schema changed")
-    require(replacement_review["status"] == "replacement_canary_passed_with_runtime_followup", "replacement review status changed")
+    require(replacement_review["status"] == "replacement_canary_and_multi_combat_stability_passed", "replacement review status changed")
     require(replacement_review["profile_id"] == review["profile_id"], "replacement review profile mismatch")
     activation = replacement_review["activation"]
     require(activation["passed"] is True and activation["active"] is True and activation["ever_hidden"] is True, "replacement activation was not recorded as passed")
@@ -119,8 +122,44 @@ def main() -> int:
     followup = replacement_review["observed_followup"]
     require(followup["reason"].endswith("original_impact_timeout"), "reviewed impact timeout evidence is missing")
     require(followup["original_visual_restored"] is True, "impact timeout did not restore the original visual")
-    require(followup["local_retest_required"] is True, "impact-sync fix was promoted without a local retest")
+    require(followup["local_retest_required"] is False, "completed impact-sync retest was left open")
+    retest = followup["local_retest"]
+    require(retest["archive_sha256"] == EXPECTED_STABILITY_ARCHIVE_HASH, "impact-sync retest archive changed")
+    require(retest["same_process_multi_combat"] is True and retest["passed"] is True, "impact-sync retest did not pass")
+    require(retest["original_impact_timeout_occurrences"] == 0 and retest["playback_fallback_occurrences"] == 0, "impact-sync regression reappeared")
+    require(replacement_review["conclusions"]["impact_sync_regression_closed"] is True, "impact-sync regression was not closed")
+    require(replacement_review["conclusions"]["same_process_multi_combat_stability_passed"] is True, "multi-combat replacement stability was not recorded")
     require(replacement_review["conclusions"]["production_profile_ready"] is False, "replacement evidence promoted production")
+
+    require(stability_review["schema_version"] == 1, "stability review schema changed")
+    require(stability_review["status"] == "multi_combat_stability_passed_with_capture_caveats", "stability review status changed")
+    require(stability_review["profile_id"] == review["profile_id"], "stability review profile mismatch")
+    require(stability_review["source"]["archive_sha256"] == EXPECTED_STABILITY_ARCHIVE_HASH, "stability archive digest changed")
+    require(stability_review["source"]["archive_size_bytes"] == 40469, "stability archive size changed")
+    require(stability_review["run"]["single_game_process"] is True and stability_review["run"]["checkpoint_count"] == 9, "stability run shape changed")
+    checkpoints = stability_review["checkpoint_evidence"]
+    require(len(checkpoints) == 9, "stability checkpoint inventory changed")
+    require([item["restore_count"] for item in checkpoints] == [0, 1, 2, 3, 3, 3, 4, 4, 4], "replacement restore sequence changed")
+    require({item.get("candidate_count") for item in checkpoints if item.get("candidate_count") is not None} == {2, 3}, "stability anchor candidate range changed")
+    require(stability_review["archive_search"] == {
+        "original_impact_timeout_occurrences": 0,
+        "playback_fallback_occurrences": 0,
+        "exception_occurrences": 0,
+        "failed_occurrences": 0,
+        "anchor_invalidated_occurrences": 0,
+    }, "stability archive contains a reviewed failure marker")
+    stability_conclusions = stability_review["conclusions"]
+    for key in [
+        "replacement_reactivated_after_combat_cleanup",
+        "unsupported_card_restoration_passed",
+        "subsequent_combat_reactivation_passed",
+        "combat_end_cleanup_passed",
+        "impact_sync_regression_closed",
+        "same_process_multi_combat_stability_passed",
+    ]:
+        require(stability_conclusions[key] is True, f"stability conclusion is not passed: {key}")
+    require(stability_conclusions["production_profile_ready"] is False, "stability review promoted production")
+    require(len(stability_review["capture_caveats"]) >= 4, "checkpoint capture caveats were discarded")
 
     animations = animation_manifest["animations"]
     require(sum(1 for item in animations if item["is_damage_card"]) == 8, "damage-card animation inventory changed")
@@ -184,7 +223,7 @@ def main() -> int:
         "RUNTIME_CANARY_CONTRACT_OK sessions=2 events=10388 approved=10 blocked=2 "
         "explicit_opt_in=true anchor=true candidate_counts=2,3 calibration=1.2,0,-150 "
         "replacement=true restoration=true unreviewed_fallback=true damage_only_impact_sync=true "
-        "impact_retest_required=true production=false"
+        "impact_retest_passed=true multi_combat_stability=true capture_caveats=true production=false"
     )
     return 0
 
