@@ -14,6 +14,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     private Vector2 _anchorOffset;
     private float _anchorScale = 1.0f;
     private bool _anchorInvalidationNotified;
+    private string? _missingTimelineFailureCardId;
 
     public event Action<AnimationPlaybackHandle>? PlaybackCompleted;
     public event Action<AnimationPlaybackHandle, string>? PlaybackFailed;
@@ -79,11 +80,49 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
         Scale = Vector2.One;
     }
 
+    /// <summary>
+    /// Arms a one-shot in-memory missing-timeline result. No PCK or game file is
+    /// changed; the next matching CanPlay call follows the normal asset fallback.
+    /// </summary>
+    public void ArmMissingTimelineFailureForCanary(string cardId)
+    {
+        if (string.IsNullOrWhiteSpace(cardId))
+            throw new ArgumentException("Failure target card ID is required.", nameof(cardId));
+        _missingTimelineFailureCardId = cardId;
+    }
+
+    public bool InjectPlaybackFailureForCanary(AnimationPlaybackHandle handle, string reason)
+    {
+        ArgumentNullException.ThrowIfNull(handle);
+        if (string.IsNullOrWhiteSpace(reason) || handle.IsReleased || _activeHandle?.Id != handle.Id)
+            return false;
+        RetireCompletedHandle(handle.AnimationId, reason);
+        return true;
+    }
+
+    public bool InjectAnchorInvalidationForCanary(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason) || !HasValidAnchor())
+            return false;
+        _anchor = null;
+        Visible = false;
+        Position = Vector2.Zero;
+        Rotation = 0.0f;
+        Scale = Vector2.One;
+        NotifyAnchorInvalidated(reason);
+        return true;
+    }
+
     public bool CanPlay(CardAnimationSelection selection)
     {
         ArgumentNullException.ThrowIfNull(selection);
         if (!HasValidAnchor() || !EnsureMounted() || _director is null)
             return false;
+        if (string.Equals(_missingTimelineFailureCardId, selection.CardId, StringComparison.Ordinal))
+        {
+            _missingTimelineFailureCardId = null;
+            return false;
+        }
         try
         {
             return _director.Call("has_timeline", selection.AnimationId).AsBool();
@@ -214,6 +253,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     {
         AnimationPlaybackHandle? handle = _activeHandle;
         _activeHandle = null;
+        _missingTimelineFailureCardId = null;
         try
         {
             _director?.Call("release_combat_resources");
