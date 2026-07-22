@@ -119,9 +119,9 @@ After a completed combat or shutdown, `active` should become `false` and
 `restore_count` should increase. `ever_hidden` remains true so the successful
 replacement is not lost from the diagnostic history.
 
-## Reviewed local results
+## Reviewed local replacement results
 
-The local replacement run confirmed both required transitions:
+The first local replacement run confirmed both required transitions:
 
 1. a reviewed Sasuke timeline hid the exact local `Ironclad` visual after the
    overlay had started successfully;
@@ -134,12 +134,12 @@ The structured review is stored at:
 SasukeIronclad/data/reviews/public-beta-24251656-replacement-canary-review.json
 ```
 
-This evidence passes the activation and unsupported-card restoration checks, but
-it does not promote the production profile.
+This evidence passes activation and unsupported-card restoration without
+promoting the production profile.
 
 ## Original-impact synchronization follow-up
 
-A separate reviewed run safely restored the original character after
+A previous reviewed run safely restored the original character after
 `original_impact_timeout`. The timeout exposed an overly broad runtime policy:
 non-damage timelines such as Defend contain local visual impact beats but do not
 produce a card-damage callback that can release an external impact wait.
@@ -152,19 +152,56 @@ when both conditions are true:
 
 Non-damage cards therefore execute their timeline impact beats on local authored
 timing, while damage cards continue to wait for the original game damage event.
-This code change remains subject to one local replacement retest before the
-follow-up is closed.
+
+The later same-process multi-combat retest found zero occurrences of
+`original_impact_timeout`, `playback_fallback`, caught exceptions, failed-status
+markers or anchor invalidation. This closes the known impact-synchronization
+regression for the exact reviewed build.
+
+## Multi-combat stability result
+
+The user supplied a nine-checkpoint archive covering repeated replacement and
+restoration in one game process. The structured review is stored at:
+
+```text
+SasukeIronclad/data/reviews/public-beta-24251656-multi-combat-stability-review.json
+```
+
+The state sequence demonstrates:
+
+- replacement active with Defend;
+- replacement active again after a combat-end restoration;
+- repeated combat-end cleanup;
+- restoration on a card outside the reviewed replacement scope;
+- reactivation in a later combat after that fallback;
+- a final `restore_count` of four with the overlay and anchor released.
+
+Candidate counts varied between two and three while the exact local `Player`
+reference remained unique. The game PID remained unchanged across the in-process
+checkpoints, so the reactivation evidence did not come from restarting the game.
+
+The checkpoint archive has capture caveats:
+
+- one expected human-readable checkpoint label was skipped;
+- some labels do not exactly match the combat boundary visible in the monotonic
+  restoration history;
+- non-combat and post-exit checkpoints copied the last runtime status because no
+  new transition was written at those moments;
+- the ad-hoc process capture did not create `process.json` for an empty result.
+
+These issues limit exact narration of individual labels, but they do not
+contradict the runtime transition sequence or the user's visual verdict.
 
 ## Remaining limits
 
 This replacement canary is not a production release because it still needs:
 
-- a local retest proving non-damage timelines no longer produce false impact timeouts;
-- several combat and room-transition runs;
+- combined title-and-animation presentation verification;
 - multiplayer local-player-only verification;
 - different resolutions and UI scales;
 - multi-Mod visibility ownership checks;
 - missing-resource and forced playback-failure tests;
 - targeted Demon Form removal and character-state evidence;
 - a separate audit and profile for the default public game branch;
+- broader reviewed card coverage for the current Beta;
 - final authored Sasuke art and animation assets instead of the graybox rig.
