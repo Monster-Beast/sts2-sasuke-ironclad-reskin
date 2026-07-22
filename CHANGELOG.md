@@ -40,5 +40,9 @@
 - Added local-player anchor calibration, same-process multi-combat stability evidence and damage-only original-impact synchronization.
 - Added an explicit combined title-and-animation canary with a bounded privacy-safe JSONL event journal.
 - Added deterministic checkpoint capture that always records an empty process list and copies the active journal by startup-session identity.
+- Added process-query, game-process and journal-tail metadata to checkpoint evidence.
 - Added a journal analyzer that separates expected unreviewed-card fallback from hard adapter, anchor or playback failure.
+- Added checkpoint-backed session closure when the runtime cannot append `session_stop` during process shutdown.
+- Recorded a real combined run with nine title applications, three completed animations, two original-impact forwards, successful replacement/restoration and no hard failures.
+- Kept `reward`, `compendium` and `tooltip` as a focused combined-surface follow-up instead of repeating the full combat matrix.
 - Kept the production integration contract disabled and retained `form_removed`, `character_state` and Demon Form replacement as blocked work.
