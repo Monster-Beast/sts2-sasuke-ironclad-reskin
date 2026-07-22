@@ -26,6 +26,8 @@ public sealed class RuntimeCanarySession : IDisposable
     private readonly Dictionary<string, string> _cardIdByModelType;
     private readonly RuntimeCanaryOptIn _optIn;
     private readonly string _modAssemblyPath;
+    private readonly RuntimeCanaryEventJournal? _journal;
+    private readonly HashSet<string> _journaledTitleKeys = new(StringComparer.Ordinal);
     private readonly SceneTree? _sceneTree;
     private readonly GodotVisualSceneHost? _sceneHost;
     private readonly CardVisualPlaybackService? _playback;
@@ -36,6 +38,8 @@ public sealed class RuntimeCanarySession : IDisposable
     private object? _activeCardModel;
     private string? _activeCardId;
     private int _activeImpactIndex;
+    private int _combatIndex;
+    private bool _combatActive;
     private bool _flameBarrierStateInstalled;
     private bool _replacementDisabledForCombat;
     private int _disposed;
@@ -53,6 +57,7 @@ public sealed class RuntimeCanarySession : IDisposable
         _optIn = optIn;
         _modAssemblyPath = modAssemblyPath;
         _cardIdByModelType = scope.ActiveCards.ToDictionary(card => card.ModelType, card => card.CardId, StringComparer.Ordinal);
+        _journal = RuntimeCanaryEventJournal.TryCreate(modAssemblyPath, optIn);
 
         if (optIn.EnableTitles)
             _titleService = new CardTitlePresentationService(new CardDisplayNameResolver());
@@ -70,6 +75,7 @@ public sealed class RuntimeCanarySession : IDisposable
             _playback = new CardVisualPlaybackService(host, new PreserveOriginalAnimationFallback());
             _playback.FallbackActivated += OnPlaybackFallback;
             host.AnchorInvalidated += OnAnchorInvalidated;
+            host.PlaybackCompleted += OnPlaybackCompleted;
 
             if (optIn.HideOriginalVisual)
             {
@@ -87,7 +93,17 @@ public sealed class RuntimeCanarySession : IDisposable
                 host,
                 originalVisualHidden: false);
         }
+
+        JournalEvent(
+            "session_start",
+            animationsEnabled: optIn.EnableAnimations,
+            titlesEnabled: optIn.EnableTitles,
+            replacementRequested: optIn.HideOriginalVisual,
+            reason: "exact_build_combined_presentation_canary");
     }
+
+    public string? SessionId => _journal?.SessionId;
+    public string? EventFileName => _journal?.EventFileName;
 
     public void HandlePostfix(
         ResolvedRuntimeCanaryTarget target,
@@ -138,6 +154,7 @@ public sealed class RuntimeCanarySession : IDisposable
         }
         catch
         {
+            JournalEvent("adapter_exception", bindingId: target.Decision.BindingId, reason: "canary_adapter_exception");
             // Every canary adapter is postfix-only and cosmetic. An adapter
             // failure must leave the already-completed original method intact.
             FailReplacementForCombat("canary_adapter_exception");
@@ -159,7 +176,10 @@ public sealed class RuntimeCanarySession : IDisposable
         try
         {
             if (_sceneHost is not null)
+            {
                 _sceneHost.AnchorInvalidated -= OnAnchorInvalidated;
+                _sceneHost.PlaybackCompleted -= OnPlaybackCompleted;
+            }
         }
         catch { }
         try
@@ -182,6 +202,9 @@ public sealed class RuntimeCanarySession : IDisposable
         _activeCardModel = null;
         _activeCardId = null;
         _flameBarrierStateInstalled = false;
+        _combatActive = false;
+        JournalEvent("session_stop", reason: "session_dispose");
+        try { _journal?.Dispose(); } catch { }
     }
 
     private void HandleCardVisualRequest(object? callbackInstance, object?[]? args)
@@ -190,6 +213,7 @@ public sealed class RuntimeCanarySession : IDisposable
             return;
         if (args is null || args.Length < 3)
         {
+            JournalEvent("card_play_rejected", bindingId: "card_visual_request", reason: "local_card_play_callback_shape_invalid");
             FailReplacementForCombat("local_card_play_callback_shape_invalid");
             return;
         }
@@ -197,6 +221,7 @@ public sealed class RuntimeCanarySession : IDisposable
         object? model = args[2];
         if (!TryResolveCardId(model, out string cardId))
         {
+            JournalEvent("unreviewed_card_fallback", bindingId: "card_visual_request", reason: "card_not_in_reviewed_replacement_scope");
             // Once the original character is hidden, an unreviewed card cannot
             // be allowed to lose its original animation silently. Restore the
             // Ironclad and remain in original-visual fallback for this combat.
@@ -204,28 +229,40 @@ public sealed class RuntimeCanarySession : IDisposable
             return;
         }
 
+        EnsureCombatStarted(cardId);
+        bool upgraded = TryReadBoolean(args.ElementAtOrDefault(1), "IsShowingUpgradedCard") ??
+                        TryReadBoolean(model, "IsUpgraded") ??
+                        TryReadBoolean(model, "Upgraded") ?? false;
+        JournalEvent(
+            "card_play_requested",
+            bindingId: "card_visual_request",
+            cardId: cardId,
+            upgraded: upgraded);
+
         // Demon Form installs a persistent form. It remains title-only until a
         // targeted run proves the exact form-removal event. Replacement mode
         // therefore restores the original character instead of hiding a card
         // presentation for which no reviewed Sasuke timeline may be committed.
         if (string.Equals(cardId, DemonFormCardId, StringComparison.Ordinal))
         {
+            JournalEvent("blocked_card_fallback", cardId: cardId, reason: "demon_form_replacement_remains_blocked");
             FailReplacementForCombat("demon_form_replacement_remains_blocked");
             return;
         }
 
         if (_optIn.HideOriginalVisual && _replacementDisabledForCombat)
+        {
+            JournalEvent("card_play_original_fallback", cardId: cardId, reason: "replacement_disabled_for_current_combat");
             return;
+        }
 
         if (!EnsureLocalPlayerAnchor(callbackInstance, args))
         {
+            JournalEvent("anchor_resolution_failed", cardId: cardId, reason: "verified_local_player_anchor_unavailable");
             ClearActiveCardState();
             return;
         }
 
-        bool upgraded = TryReadBoolean(args.ElementAtOrDefault(1), "IsShowingUpgradedCard") ??
-                        TryReadBoolean(model, "IsUpgraded") ??
-                        TryReadBoolean(model, "Upgraded") ?? false;
         AnimationContext context = new(
             cardId,
             upgraded,
@@ -242,12 +279,14 @@ public sealed class RuntimeCanarySession : IDisposable
         AnimationPlaybackHandle? handle = _playback.Request(context);
         if (handle is null)
         {
+            JournalEvent("playback_request_failed", cardId: cardId, reason: "reviewed_timeline_request_failed");
             FailReplacementForCombat("reviewed_timeline_request_failed");
             ClearActiveCardState();
             return;
         }
+        JournalEvent("playback_started", cardId: cardId, animationId: handle.AnimationId, upgraded: upgraded);
 
-        if (!TryActivateReplacement())
+        if (!TryActivateReplacement(cardId, handle.AnimationId))
         {
             try { _playback.Release(cardId); } catch { }
             ClearActiveCardState();
@@ -261,6 +300,15 @@ public sealed class RuntimeCanarySession : IDisposable
             _flameBarrierStateInstalled = true;
     }
 
+    private void EnsureCombatStarted(string cardId)
+    {
+        if (_combatActive)
+            return;
+        _combatActive = true;
+        _combatIndex++;
+        JournalEvent("combat_started", bindingId: "card_visual_request", cardId: cardId);
+    }
+
     private bool EnsureLocalPlayerAnchor(object? callbackInstance, object?[] args)
     {
         if (_sceneHost is null || _sceneTree is null || !_optIn.AnchorToLocalPlayer)
@@ -269,6 +317,7 @@ public sealed class RuntimeCanarySession : IDisposable
         {
             if (_replacementController?.Active == true && !_replacementController.ValidateActiveTarget())
             {
+                JournalEvent("replacement_target_invalid", reason: "original_visual_state_changed_outside_controller");
                 FailReplacementForCombat("original_visual_state_changed_outside_controller");
                 return false;
             }
@@ -284,6 +333,7 @@ public sealed class RuntimeCanarySession : IDisposable
         {
             _sceneHost.ClearAnchor();
             WriteAnchorStatus(resolution, attempted: true);
+            JournalEvent("anchor_resolution_failed", reason: string.Join("; ", resolution.Reasons.Take(3)));
             return false;
         }
 
@@ -303,36 +353,50 @@ public sealed class RuntimeCanarySession : IDisposable
         _lastAnchorResolution = finalResolution;
         WriteAnchorStatus(finalResolution, attempted: true);
         WriteReplacementStatus();
+        JournalEvent(
+            bound ? "anchor_bound" : "anchor_resolution_failed",
+            reason: bound ? resolution.Strategy : "resolved_node_could_not_be_bound");
         return bound;
     }
 
-    private bool TryActivateReplacement()
+    private bool TryActivateReplacement(string cardId, string animationId)
     {
         if (!_optIn.HideOriginalVisual)
+        {
+            JournalEvent("overlay_active", cardId: cardId, animationId: animationId);
             return true;
+        }
         if (_replacementDisabledForCombat || _replacementController is null || _sceneHost is null)
             return false;
 
         Node2D? anchor = _sceneHost.AnchorNode;
         if (anchor is null || !_replacementController.TryHide(anchor))
         {
+            JournalEvent("replacement_hide_failed", cardId: cardId, animationId: animationId, reason: "exact_local_ironclad_visual_could_not_be_hidden");
             FailReplacementForCombat("exact_local_ironclad_visual_could_not_be_hidden");
             return false;
         }
 
         WriteReplacementStatus();
         WriteAnchorStatus(_lastAnchorResolution ?? CreateWaitingResolution(), attempted: true);
+        JournalEvent("replacement_hidden", cardId: cardId, animationId: animationId);
         return true;
+    }
+
+    private void OnPlaybackCompleted(AnimationPlaybackHandle handle)
+    {
+        JournalEvent("playback_completed", cardId: handle.CardId, animationId: handle.AnimationId);
     }
 
     private void OnPlaybackFallback(AnimationContext context, string reason)
     {
-        _ = context;
+        JournalEvent("playback_fallback", cardId: context.CardId, reason: reason);
         FailReplacementForCombat($"playback_fallback:{reason}");
     }
 
     private void OnAnchorInvalidated(string reason)
     {
+        JournalEvent("anchor_invalidated", reason: reason);
         FailReplacementForCombat($"anchor_invalidated:{reason}");
     }
 
@@ -341,6 +405,7 @@ public sealed class RuntimeCanarySession : IDisposable
         if (!_optIn.HideOriginalVisual)
             return;
         _replacementDisabledForCombat = true;
+        JournalEvent("replacement_disabled_for_combat", cardId: _activeCardId, reason: reason);
         RestoreOriginalVisual(reason);
         try { _sceneHost?.ClearAnchor(); } catch { }
         WriteReplacementStatus();
@@ -350,8 +415,18 @@ public sealed class RuntimeCanarySession : IDisposable
 
     private void RestoreOriginalVisual(string reason)
     {
+        RuntimeOriginalVisualReplacementSnapshot? before = _replacementController?.Snapshot(requested: _optIn.HideOriginalVisual);
         try { _replacementController?.Restore(reason); } catch { }
+        RuntimeOriginalVisualReplacementSnapshot? after = _replacementController?.Snapshot(requested: _optIn.HideOriginalVisual);
         WriteReplacementStatus();
+        if (before?.Active == true)
+        {
+            JournalEvent(
+                "replacement_restored",
+                cardId: _activeCardId,
+                restoreCount: after?.RestoreCount,
+                reason: reason);
+        }
     }
 
     private void WriteReplacementStatus()
@@ -386,7 +461,13 @@ public sealed class RuntimeCanarySession : IDisposable
         object? sourceCardModel = args[4];
         if (!ReferenceEquals(sourceCardModel, _activeCardModel))
             return;
-        _playback.RaiseOriginalImpact(_activeCardId, _activeImpactIndex++);
+        int impactIndex = _activeImpactIndex++;
+        _playback.RaiseOriginalImpact(_activeCardId, impactIndex);
+        JournalEvent(
+            "original_impact_forwarded",
+            bindingId: "original_impact",
+            cardId: _activeCardId,
+            impactIndex: impactIndex);
     }
 
     private void HandleStateRemoved(object? container, object?[]? args)
@@ -400,6 +481,7 @@ public sealed class RuntimeCanarySession : IDisposable
             return;
         _sceneHost.ClearVisualState(FlameBarrierStateId);
         _flameBarrierStateInstalled = false;
+        JournalEvent("state_cleared", bindingId: "state_removed", cardId: FlameBarrierCardId, reason: FlameBarrierStateId);
     }
 
     private void ReleaseCombatResources()
@@ -410,8 +492,10 @@ public sealed class RuntimeCanarySession : IDisposable
         WriteAnchorStatus(
             AddReason(_lastAnchorResolution ?? CreateWaitingResolution(), "Combat resources released and the original visual was restored."),
             attempted: _lastAnchorResolution is not null);
+        JournalEvent("combat_ended", bindingId: "combat_ended", reason: "combat_resources_released");
         _lastAnchorResolution = null;
         _replacementDisabledForCombat = false;
+        _combatActive = false;
         ClearActiveCardState();
         _flameBarrierStateInstalled = false;
     }
@@ -434,12 +518,12 @@ public sealed class RuntimeCanarySession : IDisposable
     private static RuntimePlayerAnchorResolution AddReason(
         RuntimePlayerAnchorResolution resolution,
         string reason) => new(
-            resolution.Success,
-            resolution.Anchor,
-            resolution.Strategy,
-            resolution.CandidateCount,
-            resolution.LocalPlayerReferenceCount,
-            resolution.Reasons.Concat([reason]).TakeLast(12).ToArray());
+        resolution.Success,
+        resolution.Anchor,
+        resolution.Strategy,
+        resolution.CandidateCount,
+        resolution.LocalPlayerReferenceCount,
+        resolution.Reasons.Concat([reason]).TakeLast(12).ToArray());
 
     private void ApplyTitlesFromSurface(object? instance, object?[]? args, string surfaceId)
     {
@@ -519,13 +603,61 @@ public sealed class RuntimeCanarySession : IDisposable
         try { locale = TranslationServer.GetLocale(); }
         catch { locale = "en-US"; }
 
-        _titleService.TryPresent(
+        bool presented = _titleService.TryPresent(
             new GodotCardTitleSurfaceAdapter(label, surfaceId),
             surfaceId,
             cardId,
             locale,
             upgraded,
             originalTitle);
+        if (!presented)
+            return;
+
+        string titleKey = $"{surfaceId}|{cardId}|{upgraded}";
+        if (_journaledTitleKeys.Add(titleKey))
+        {
+            JournalEvent(
+                "title_applied",
+                bindingId: surfaceId,
+                cardId: cardId,
+                surfaceId: surfaceId,
+                upgraded: upgraded);
+        }
+    }
+
+    private void JournalEvent(
+        string eventType,
+        string? bindingId = null,
+        string? cardId = null,
+        string? animationId = null,
+        string? surfaceId = null,
+        int? impactIndex = null,
+        bool? upgraded = null,
+        bool? animationsEnabled = null,
+        bool? titlesEnabled = null,
+        bool? replacementRequested = null,
+        int? restoreCount = null,
+        string? reason = null)
+    {
+        RuntimeOriginalVisualReplacementSnapshot? snapshot = _replacementController?.Snapshot(
+            requested: _optIn.HideOriginalVisual);
+        _journal?.Write(new RuntimeCanaryEventData(
+            eventType,
+            _combatIndex,
+            BindingId: bindingId,
+            CardId: cardId,
+            AnimationId: animationId,
+            SurfaceId: surfaceId,
+            ImpactIndex: impactIndex,
+            Upgraded: upgraded,
+            AnimationsEnabled: animationsEnabled,
+            TitlesEnabled: titlesEnabled,
+            ReplacementRequested: replacementRequested,
+            ReplacementActive: snapshot?.Active,
+            AnchorBound: _sceneHost?.IsAnchorBound,
+            OverlayVisible: _sceneHost?.Visible,
+            RestoreCount: restoreCount ?? snapshot?.RestoreCount,
+            Reason: reason));
     }
 
     private bool TryResolveCardId(object? model, out string cardId)
