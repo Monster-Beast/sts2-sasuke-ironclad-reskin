@@ -15,7 +15,8 @@ $AppId = "2868840"
 $StatusFileNames = @(
     "runtime-canary-status.json",
     "runtime-canary-anchor-status.json",
-    "runtime-canary-replacement-status.json"
+    "runtime-canary-replacement-status.json",
+    "runtime-canary-failure-status.json"
 )
 $MarkerFileName = "SasukeIronclad.canary.json"
 $ObservationMarkerFileName = "SasukeIronclad.observe.json"
