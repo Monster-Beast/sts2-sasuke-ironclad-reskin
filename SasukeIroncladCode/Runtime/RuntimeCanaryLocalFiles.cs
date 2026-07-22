@@ -16,6 +16,7 @@ public static class RuntimeCanaryLocalFiles
     public const string StatusFileName = "runtime-canary-status.json";
     public const string AnchorStatusFileName = "runtime-canary-anchor-status.json";
     public const string ReplacementStatusFileName = "runtime-canary-replacement-status.json";
+    public const string FailureStatusFileName = "runtime-canary-failure-status.json";
     public const string ObservationOptInFileName = "SasukeIronclad.observe.json";
 
     private static readonly JsonSerializerOptions ReadOptions = new()
@@ -73,6 +74,8 @@ public static class RuntimeCanaryLocalFiles
             TitlesEnabled = status.TitlesEnabled,
             SessionId = status.SessionId,
             EventFile = status.EventFileName,
+            FailureInjectionScenario = status.FailureInjectionScenario,
+            FailureInjectionCardId = status.FailureInjectionCardId,
             PatchedBindingIds = status.PatchedBindingIds.Order(StringComparer.Ordinal).ToArray(),
             Reasons = status.Reasons,
         };
@@ -149,6 +152,44 @@ public static class RuntimeCanaryLocalFiles
             Reasons = snapshot.Reasons,
         };
         TryWriteAtomic(Path.Combine(modDirectory, ReplacementStatusFileName), document);
+    }
+
+    public static void WriteFailureStatus(
+        string modAssemblyPath,
+        RuntimeCanaryOptIn optIn,
+        RuntimeCanaryFailureInjectionSnapshot failure,
+        RuntimeOriginalVisualReplacementSnapshot? replacement,
+        GodotVisualSceneHost? host,
+        bool replacementDisabledForCombat)
+    {
+        ArgumentNullException.ThrowIfNull(optIn);
+        ArgumentNullException.ThrowIfNull(failure);
+        string? modDirectory = ResolveModDirectory(modAssemblyPath);
+        if (string.IsNullOrWhiteSpace(modDirectory))
+            return;
+
+        RuntimeCanaryFailureStatusDocument document = new()
+        {
+            GeneratedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+            Requested = failure.Requested,
+            Scenario = failure.Scenario,
+            TargetCardId = string.IsNullOrWhiteSpace(failure.TargetCardId) ? null : failure.TargetCardId,
+            Armed = failure.Armed,
+            Triggered = failure.Triggered,
+            TriggerCount = failure.TriggerCount,
+            TriggerStage = failure.TriggerStage,
+            OriginalVisualHiddenAtTrigger = failure.OriginalVisualHiddenAtTrigger,
+            RecoveryConfirmed = failure.RecoveryConfirmed,
+            ReplacementActiveAfterFault = replacement?.Active == true,
+            ReplacementEverHidden = replacement?.EverHidden == true,
+            RestoreCountAfterFault = replacement?.RestoreCount ?? 0,
+            AnchorBoundAfterFault = host?.IsAnchorBound == true,
+            OverlayVisibleAfterFault = host?.Visible == true,
+            ReplacementDisabledForCombat = replacementDisabledForCombat,
+            LastTransition = failure.LastTransition,
+            Reasons = failure.Reasons,
+        };
+        TryWriteAtomic(Path.Combine(modDirectory, FailureStatusFileName), document);
     }
 
     private static void TryWriteAtomic<T>(string statusPath, T document)
