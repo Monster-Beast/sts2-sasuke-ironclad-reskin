@@ -47,7 +47,9 @@ public sealed class CardVisualPlaybackService : IDisposable
 
             if (!_sceneHost.CanPlay(selection))
             {
-                SafeFallback(context, $"visual assets unavailable for {selection.AnimationId}");
+                string reason = (_sceneHost as IRuntimeCanaryFailureSource)?.ConsumeCanPlayFailureReason()
+                                ?? $"visual assets unavailable for {selection.AnimationId}";
+                SafeFallback(context, reason);
                 return null;
             }
 
