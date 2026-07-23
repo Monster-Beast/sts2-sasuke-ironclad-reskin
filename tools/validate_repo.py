@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import json, re, sys, xml.etree.ElementTree as ET
+import configparser, json, re, sys, xml.etree.ElementTree as ET
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -191,6 +191,23 @@ def main():
     project_text=(ROOT/'SasukeIronclad.csproj').read_text(encoding='utf-8')
     if 'ActiveBaseLibVersion' in project_text or 'NuGetAssetsPath' in project_text:
         die('build must not rewrite the BaseLib runtime minimum from NuGet restore data')
+
+    export_config=configparser.ConfigParser(interpolation=None)
+    try:
+        export_config.read(ROOT/'export_presets.cfg',encoding='utf-8')
+        raw_exclusions=export_config.get('preset.0','exclude_filter')
+        parsed_exclusions=json.loads(raw_exclusions)
+        if not isinstance(parsed_exclusions,str):
+            raise ValueError('exclude_filter must be a quoted string')
+    except (configparser.Error,json.JSONDecodeError,ValueError) as exc:
+        die(f'invalid export_presets.cfg exclude_filter: {exc}')
+    excluded={item.strip() for item in parsed_exclusions.split(',') if item.strip()}
+    required_exclusions={
+        'local-audit*/*','audit-output/*','local-canary-*/*',
+        'runtime-*/*','runtime-*.json','*.zip'
+    }
+    if not required_exclusions <= excluded:
+        die('Godot export may include local audit or runtime evidence')
 
     forbidden={'.pck','.dll','.atlas','.skel','.ogg','.mp3','.ttf','.otf'}
     bad=[str(p.relative_to(ROOT)) for p in ROOT.rglob('*') if p.is_file() and '.git' not in p.parts and p.suffix.lower() in forbidden]
