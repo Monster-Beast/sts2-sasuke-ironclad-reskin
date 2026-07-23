@@ -208,8 +208,10 @@ def main():
     }
     if not required_exclusions <= excluded:
         die('Godot export may include local audit or runtime evidence')
-    if not (ROOT/'audit-output/.gdignore').is_file():
-        die('Godot filesystem scan may enter generated audit fixtures')
+    ignored_resource_roots=['art','animation','docs','tools','audit-output']
+    missing_gdignore=[root for root in ignored_resource_roots if not (ROOT/root/'.gdignore').is_file()]
+    if missing_gdignore:
+        die('Godot filesystem scan may enter non-resource directories: '+', '.join(missing_gdignore))
 
     forbidden={'.pck','.dll','.atlas','.skel','.ogg','.mp3','.ttf','.otf'}
     generated_dirs={'.git','.godot','bin','obj','audit-output'}
