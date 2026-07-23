@@ -59,7 +59,7 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     {
         _ = delta;
         SyncAnchorTransform();
-        ProcessPendingFailureInjection();
+        _ = TryProcessPendingFailureInjection();
     }
 
     public bool BindToAnchor(Node2D anchor, Vector2 offset, float scale)
@@ -274,31 +274,33 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
         }
     }
 
-    private void ProcessPendingFailureInjection()
+    internal bool TryProcessPendingFailureInjection()
     {
         AnimationPlaybackHandle? handle = _pendingFailureHandle;
         string? cardId = _pendingFailureCardId;
         if (handle is null || string.IsNullOrWhiteSpace(cardId))
-            return;
+            return false;
         if (handle.IsReleased || _activeHandle?.Id != handle.Id)
         {
             ClearPendingFailure(handle);
-            return;
+            return false;
         }
         if (!RuntimeCanaryFailureDiagnostics.TryTakePostHideFailure(cardId, out string scenario))
-            return;
+            return false;
 
         _pendingFailureHandle = null;
         _pendingFailureCardId = null;
+        bool injected = false;
         if (string.Equals(scenario, RuntimeCanaryFailureScenarios.ForcedPlaybackFailure, StringComparison.Ordinal))
         {
-            InjectPlaybackFailureForCanary(handle, "fault_injection:forced_playback_failure");
+            injected = InjectPlaybackFailureForCanary(handle, "fault_injection:forced_playback_failure");
         }
         else if (string.Equals(scenario, RuntimeCanaryFailureScenarios.AnchorInvalidation, StringComparison.Ordinal))
         {
-            InjectAnchorInvalidationForCanary("fault_injection:anchor_invalidation");
+            injected = InjectAnchorInvalidationForCanary("fault_injection:anchor_invalidation");
         }
         RuntimeCanaryFailureDiagnostics.RefreshStatus();
+        return injected;
     }
 
     private bool InjectPlaybackFailureForCanary(AnimationPlaybackHandle handle, string reason)

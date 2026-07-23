@@ -297,6 +297,12 @@ public sealed class RuntimeCanarySession : IDisposable
         _activeCardModel = model;
         _activeCardId = cardId;
         _activeImpactIndex = 0;
+        // Consume an armed post-hide failure in the same managed callback that
+        // hid the original visual. Godot's per-frame C# dispatcher is retained
+        // as a fallback, but recovery safety must not depend on that callback
+        // successfully crossing the MonoMod JIT boundary.
+        if (_sceneHost.TryProcessPendingFailureInjection())
+            return;
         if (string.Equals(cardId, FlameBarrierCardId, StringComparison.Ordinal))
             _flameBarrierStateInstalled = true;
     }

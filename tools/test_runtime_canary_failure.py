@@ -342,6 +342,16 @@ def main() -> int:
     assert "ConfigureFailureDiagnostics" in host_source
     assert "host.ConfigureFailureDiagnostics(_modAssemblyPath, optIn);" in session_source
     assert "typeof(GodotVisualSceneHost).Assembly.Location" not in host_source
+    assert "internal bool TryProcessPendingFailureInjection()" in host_source
+    assert "_ = TryProcessPendingFailureInjection();" in host_source
+    active_card_index = session_source.index("_activeCardId = cardId;")
+    synchronous_pump_index = session_source.index(
+        "if (_sceneHost.TryProcessPendingFailureInjection())"
+    )
+    flame_barrier_index = session_source.index(
+        "if (string.Equals(cardId, FlameBarrierCardId, StringComparison.Ordinal))"
+    )
+    assert active_card_index < synchronous_pump_index < flame_barrier_index
     assert "File.Delete" not in host_source
     assert "File.Move" not in host_source
 
