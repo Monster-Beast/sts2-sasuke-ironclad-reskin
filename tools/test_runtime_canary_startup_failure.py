@@ -21,6 +21,11 @@ from analyze_runtime_canary_startup_failure import (
 
 ROOT = Path(__file__).resolve().parents[1]
 ANALYZER = ROOT / "tools/analyze_runtime_canary_startup_failure.py"
+REVIEW = (
+    ROOT
+    / "SasukeIronclad/data/reviews"
+    / "public-beta-24251656-startup-failure-review.json"
+)
 SCENARIO = "method_signature_mismatch"
 SESSION_LABEL = "startup-signature-fixture-1"
 
@@ -616,6 +621,20 @@ def main() -> int:
             root / "duplicate-review",
         )
         assert duplicate_cli.returncode == 1, duplicate_cli
+
+    review = json.loads(REVIEW.read_text(encoding="utf-8"))
+    assert review["schema_version"] == 1
+    assert review["status"] == "startup_signature_mismatch_fail_closed_passed"
+    assert review["test"]["user_visual_verdict_zh"] == "已退出，打击时没有佐助"
+    assert review["test"]["analyzer_status"] == "passed"
+    assert review["test"]["patch_install_attempted"] is False
+    assert review["test"]["runtime_session_created"] is False
+    assert review["test"]["event_journal_created"] is False
+    assert review["conclusions"]["startup_signature_mismatch_fail_closed"] is True
+    assert review["conclusions"]["original_presentation_visual_passed"] is True
+    assert review["conclusions"]["production_profile_ready"] is False
+    assert review["source_policy"]["raw_game_log_committed"] is False
+    assert review["safety"]["affects_gameplay"] is False
 
     print(
         "RUNTIME_CANARY_STARTUP_FAILURE_TEST_OK "
