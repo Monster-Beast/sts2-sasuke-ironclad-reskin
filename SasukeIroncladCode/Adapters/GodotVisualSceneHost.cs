@@ -6,6 +6,7 @@ namespace SasukeIronclad.SasukeIroncladCode.Adapters;
 public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSceneHostNotifications, IRuntimeCanaryFailureSource
 {
     private const string DefaultRuntimeScene = "res://SasukeIronclad/scenes/runtime/animation_director.tscn";
+    private const string RuntimeAnchorExitedMeta = "sasuke_runtime_anchor_exited";
 
     private AnimationPlaybackHandle? _activeHandle;
     private AnimationPlaybackHandle? _pendingFailureHandle;
@@ -32,6 +33,20 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     public float ImpactTimeoutSeconds { get; set; } = 1.5f;
 
     public bool IsAnchorBound => HasValidAnchor();
+    public bool RuntimeAnchorExitedSinceBind
+    {
+        get
+        {
+            try
+            {
+                return HasMeta(RuntimeAnchorExitedMeta) && GetMeta(RuntimeAnchorExitedMeta).AsBool();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
     public Node2D? AnchorNode => HasValidAnchor() ? _anchor : null;
     public string? AnchorType => HasValidAnchor() ? _anchor!.GetType().FullName : null;
     public string? AnchorName => HasValidAnchor() ? _anchor!.Name.ToString() : null;
@@ -81,12 +96,33 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
             ClearAnchor();
             return false;
         }
+        try
+        {
+            if (_director is null || !_director.HasMethod("bind_runtime_anchor") ||
+                !_director.Call("bind_runtime_anchor", anchor).AsBool())
+            {
+                ClearAnchor();
+                return false;
+            }
+            SetMeta(RuntimeAnchorExitedMeta, false);
+        }
+        catch
+        {
+            ClearAnchor();
+            return false;
+        }
         SyncAnchorTransform();
         return Visible;
     }
 
     public void ClearAnchor()
     {
+        try
+        {
+            if (_director?.HasMethod("clear_runtime_anchor") == true)
+                _director.Call("clear_runtime_anchor");
+        }
+        catch { }
         _anchor = null;
         _anchorInvalidationNotified = false;
         Visible = false;

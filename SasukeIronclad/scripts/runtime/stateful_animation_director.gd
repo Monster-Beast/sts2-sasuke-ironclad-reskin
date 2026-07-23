@@ -12,6 +12,38 @@ signal playback_committed(animation_id: String)
 
 var _transaction_counter := 0
 var _active_transaction := -1
+var _runtime_anchor: Node2D
+
+func bind_runtime_anchor(anchor: Node2D) -> bool:
+    clear_runtime_anchor()
+    if not is_instance_valid(anchor) or not anchor.is_inside_tree():
+        return false
+    _runtime_anchor = anchor
+    anchor.tree_exiting.connect(_on_runtime_anchor_tree_exiting, CONNECT_ONE_SHOT)
+    var runtime_root := get_parent() as CanvasItem
+    if runtime_root != null:
+        runtime_root.visible = true
+    return true
+
+func clear_runtime_anchor() -> void:
+    var anchor := _runtime_anchor
+    _runtime_anchor = null
+    if is_instance_valid(anchor) and anchor.tree_exiting.is_connected(_on_runtime_anchor_tree_exiting):
+        anchor.tree_exiting.disconnect(_on_runtime_anchor_tree_exiting)
+
+func _on_runtime_anchor_tree_exiting() -> void:
+    _runtime_anchor = null
+    release_combat_resources()
+    var runtime_root := get_parent() as CanvasItem
+    if runtime_root == null:
+        return
+    runtime_root.visible = false
+    var host := runtime_root.get_parent()
+    if is_instance_valid(host):
+        host.set_meta("sasuke_runtime_anchor_exited", true)
+        if host is CanvasItem:
+            host.visible = false
+    print("[SasukeIronclad] runtime anchor exited; GDScript released and hid combat visuals.")
 
 func play_timeline(animation_id: String, variant: String = "base", context: Dictionary = {}) -> bool:
     if character_state_director.is_terminal():
@@ -102,6 +134,7 @@ func has_visual_form(form_id: String) -> bool:
     return form_visual_director.has_form(form_id)
 
 func release_combat_resources() -> void:
+    clear_runtime_anchor()
     cancel_current()
     state_visual_director.clear_all()
     form_visual_director.clear_all()

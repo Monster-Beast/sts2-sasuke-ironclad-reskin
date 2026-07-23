@@ -219,6 +219,13 @@ public sealed class RuntimeCanarySession : IDisposable
             return;
         }
 
+        if (_combatActive && _sceneHost.RuntimeAnchorExitedSinceBind)
+        {
+            ReleaseCombatResourcesCore(
+                "runtime_anchor_left_scene_tree",
+                "runtime_anchor_left_scene_tree_before_next_local_card");
+        }
+
         object? model = args[2];
         if (!TryResolveCardId(model, out string cardId))
         {
@@ -493,13 +500,18 @@ public sealed class RuntimeCanarySession : IDisposable
 
     private void ReleaseCombatResources()
     {
-        RestoreOriginalVisual("combat_ended");
+        ReleaseCombatResourcesCore("combat_ended", "combat_resources_released");
+    }
+
+    private void ReleaseCombatResourcesCore(string restoreReason, string journalReason)
+    {
+        RestoreOriginalVisual(restoreReason);
         try { _playback?.ReleaseCombatResources(); } catch { }
         WriteReplacementStatus();
         WriteAnchorStatus(
             AddReason(_lastAnchorResolution ?? CreateWaitingResolution(), "Combat resources released and the original visual was restored."),
             attempted: _lastAnchorResolution is not null);
-        JournalEvent("combat_ended", bindingId: "combat_ended", reason: "combat_resources_released");
+        JournalEvent("combat_ended", bindingId: "combat_ended", reason: journalReason);
         _lastAnchorResolution = null;
         _replacementDisabledForCombat = false;
         _combatActive = false;

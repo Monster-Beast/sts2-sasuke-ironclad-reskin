@@ -38,6 +38,7 @@ BOOTSTRAP_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryBootstrap.cs"
 TARGET_RESOLVER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryTargetResolver.cs"
 REPLACEMENT_CONTROLLER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeOriginalVisualReplacementController.cs"
 PLAYBACK_PATH = ROOT / "SasukeIroncladCode/Runtime/CardVisualPlaybackService.cs"
+STATEFUL_DIRECTOR_PATH = ROOT / "SasukeIronclad/scripts/runtime/stateful_animation_director.gd"
 RUNTIME_CONTRACT_PROJECT_PATH = ROOT / "tools/runtime_contract/SasukeIronclad.RuntimeContract.csproj"
 
 EXPECTED_APPROVED = {
@@ -207,6 +208,7 @@ def main() -> int:
     target_resolver_text = TARGET_RESOLVER_PATH.read_text(encoding="utf-8")
     replacement_text = REPLACEMENT_CONTROLLER_PATH.read_text(encoding="utf-8")
     playback_text = PLAYBACK_PATH.read_text(encoding="utf-8")
+    stateful_director_text = STATEFUL_DIRECTOR_PATH.read_text(encoding="utf-8")
     runtime_contract_text = RUNTIME_CONTRACT_PROJECT_PATH.read_text(encoding="utf-8")
 
     require("local_visual_only" in script_text, "canary marker mode changed")
@@ -244,7 +246,11 @@ def main() -> int:
     require("TryActivateReplacement" in session_text and "FailReplacementForCombat" in session_text, "replacement lifecycle is not wired")
     require("FallbackActivated += OnPlaybackFallback" in session_text, "playback fallback does not restore the original visual")
     require("AnchorInvalidated += OnAnchorInvalidated" in session_text, "anchor loss does not restore the original visual")
-    require("RestoreOriginalVisual(\"combat_ended\")" in session_text, "combat end does not restore the original visual")
+    require(
+        'ReleaseCombatResourcesCore("combat_ended", "combat_resources_released")'
+        in session_text,
+        "combat end does not restore the original visual",
+    )
     require("card_not_in_reviewed_replacement_scope" in session_text, "unreviewed cards do not restore original presentation")
     require("demon_form_replacement_remains_blocked" in session_text, "Demon Form does not restore original presentation")
     for event_name in [
@@ -264,6 +270,12 @@ def main() -> int:
     require("MaxSceneNodes" in resolver_text and "MaxReferenceObjects" in resolver_text, "anchor traversal is not bounded")
     require("Visible = false" in host_text and "BindToAnchor" in host_text, "visual host does not stay hidden before anchoring")
     require("AnchorInvalidated" in host_text and "GetGlobalTransformWithCanvas" in host_text, "visual host does not report anchor loss")
+    require("bind_runtime_anchor" in host_text and "RuntimeAnchorExitedSinceBind" in host_text, "visual host does not bridge the Godot-side scene-exit watchdog")
+    require("tree_exiting.connect" in stateful_director_text and "sasuke_runtime_anchor_exited" in stateful_director_text, "Godot-side anchor exit watchdog is missing")
+    require("runtime_root.visible = false" in stateful_director_text and "host.visible = false" in stateful_director_text, "scene-exit watchdog does not hide the runtime overlay")
+    stale_exit_index = session_text.index("RuntimeAnchorExitedSinceBind")
+    combat_start_index = session_text.index("EnsureCombatStarted(cardId)")
+    require(stale_exit_index < combat_start_index, "stale scene-exit state is not cleared before the next local card starts combat")
     require("RuntimeCanaryFailureDiagnostics.TryTriggerMissingTimeline" in host_text, "missing timeline fault is not injected in memory")
     require("RuntimeCanaryFailureDiagnostics.TryTakePostHideFailure" in host_text, "post-hide failure is not deferred until replacement activates")
     require("File.Delete" not in host_text and "File.Move" not in host_text, "failure injection modifies files from the Godot host")
@@ -304,7 +316,8 @@ def main() -> int:
         "replacement=true restoration=true unreviewed_fallback=true damage_only_impact_sync=true "
         "impact_retest_passed=true multi_combat_stability=true capture_caveats=true "
         "combined_journal=true deterministic_checkpoint=true failure_injection=true "
-        "failure_scenarios=3 startup_fail_closed=true in_memory_only=true production=false"
+        "failure_scenarios=3 startup_fail_closed=true scene_exit_watchdog=true "
+        "in_memory_only=true production=false"
     )
     return 0
 
