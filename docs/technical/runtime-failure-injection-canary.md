@@ -263,10 +263,15 @@ Current exact-build result:
 - `forced_playback_failure` did not trigger in the first real-game run: Strike
   and the follow-up Defend both completed Sasuke playback, while the diagnostic
   remained armed;
-- the failed playback run's local game log recorded repeated MonoMod JIT
-  `ArgumentException` frames at the Godot-to-C# host dispatcher, so the
-  post-hide safety fault may not rely solely on `_Process` to consume its pending
-  trigger;
+- the first playback run's local game log recorded repeated MonoMod JIT
+  `ArgumentException` frames at the Godot-to-C# host dispatcher, proving the
+  post-hide safety fault could not rely solely on `_Process` to consume its
+  pending trigger;
+- the fault is now consumed synchronously after active-card state is registered,
+  with `_Process` retained as a fallback. A clean build from commit `8b143fc`
+  passed the strict real-game rerun: Strike triggered exactly one fault, the
+  original presentation was restored, and the user's follow-up Defend showed no
+  Sasuke. Dispatcher exceptions persisted but no longer gated recovery;
 - `anchor_invalidation` remains untested and must not be counted as passed.
 
 ## Remaining boundary

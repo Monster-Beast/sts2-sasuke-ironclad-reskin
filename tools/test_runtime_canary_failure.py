@@ -300,7 +300,7 @@ def main() -> int:
     assert review["schema_version"] == 1
     assert (
         review["status"]
-        == "missing_timeline_passed_forced_playback_trigger_regression_open"
+        == "missing_timeline_and_forced_playback_passed_anchor_invalidation_pending"
     )
     attempts = {
         attempt["session_label"]: attempt for attempt in review["attempts"]
@@ -313,7 +313,19 @@ def main() -> int:
     assert failed_playback["analyzer_status"] == "partial"
     assert failed_playback["primary_fault_event_count"] == 0
     assert failed_playback["passed"] is False
-    assert review["conclusions"]["forced_playback_failure_regression_open"] is True
+    passed_playback = attempts["failure-playback-v338-2"]
+    assert passed_playback["analyzer_status"] == "passed"
+    assert passed_playback["primary_fault_event_count"] == 1
+    assert passed_playback["unexpected_hard_failure_count"] == 0
+    assert passed_playback["passed"] is True
+    assert passed_playback["failure_status"]["recovery_confirmed"] is True
+    assert (
+        passed_playback["failure_status"]["replacement_disabled_for_combat"]
+        is True
+    )
+    assert review["conclusions"]["forced_playback_failure_passed"] is True
+    assert review["conclusions"]["forced_playback_failure_regression_open"] is False
+    assert review["conclusions"]["anchor_invalidation_passed"] is False
     assert review["conclusions"]["production_profile_ready"] is False
     assert review["source_policy"]["raw_game_logs_committed"] is False
     assert review["safety"]["affects_gameplay"] is False

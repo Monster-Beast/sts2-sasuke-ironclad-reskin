@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-07-23T13:28:35.2414427Z",
-  "status": "missing_timeline_passed_forced_playback_trigger_regression_open",
+  "generated_at_utc": "2026-07-23T13:41:48.2510358Z",
+  "status": "missing_timeline_and_forced_playback_passed_anchor_invalidation_pending",
   "profile_id": "public-beta-24251656-ee45848ff631",
-  "tested_mod_commit": "bc799e83619c9b6ddddadcba039f08693aaafae3",
+  "tested_mod_commit": "8b143fc7a5b70179a9643f7f6ca335f5fc3ff154",
   "runtime": {
     "branch": "public-beta",
     "steam_build_id": "24251656",
     "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
     "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
     "baselib_version": "v3.3.8",
-    "installed_mod_dll_sha256": "38df3b83e4cb9014c8d4b98870d48c108af5b85f696c542d947ab31abcce307e",
-    "installed_mod_pck_sha256": "0d13c96dcaa57159826ffa25c45893816977d7f965781a1f172e23061d7a082a"
+    "installed_mod_dll_sha256": "561a55a0cf512b5bd4a51a3b482d47ed53f8d36993b27bef263d2df7f245391b",
+    "installed_mod_pck_sha256": "0da2343bdbc7df72d956034b9dfd8491e59af7d187046fb7aa653f09039e5c8f"
   },
   "source_policy": {
     "kind": "user_run_privacy_safe_checkpoint_and_analyzer_reviews",
@@ -133,13 +133,113 @@
         "host_dispatch_frame_count": 45,
         "sanitized_finding": "Godot-to-C# host callbacks repeatedly encountered a MonoMod JIT ArgumentException, so a safety path that depended only on _Process could not consume the pending fault."
       }
+    },
+    {
+      "session_label": "failure-playback-v338-2",
+      "scenario": "forced_playback_failure",
+      "target_card_id": "Strike",
+      "target_card_name_zh": "打击",
+      "followup_card_id": "Defend",
+      "followup_card_name_zh": "防御",
+      "user_visual_verdict_zh": "已退出，防御时没有佐助",
+      "tested_mod_commit": "8b143fc7a5b70179a9643f7f6ca335f5fc3ff154",
+      "analyzer_status": "passed",
+      "passed": true,
+      "event_count": 11,
+      "primary_fault_event_count": 1,
+      "unexpected_hard_failure_count": 0,
+      "closure_mode": "clean_process_checkpoint",
+      "failed_requirements": [],
+      "code_resolution": "The post-hide fault is consumed synchronously after active-card state is registered; _Process remains a fallback.",
+      "archive": {
+        "file_name": "local-failure-canary-failure-playback-v338-2.zip",
+        "size_bytes": 7991,
+        "sha256": "76c1d531b152ba86c83e522d5081ab5d5aabbe61fb084b31901190298ee49558"
+      },
+      "journal": {
+        "file_name": "runtime-canary-failure-playback-v338-2-20260723T134009488Z-c64639478c154aa986ad1a4f695d2a7e.jsonl",
+        "size_bytes": 4539,
+        "sha256": "055986b36ba9ac49606105aa540a788983f8ce090d285bdd151566756957bdcb"
+      },
+      "analyzer_review": {
+        "size_bytes": 3437,
+        "sha256": "40f17feec07e83499e41434245eeeab758aec9d5c49853ad4f6a18a9207633b5"
+      },
+      "failure_status": {
+        "size_bytes": 1226,
+        "sha256": "10f82a2d8ac3705ce8a41b68724a35dca7d4fa8fc4f8f45541397301529da2b4",
+        "triggered": true,
+        "trigger_count": 1,
+        "recovery_confirmed": true,
+        "replacement_active_after_fault": false,
+        "restore_count_after_fault": 1,
+        "original_visibility_restored_after_fault": true,
+        "anchor_bound_after_fault": false,
+        "overlay_visible_after_fault": false,
+        "replacement_disabled_for_combat": true
+      },
+      "local_game_log": {
+        "file_name": "godot.log",
+        "size_bytes": 227535,
+        "sha256": "d83a68b661a67dafc3631214e862c2d479ae621eb5f9775e36276f52d81bb2aa",
+        "argument_exception_count": 52,
+        "host_dispatch_frame_count": 46,
+        "sanitized_finding": "Godot-to-C# dispatcher exceptions persisted, but the synchronous safety path no longer depended on that callback and restored the original presentation."
+      }
     }
   ],
+  "resolution_and_validation": {
+    "root_cause": "The first forced-playback run depended only on the Godot _Process callback to consume a pending post-hide fault; repeated dispatcher exceptions prevented that callback path from completing.",
+    "synchronous_recovery_commit": "2aa5cf401609ef6a8c1852438f148415574882b0",
+    "export_evidence_exclusion_commit": "cc890227eefd4dba1d69fae531e3ff5e060c4574",
+    "clean_import_boundary_commit": "8b143fc7a5b70179a9643f7f6ca335f5fc3ff154",
+    "automated_checks": [
+      {
+        "name": "python tools/test_runtime_canary_failure.py",
+        "status": "passed"
+      },
+      {
+        "name": "python tools/validate_repo.py",
+        "status": "passed"
+      },
+      {
+        "name": "dotnet build tools/runtime_contract/SasukeIronclad.RuntimeContract.csproj --configuration Release",
+        "status": "passed",
+        "warnings": 0,
+        "errors": 0
+      },
+      {
+        "name": "dotnet run --project tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj --configuration Release --no-build",
+        "status": "passed"
+      }
+    ],
+    "packaging_checks": [
+      {
+        "stage": "dirty_worktree_publish",
+        "status": "rejected",
+        "finding": "Local backup and generated audit fixtures entered the Godot import scan; no artifact from this attempt was accepted."
+      },
+      {
+        "stage": "clean_cc89022_publish",
+        "status": "rejected",
+        "finding": "Tracked art and animation CSV files entered the Godot translation importer; no artifact from this attempt was accepted."
+      },
+      {
+        "stage": "clean_8b143fc_publish",
+        "status": "passed",
+        "exit_code": 0,
+        "warnings": 0,
+        "errors": 0,
+        "installed_mod_dll_sha256": "561a55a0cf512b5bd4a51a3b482d47ed53f8d36993b27bef263d2df7f245391b",
+        "installed_mod_pck_sha256": "0da2343bdbc7df72d956034b9dfd8491e59af7d187046fb7aa653f09039e5c8f"
+      }
+    ]
+  },
   "conclusions": {
     "missing_timeline_passed": true,
-    "forced_playback_failure_passed": false,
+    "forced_playback_failure_passed": true,
     "anchor_invalidation_passed": false,
-    "forced_playback_failure_regression_open": true,
+    "forced_playback_failure_regression_open": false,
     "production_profile_ready": false
   },
   "safety": {
