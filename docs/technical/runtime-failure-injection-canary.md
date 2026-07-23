@@ -272,7 +272,13 @@ Current exact-build result:
   passed the strict real-game rerun: Strike triggered exactly one fault, the
   original presentation was restored, and the user's follow-up Defend showed no
   Sasuke. Dispatcher exceptions persisted but no longer gated recovery;
-- `anchor_invalidation` remains untested and must not be counted as passed.
+- `anchor_invalidation` also passed on the same clean build: Strike invalidated
+  the overlay anchor exactly once after replacement was hidden, the captured
+  original visibility was restored, and the user's follow-up Defend showed no
+  Sasuke;
+- all three deliberate failure scenarios now pass strict analysis and direct
+  visual review. The production profile remains unpromoted because the broader
+  compatibility boundaries below are separate evidence requirements.
 
 ## Remaining boundary
 

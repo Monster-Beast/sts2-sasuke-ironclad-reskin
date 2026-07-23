@@ -298,10 +298,7 @@ def main() -> int:
 
     review = json.loads(REVIEW.read_text(encoding="utf-8"))
     assert review["schema_version"] == 1
-    assert (
-        review["status"]
-        == "missing_timeline_and_forced_playback_passed_anchor_invalidation_pending"
-    )
+    assert review["status"] == "all_failure_injection_scenarios_passed"
     attempts = {
         attempt["session_label"]: attempt for attempt in review["attempts"]
     }
@@ -325,7 +322,15 @@ def main() -> int:
     )
     assert review["conclusions"]["forced_playback_failure_passed"] is True
     assert review["conclusions"]["forced_playback_failure_regression_open"] is False
-    assert review["conclusions"]["anchor_invalidation_passed"] is False
+    passed_anchor = attempts["failure-anchor-v338-1"]
+    assert passed_anchor["analyzer_status"] == "passed"
+    assert passed_anchor["primary_fault_event_count"] == 1
+    assert passed_anchor["unexpected_hard_failure_count"] == 0
+    assert passed_anchor["passed"] is True
+    assert passed_anchor["failure_status"]["trigger_stage"] == "after_replacement_hidden"
+    assert passed_anchor["failure_status"]["recovery_confirmed"] is True
+    assert passed_anchor["failure_status"]["original_visibility_restored_after_fault"] is True
+    assert review["conclusions"]["anchor_invalidation_passed"] is True
     assert review["conclusions"]["production_profile_ready"] is False
     assert review["source_policy"]["raw_game_logs_committed"] is False
     assert review["safety"]["affects_gameplay"] is False
