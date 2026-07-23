@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-07-23T14:32:28.8564894+00:00",
-  "status": "4k_menu_cleanup_regression_open",
+  "generated_at_utc": "2026-07-23T14:41:18.3684529+00:00",
+  "status": "4k_passed_1080p_pending",
   "profile_id": "public-beta-24251656-ee45848ff631",
-  "tested_mod_commit": "2cb78fa2daba4c8d05aad5a645f42baa9a851fb6",
+  "tested_mod_commit": "2fc7463b79b45b42bc14b02c58c83743fe48ef99",
   "runtime": {
     "branch": "public-beta",
     "steam_build_id": "24251656",
     "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
     "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
     "baselib_version": "v3.3.8",
-    "installed_mod_dll_sha256": "94f480873af5d8f8e4f73806e8d6aeaeb37768d8bdc0f30fee9912556eb28224",
-    "installed_mod_pck_sha256": "34ea6e00c949131f300c9fc3e8aae94a3faa5c50af17e0f5211a1e74cfbea563"
+    "installed_mod_dll_sha256": "68da79c47a0fa5273e9ba17339f84c9e5b6f2388edd4a161ed78971838420673",
+    "installed_mod_pck_sha256": "a31a7cde27886e9833916176bb1df40aeb3804f0d93e51f7190d4a9328f8c69e"
   },
   "source_policy": {
     "kind": "user_run_privacy_safe_checkpoint_and_analyzer_review",
@@ -23,6 +23,9 @@
   "attempts": [
     {
       "session_label": "resolution-4k-v338-1",
+      "tested_mod_commit": "2cb78fa2daba4c8d05aad5a645f42baa9a851fb6",
+      "installed_mod_dll_sha256": "94f480873af5d8f8e4f73806e8d6aeaeb37768d8bdc0f30fee9912556eb28224",
+      "installed_mod_pck_sha256": "34ea6e00c949131f300c9fc3e8aae94a3faa5c50af17e0f5211a1e74cfbea563",
       "display_mode": "fullscreen",
       "aspect_ratio": "sixteen_by_nine",
       "window_width": 3840,
@@ -98,12 +101,89 @@
         "host_dispatch_frame_count": 52
       },
       "diagnosis": "The selected CombatRoom.OnCombatEnded endpoint was not observed when leaving combat for the main menu. Repeated Godot-to-C# dispatcher exceptions also prevented the C# per-frame anchor invalidation fallback, leaving the root-mounted overlay visible."
+    },
+    {
+      "session_label": "resolution-4k-v338-2",
+      "tested_mod_commit": "2fc7463b79b45b42bc14b02c58c83743fe48ef99",
+      "display_mode": "fullscreen",
+      "aspect_ratio": "sixteen_by_nine",
+      "window_width": 3840,
+      "window_height": 2160,
+      "display_dpi": 144,
+      "display_scale": 1,
+      "cards_played": [
+        {
+          "card_id": "Strike",
+          "card_name_zh": "打击"
+        },
+        {
+          "card_id": "Defend",
+          "card_name_zh": "防御"
+        }
+      ],
+      "user_visual_verdict_zh": "已退出，4K下打击和防御正常，主菜单没有佐助",
+      "visual_alignment_passed": true,
+      "title_display_passed": true,
+      "menu_cleanup_passed": true,
+      "scene_exit_watchdog_log_count": 1,
+      "analyzer_status": "partial",
+      "passed": true,
+      "event_count": 15,
+      "combat_ended_event_count": 0,
+      "session_stop_event_count": 0,
+      "closure_mode": "clean_process_checkpoint",
+      "archive": {
+        "file_name": "local-resolution-ui-resolution-4k-v338-2.zip",
+        "size_bytes": 21592,
+        "sha256": "27d7e79cedd48b1c9a2bb99a1bae71a93a45b1cc7b04dec90b552782a126f1fd"
+      },
+      "journal": {
+        "file_name": "runtime-canary-resolution-4k-v338-2-20260723T143955246Z-68e51d05cdef42bd88ed7dda1084f6ad.jsonl",
+        "size_bytes": 5917,
+        "sha256": "fb0ed147f7e2d01ac20683bdd2500fc25130f4d846705fddfd69d957ad5a1ccb"
+      },
+      "checkpoint": {
+        "file_name": "checkpoint.json",
+        "size_bytes": 1235,
+        "sha256": "e39c93b444a4aefb83d65f439fd72970b9196ca9845c45ea0fd1fad9143248f6",
+        "process_query_succeeded": true,
+        "game_process_count": 0
+      },
+      "analyzer_review": {
+        "file_name": "runtime-canary-journal-review.json",
+        "size_bytes": 2955,
+        "sha256": "7b4f7790df7c34f1140a1e3085607005210e980cf92549b1b87f901070fb2d36",
+        "failed_requirements": [
+          "combat_ended"
+        ]
+      },
+      "anchor_status": {
+        "size_bytes": 703,
+        "sha256": "b5d6ae02ed2262a6c608d0e592285f6708400b8bd1aa1711f434670af1599a65",
+        "managed_status_stale_after_gdscript_cleanup": true
+      },
+      "replacement_status": {
+        "size_bytes": 812,
+        "sha256": "6f6bd218288340aaa4fe4179aae13c7f033dfc8b494ff7920710bbe3983802fd",
+        "managed_status_stale_after_gdscript_cleanup": true
+      },
+      "local_game_log": {
+        "file_name": "godot.log",
+        "size_bytes": 199840,
+        "sha256": "079fd11caec8adfc4f965f751e9016aad71ab489c453339ac814acb1999e950a",
+        "scene_exit_watchdog_log_count": 1,
+        "argument_exception_count": 34,
+        "host_dispatch_frame_count": 27
+      },
+      "resolution": "A Godot-side tree_exiting watchdog released and hid the runtime visuals without depending on CombatRoom.OnCombatEnded or the failing C# per-frame dispatcher."
     }
   ],
   "conclusions": {
     "4k_fullscreen_alignment_passed": true,
     "4k_fullscreen_title_display_passed": true,
-    "menu_cleanup_regression_open": true,
+    "4k_fullscreen_menu_cleanup_passed": true,
+    "scene_exit_watchdog_verified": true,
+    "menu_cleanup_regression_open": false,
     "resolution_ui_matrix_passed": false,
     "production_profile_ready": false
   },
