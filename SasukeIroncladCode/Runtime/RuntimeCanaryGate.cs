@@ -16,8 +16,11 @@ public static class RuntimeCanaryGate
         "public-beta-24251656-local-ironclad-replacement";
     public const string RequiredFailureInjectionAcknowledgement =
         "public-beta-24251656-local-visual-failure-injection";
+    public const string RequiredStartupFailureInjectionAcknowledgement =
+        "public-beta-24251656-local-startup-method-signature-mismatch";
 
-    private const string RequiredMode = "local_visual_only";
+    private const string RequiredVisualMode = "local_visual_only";
+    private const string RequiredStartupFailureMode = "local_startup_failure_only";
     private const string RequiredBranch = "public-beta";
     private const string DemonFormCardId = "Demon Form";
     private static readonly HashSet<string> RequiredVisualBindings =
@@ -87,10 +90,18 @@ public static class RuntimeCanaryGate
             return Disabled("Current public-beta card scope is invalid for the runtime canary.");
         }
 
-        if (!optIn.Enabled || optIn.SchemaVersion != 1 || optIn.Mode != RequiredMode ||
+        if (!RuntimeCanaryStartupFailureScenarios.IsSupported(optIn.StartupFailureInjectionScenario))
+            return Disabled("Runtime canary startup_failure_injection_scenario is unsupported.");
+        bool startupFailureRequested = RuntimeCanaryStartupFailureScenarios.IsFailure(
+            optIn.StartupFailureInjectionScenario);
+        string requiredMode = startupFailureRequested
+            ? RequiredStartupFailureMode
+            : RequiredVisualMode;
+        if (!optIn.Enabled || optIn.SchemaVersion != 1 || optIn.Mode != requiredMode ||
             (!optIn.EnableAnimations && !optIn.EnableTitles))
         {
-            return Disabled("Runtime canary requires an explicit schema-1 local_visual_only marker with at least one presentation layer enabled.");
+            return Disabled(
+                $"Runtime canary requires an explicit schema-1 {requiredMode} marker with at least one presentation layer enabled.");
         }
         if (!IsValidSessionLabel(optIn.SessionLabel))
             return Disabled("Runtime canary session_label must contain 1-48 ASCII letters, digits, dots, underscores or hyphens and start with a letter or digit.");
@@ -149,6 +160,41 @@ public static class RuntimeCanaryGate
             return Disabled("Failure injection fields are populated while failure_injection_scenario is none.");
         }
 
+        if (startupFailureRequested)
+        {
+            if (!optIn.EnableAnimations || optIn.EnableTitles || optIn.HideOriginalVisual)
+            {
+                return Disabled(
+                    "Startup failure injection requires animations-only resolution with original visual replacement disabled.");
+            }
+            if (failureRequested)
+                return Disabled("Startup failure injection cannot be combined with presentation failure injection.");
+            if (!optIn.StartupFailureInjectionOnce)
+                return Disabled("Startup failure injection must remain one-shot for the current process.");
+            if (!string.Equals(
+                    optIn.StartupFailureInjectionAcknowledgement,
+                    RequiredStartupFailureInjectionAcknowledgement,
+                    StringComparison.Ordinal))
+            {
+                return Disabled(
+                    "Startup failure injection lacks the exact-build acknowledgement written by the explicit startup failure switch.");
+            }
+            if (!string.Equals(
+                    optIn.StartupFailureInjectionBindingId,
+                    RuntimeCanaryStartupFailureScenarios.TargetBindingId,
+                    StringComparison.Ordinal))
+            {
+                return Disabled(
+                    "Startup failure injection is restricted to the reviewed card_visual_request binding.");
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(optIn.StartupFailureInjectionBindingId) ||
+                 !string.IsNullOrWhiteSpace(optIn.StartupFailureInjectionAcknowledgement))
+        {
+            return Disabled(
+                "Startup failure injection fields are populated while startup_failure_injection_scenario is none.");
+        }
+
         if (!string.Equals(optIn.ExpectedBranch, runtime.Branch, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(optIn.ExpectedBuildId, runtime.SteamBuildId, StringComparison.Ordinal))
         {
@@ -205,6 +251,14 @@ public static class RuntimeCanaryGate
         int expectedCount = (optIn.EnableAnimations ? 4 : 0) + (optIn.EnableTitles ? 6 : 0);
         if (selected.Count != expectedCount)
             return Disabled("Runtime canary selected binding count does not match the approved partial review.");
+        if (startupFailureRequested && !selected.Any(decision => string.Equals(
+                decision.BindingId,
+                RuntimeCanaryStartupFailureScenarios.TargetBindingId,
+                StringComparison.Ordinal)))
+        {
+            return Disabled(
+                "Startup failure injection target is not present in the selected approved canary bindings.");
+        }
 
         reasons.Add(
             $"Exact-build runtime canary enabled for {runtime.Branch} build {runtime.SteamBuildId}; " +
@@ -234,6 +288,14 @@ public static class RuntimeCanaryGate
                 $"target_card={optIn.FailureInjectionCardId}."
             );
             reasons.Add("Failure injection is diagnostic-only and may not mutate card rules, combat state or game resources on disk.");
+        }
+        if (startupFailureRequested)
+        {
+            reasons.Add(
+                $"One-shot startup failure injection armed: scenario={optIn.StartupFailureInjectionScenario}; " +
+                $"binding={optIn.StartupFailureInjectionBindingId}.");
+            reasons.Add(
+                "Startup failure injection changes only an in-memory signature comparison after the real reviewed baseline matches; no Harmony patch may be installed.");
         }
         reasons.Add("Only approved_for_canary postfix adapters are eligible; form_removed and character_state remain disabled.");
         reasons.Add("Original game methods, arguments, return values, card IDs and gameplay state remain untouched.");

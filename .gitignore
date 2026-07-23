@@ -32,6 +32,7 @@ canary-output/
 runtime-canary-checkpoints/
 runtime-canary-combined-review/
 runtime-canary-failure-review/
+runtime-canary-startup-failure-review/
 local-combined-canary*/
 local-failure-canary*/
 *.autosave

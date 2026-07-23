@@ -66,6 +66,8 @@ public static class RuntimeCanaryLocalFiles
         if (string.IsNullOrWhiteSpace(modDirectory))
             return;
 
+        RuntimeCanaryStartupFailureInjectionSnapshot? startupFailure =
+            status.StartupFailureInjection;
         RuntimeCanaryStatusDocument document = new()
         {
             GeneratedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
@@ -74,8 +76,18 @@ public static class RuntimeCanaryLocalFiles
             TitlesEnabled = status.TitlesEnabled,
             SessionId = status.SessionId,
             EventFile = status.EventFileName,
+            RequestedSessionLabel = status.RequestedSessionLabel,
+            PatchInstallAttempted = status.PatchInstallAttempted,
             FailureInjectionScenario = status.FailureInjectionScenario,
             FailureInjectionCardId = status.FailureInjectionCardId,
+            StartupFailureInjectionRequested = startupFailure?.Requested == true,
+            StartupFailureInjectionScenario = startupFailure?.Scenario ?? RuntimeCanaryStartupFailureScenarios.None,
+            StartupFailureInjectionBindingId = startupFailure?.BindingId,
+            StartupFailureInjectionArmed = startupFailure?.Armed == true,
+            StartupFailureInjectionTriggered = startupFailure?.Triggered == true,
+            StartupFailureInjectionTriggerCount = startupFailure?.TriggerCount ?? 0,
+            StartupFailureInjectionTriggerStage = startupFailure?.TriggerStage,
+            StartupFailureInjectionBaselineMatchConfirmed = startupFailure?.BaselineMatchConfirmed == true,
             PatchedBindingIds = status.PatchedBindingIds.Order(StringComparer.Ordinal).ToArray(),
             Reasons = status.Reasons,
         };

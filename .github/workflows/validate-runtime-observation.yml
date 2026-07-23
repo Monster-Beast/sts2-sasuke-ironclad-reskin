@@ -20,6 +20,8 @@ jobs:
         run: python tools/test_runtime_canary_journal.py
       - name: Validate one-shot failure recovery analyzer
         run: python tools/test_runtime_canary_failure.py
+      - name: Validate startup fail-closed analyzer
+        run: python tools/test_runtime_canary_startup_failure.py
       - name: Validate redacted evidence analysis
         run: python tools/test_runtime_observation_analysis.py
       - name: Restore observation behavior matrix
@@ -182,6 +184,27 @@ jobs:
             -GamePath $game `
             -ModDirectory $mod `
             -AnimationsOnly `
+            -SessionLabel "ci-startup-failure" `
+            -StartupFailureScenario method_signature_mismatch
+
+          $startupFailureMarker = Get-Content -LiteralPath $canaryMarkerPath -Raw | ConvertFrom-Json
+          if ($startupFailureMarker.mode -ne "local_startup_failure_only" -or
+              $startupFailureMarker.enable_animations -ne $true -or
+              $startupFailureMarker.enable_titles -ne $false -or
+              $startupFailureMarker.hide_original_visual -ne $false -or
+              $startupFailureMarker.failure_injection_scenario -ne "none" -or
+              $startupFailureMarker.startup_failure_injection_scenario -ne "method_signature_mismatch" -or
+              $startupFailureMarker.startup_failure_injection_binding_id -ne "card_visual_request" -or
+              $startupFailureMarker.startup_failure_injection_once -ne $true -or
+              $startupFailureMarker.startup_failure_injection_acknowledgement -ne "public-beta-24251656-local-startup-method-signature-mismatch") {
+            throw "startup failure canary mode or acknowledgement is incorrect"
+          }
+
+          powershell -NoProfile -ExecutionPolicy Bypass -File $canaryPath `
+            -Action enable `
+            -GamePath $game `
+            -ModDirectory $mod `
+            -AnimationsOnly `
             -SessionLabel "ci-failure" `
             -ReplaceOriginal `
             -FailureScenario missing_timeline `
@@ -274,6 +297,7 @@ jobs:
             "checkpoint.json",
             "process.json",
             "status.txt",
+            "SasukeIronclad.canary.json",
             "runtime-canary-failure-status.json",
             $eventFile
           )) {
@@ -302,4 +326,4 @@ jobs:
             throw "canary marker was not removed"
           }
 
-          Write-Output "RUNTIME_CONTROLS_POWERSHELL_OK observation=true canary=true combined=true failure=true journal=true checkpoint=true anchor=true replacement=true status=true disable=true"
+          Write-Output "RUNTIME_CONTROLS_POWERSHELL_OK observation=true canary=true combined=true failure=true startup_failure=true journal=true checkpoint=true anchor=true replacement=true status=true disable=true"

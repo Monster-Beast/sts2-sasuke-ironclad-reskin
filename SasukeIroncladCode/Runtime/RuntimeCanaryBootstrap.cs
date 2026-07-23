@@ -13,7 +13,10 @@ public sealed record RuntimeCanaryBootstrapResult(
     string? SessionId = null,
     string? EventFileName = null,
     string FailureInjectionScenario = RuntimeCanaryFailureScenarios.None,
-    string? FailureInjectionCardId = null
+    string? FailureInjectionCardId = null,
+    string? RequestedSessionLabel = null,
+    bool PatchInstallAttempted = false,
+    RuntimeCanaryStartupFailureInjectionSnapshot? StartupFailureInjection = null
 );
 
 public static class RuntimeCanaryBootstrap
@@ -41,7 +44,7 @@ public static class RuntimeCanaryBootstrap
         ArgumentNullException.ThrowIfNull(gameAssembly);
         ArgumentNullException.ThrowIfNull(patcher);
         if (string.IsNullOrWhiteSpace(modAssemblyPath))
-            return Disabled("Runtime canary Mod assembly path is unavailable.");
+            return Disabled(optIn, ["Runtime canary Mod assembly path is unavailable."]);
 
         SafeReset(patcher);
         RuntimeBuildFingerprintCollectionResult collection;
@@ -51,10 +54,10 @@ public static class RuntimeCanaryBootstrap
         }
         catch (Exception exception)
         {
-            return Disabled($"Runtime canary fingerprint provider failed safely: {exception.GetType().Name}.");
+            return Disabled(optIn, [$"Runtime canary fingerprint provider failed safely: {exception.GetType().Name}."]);
         }
         if (!collection.Success || collection.Fingerprint is null)
-            return new(false, false, false, [], collection.Reasons);
+            return Disabled(optIn, collection.Reasons);
 
         RuntimeCanaryGateResult gate = RuntimeCanaryGate.Evaluate(
             review,
@@ -66,26 +69,59 @@ public static class RuntimeCanaryBootstrap
             collection.Fingerprint,
             observationEnabled);
         if (!gate.Enabled)
-            return new(false, false, false, [], gate.Reasons);
+            return Disabled(optIn, gate.Reasons);
 
+        RuntimeCanaryStartupFailureInjectionController startupFailureInjection = new(
+            optIn.StartupFailureInjectionScenario,
+            optIn.StartupFailureInjectionBindingId);
         RuntimeCanaryResolutionResult resolution;
         try
         {
-            resolution = RuntimeCanaryTargetResolver.Resolve(gameAssembly, observationManifest, gate.Decisions);
+            resolution = RuntimeCanaryTargetResolver.Resolve(
+                gameAssembly,
+                observationManifest,
+                gate.Decisions,
+                startupFailureInjection);
         }
         catch (Exception exception)
         {
-            return Disabled($"Runtime canary target resolution failed safely: {exception.GetType().Name}.");
+            return Disabled(
+                optIn,
+                [$"Runtime canary target resolution failed safely: {exception.GetType().Name}."],
+                startupFailureInjection.Snapshot());
+        }
+        RuntimeCanaryStartupFailureInjectionSnapshot startupFailureSnapshot =
+            startupFailureInjection.Snapshot();
+        if (startupFailureSnapshot.Requested)
+        {
+            bool expectedFailureObserved =
+                !resolution.Success &&
+                startupFailureSnapshot.Triggered &&
+                startupFailureSnapshot.TriggerCount == 1 &&
+                startupFailureSnapshot.BaselineMatchConfirmed &&
+                resolution.Reasons.Count == 1 &&
+                resolution.Reasons[0].Contains(
+                    RuntimeCanaryStartupFailureScenarios.ReasonMarker,
+                    StringComparison.Ordinal);
+            if (expectedFailureObserved)
+                return Disabled(optIn, resolution.Reasons, startupFailureSnapshot);
+
+            List<string> invalidReasons = resolution.Reasons.ToList();
+            invalidReasons.Add(
+                "Startup failure injection did not produce exactly one reviewed method-signature mismatch; patch installation remains disabled.");
+            return Disabled(optIn, invalidReasons, startupFailureSnapshot);
         }
         if (!resolution.Success)
-            return new(false, false, false, [], resolution.Reasons);
+            return Disabled(optIn, resolution.Reasons, startupFailureSnapshot);
 
         RuntimeCanarySession? session = null;
+        bool patchInstallAttempted = false;
         try
         {
             session = new RuntimeCanarySession(scope, optIn, modAssemblyPath);
             string? sessionId = session.SessionId;
             string? eventFileName = session.EventFileName;
+            patchInstallAttempted = true;
             patcher.Install(session, resolution.Targets);
             session = null;
             List<string> reasons = gate.Reasons.Concat(resolution.Reasons).ToList();
@@ -125,13 +161,20 @@ public static class RuntimeCanaryBootstrap
                 optIn.FailureInjectionScenario,
                 RuntimeCanaryFailureScenarios.IsFailure(optIn.FailureInjectionScenario)
                     ? optIn.FailureInjectionCardId
-                    : null);
+                    : null,
+                RequestedSessionLabel: optIn.SessionLabel,
+                PatchInstallAttempted: patchInstallAttempted,
+                StartupFailureInjection: startupFailureSnapshot);
         }
         catch (Exception exception)
         {
             SafeReset(patcher);
             try { session?.Dispose(); } catch { }
-            return Disabled($"Runtime canary installation failed closed: {exception.GetType().Name}.");
+            return Disabled(
+                optIn,
+                [$"Runtime canary installation failed closed: {exception.GetType().Name}."],
+                startupFailureSnapshot,
+                patchInstallAttempted);
         }
     }
 
@@ -144,6 +187,20 @@ public static class RuntimeCanaryBootstrap
         }
     }
 
-    private static RuntimeCanaryBootstrapResult Disabled(string reason) =>
-        new(false, false, false, [], [reason]);
+    private static RuntimeCanaryBootstrapResult Disabled(
+        RuntimeCanaryOptIn optIn,
+        IReadOnlyList<string> reasons,
+        RuntimeCanaryStartupFailureInjectionSnapshot? startupFailureInjection = null,
+        bool patchInstallAttempted = false) =>
+        new(
+            false,
+            false,
+            false,
+            [],
+            reasons,
+            RequestedSessionLabel: optIn.SessionLabel,
+            PatchInstallAttempted: patchInstallAttempted,
+            StartupFailureInjection: startupFailureInjection ?? new RuntimeCanaryStartupFailureInjectionController(
+                optIn.StartupFailureInjectionScenario,
+                optIn.StartupFailureInjectionBindingId).Snapshot());
 }

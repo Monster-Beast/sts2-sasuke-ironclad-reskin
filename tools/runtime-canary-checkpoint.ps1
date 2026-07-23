@@ -111,6 +111,11 @@ foreach ($fileName in $StatusFileNames) {
         [void]$copiedFiles.Add($fileName)
     }
 }
+$markerSource = Join-Path $resolvedModDirectory $MarkerFileName
+if (Test-Path -LiteralPath $markerSource -PathType Leaf) {
+    Copy-Item -LiteralPath $markerSource -Destination (Join-Path $checkpointDirectory $MarkerFileName) -Force
+    [void]$copiedFiles.Add($MarkerFileName)
+}
 
 $statusPath = Join-Path $resolvedModDirectory "runtime-canary-status.json"
 $eventFileName = $null

@@ -20,17 +20,22 @@ JOURNAL_ANALYZER_PATH = ROOT / "tools/analyze_runtime_canary_journal.py"
 JOURNAL_TEST_PATH = ROOT / "tools/test_runtime_canary_journal.py"
 FAILURE_ANALYZER_PATH = ROOT / "tools/analyze_runtime_canary_failure.py"
 FAILURE_TEST_PATH = ROOT / "tools/test_runtime_canary_failure.py"
+STARTUP_FAILURE_ANALYZER_PATH = ROOT / "tools/analyze_runtime_canary_startup_failure.py"
+STARTUP_FAILURE_TEST_PATH = ROOT / "tools/test_runtime_canary_startup_failure.py"
 MAIN_PATH = ROOT / "SasukeIroncladCode/MainFile.cs"
 LOCAL_FILES_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryLocalFiles.cs"
 SESSION_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanarySession.cs"
 JOURNAL_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryEventJournal.cs"
 FAILURE_CONTROLLER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryFailureInjection.cs"
+STARTUP_FAILURE_CONTROLLER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryStartupFailureInjection.cs"
 FAILURE_DIAGNOSTICS_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryFailureDiagnostics.cs"
 ANCHOR_RESOLVER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimePlayerVisualAnchorResolver.cs"
 SCENE_HOST_PATH = ROOT / "SasukeIroncladCode/Adapters/GodotVisualSceneHost.cs"
 FAILURE_SOURCE_PATH = ROOT / "SasukeIroncladCode/Adapters/IRuntimeCanaryFailureSource.cs"
 SELECTOR_PATH = ROOT / "SasukeIroncladCode/Runtime/CardAnimationSelector.cs"
 GATE_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryGate.cs"
+BOOTSTRAP_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryBootstrap.cs"
+TARGET_RESOLVER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryTargetResolver.cs"
 REPLACEMENT_CONTROLLER_PATH = ROOT / "SasukeIroncladCode/Runtime/RuntimeOriginalVisualReplacementController.cs"
 PLAYBACK_PATH = ROOT / "SasukeIroncladCode/Runtime/CardVisualPlaybackService.cs"
 RUNTIME_CONTRACT_PROJECT_PATH = ROOT / "tools/runtime_contract/SasukeIronclad.RuntimeContract.csproj"
@@ -47,6 +52,7 @@ EXPECTED_LOG_HASHES = {
 EXPECTED_STABILITY_ARCHIVE_HASH = "8b74fc4e9bf0abb6567e68e672a186909f6fe7c7ac5cd51eff47af1960d17026"
 REPLACEMENT_ACK = "public-beta-24251656-local-ironclad-replacement"
 FAILURE_ACK = "public-beta-24251656-local-visual-failure-injection"
+STARTUP_FAILURE_ACK = "public-beta-24251656-local-startup-method-signature-mismatch"
 
 
 def load(path: Path) -> dict:
@@ -190,12 +196,15 @@ def main() -> int:
     session_text = SESSION_PATH.read_text(encoding="utf-8")
     journal_text = JOURNAL_PATH.read_text(encoding="utf-8")
     failure_controller_text = FAILURE_CONTROLLER_PATH.read_text(encoding="utf-8")
+    startup_failure_controller_text = STARTUP_FAILURE_CONTROLLER_PATH.read_text(encoding="utf-8")
     failure_diagnostics_text = FAILURE_DIAGNOSTICS_PATH.read_text(encoding="utf-8")
     resolver_text = ANCHOR_RESOLVER_PATH.read_text(encoding="utf-8")
     host_text = SCENE_HOST_PATH.read_text(encoding="utf-8")
     failure_source_text = FAILURE_SOURCE_PATH.read_text(encoding="utf-8")
     selector_text = SELECTOR_PATH.read_text(encoding="utf-8")
     gate_text = GATE_PATH.read_text(encoding="utf-8")
+    bootstrap_text = BOOTSTRAP_PATH.read_text(encoding="utf-8")
+    target_resolver_text = TARGET_RESOLVER_PATH.read_text(encoding="utf-8")
     replacement_text = REPLACEMENT_CONTROLLER_PATH.read_text(encoding="utf-8")
     playback_text = PLAYBACK_PATH.read_text(encoding="utf-8")
     runtime_contract_text = RUNTIME_CONTRACT_PROJECT_PATH.read_text(encoding="utf-8")
@@ -217,8 +226,10 @@ def main() -> int:
     require("process_count" in checkpoint_text and '"[]"' in checkpoint_text, "checkpoint tool does not record a deterministic empty process list")
     require("event_file" in checkpoint_text and "checkpoint.json" in checkpoint_text, "checkpoint tool does not capture journal identity")
     require("runtime-canary-failure-status.json" in checkpoint_text, "checkpoint does not capture failure status")
+    require("$markerSource" in checkpoint_text and "$MarkerFileName" in checkpoint_text, "checkpoint does not preserve the exact startup opt-in marker")
     require(JOURNAL_ANALYZER_PATH.exists() and JOURNAL_TEST_PATH.exists(), "journal analyzer or regression test is missing")
     require(FAILURE_ANALYZER_PATH.exists() and FAILURE_TEST_PATH.exists(), "failure analyzer or regression test is missing")
+    require(STARTUP_FAILURE_ANALYZER_PATH.exists() and STARTUP_FAILURE_TEST_PATH.exists(), "startup failure analyzer or regression test is missing")
     require("RuntimeCanaryLocalFiles.LoadOptIn" in main_text and "RuntimeCanaryLocalFiles.WriteStatus" in main_text, "canary startup wiring is missing")
     require("events={CanaryStatus.EventFileName" in main_text, "Mod startup log does not report the journal file")
     require("SasukeIronclad.canary.json" in local_text and "runtime-canary-status.json" in local_text, "canary local filenames changed")
@@ -261,6 +272,22 @@ def main() -> int:
     require('["external_impact_sync"] = true' not in host_text, "scene host still forces external impact sync for every card")
     require("RequiresOriginalImpactSync = spec.IsDamageCard && string.Equals" in selector_text, "non-damage timelines can still wait for original damage impacts")
     require(REPLACEMENT_ACK in gate_text and "original visibility value must be captured" in gate_text.lower(), "replacement gate policy is incomplete")
+    require(STARTUP_FAILURE_ACK in script_text and STARTUP_FAILURE_ACK in gate_text, "startup failure acknowledgement changed")
+    require("local_startup_failure_only" in script_text and "local_startup_failure_only" in gate_text, "startup failure mode is not distinct from the visual canary")
+    require("method_signature_mismatch" in script_text and "method_signature_mismatch" in startup_failure_controller_text, "startup signature mismatch scenario is missing")
+    require("Startup failure injection cannot be combined with presentation failure injection" in gate_text, "startup and presentation failures are not mutually exclusive")
+    require("Startup failure injection requires animations-only resolution" in gate_text, "startup failure mode is not restricted to animations-only resolution")
+    require("File.Write" not in startup_failure_controller_text and "File.Move" not in startup_failure_controller_text, "startup failure injection may modify files")
+    baseline_index = target_resolver_text.index("string actualSignature = AuditedMethodBindingResolver.FormatMethodSignature(method);")
+    injection_index = target_resolver_text.index("TryInjectMethodSignatureMismatch")
+    resolve_index = bootstrap_text.index("RuntimeCanaryTargetResolver.Resolve(")
+    startup_return_index = bootstrap_text.index("if (startupFailureSnapshot.Requested)")
+    session_index = bootstrap_text.index("session = new RuntimeCanarySession")
+    install_index = bootstrap_text.index("patcher.Install(session, resolution.Targets)")
+    require(baseline_index < injection_index, "startup mismatch is injected before the real reflected signature is established")
+    require(resolve_index < startup_return_index < session_index < install_index, "startup failure can reach session creation or patch installation")
+    require("PatchInstallAttempted = status.PatchInstallAttempted" in local_text, "startup status does not expose patch-install attempts")
+    require("StartupFailureInjectionBaselineMatchConfirmed" in local_text, "startup status does not preserve baseline-match evidence")
     require("IsValidSessionLabel" in gate_text, "manually edited canary session labels are not validated")
     require("RequiredTargetType = \"MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals\"" in replacement_text, "replacement target type is not exact")
     require("RequiredTargetName = \"Ironclad\"" in replacement_text, "replacement target name is not exact")
@@ -277,7 +304,7 @@ def main() -> int:
         "replacement=true restoration=true unreviewed_fallback=true damage_only_impact_sync=true "
         "impact_retest_passed=true multi_combat_stability=true capture_caveats=true "
         "combined_journal=true deterministic_checkpoint=true failure_injection=true "
-        "failure_scenarios=3 in_memory_only=true production=false"
+        "failure_scenarios=3 startup_fail_closed=true in_memory_only=true production=false"
     )
     return 0
 

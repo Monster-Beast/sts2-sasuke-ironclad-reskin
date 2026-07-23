@@ -17,6 +17,9 @@
     <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeObservationSession.cs" Link="RuntimeObservationSession.cs" />
     <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeObservationBootstrap.cs" Link="RuntimeObservationBootstrap.cs" />
     <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeCanaryFailureInjection.cs" Link="RuntimeCanaryFailureInjection.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeCanaryStartupFailureInjection.cs" Link="RuntimeCanaryStartupFailureInjection.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeCanaryConfiguration.cs" Link="RuntimeCanaryConfiguration.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeCanaryTargetResolver.cs" Link="RuntimeCanaryTargetResolver.cs" />
     <Compile Include="../../SasukeIroncladCode/Adapters/IGameIntegrationInstaller.cs" Link="IGameIntegrationInstaller.cs" />
     <Compile Include="../../SasukeIroncladCode/Adapters/IRuntimeObservationPatcher.cs" Link="IRuntimeObservationPatcher.cs" />
     <Compile Include="../../SasukeIroncladCode/Visuals/GameIntegrationConfiguration.cs" Link="GameIntegrationConfiguration.cs" />

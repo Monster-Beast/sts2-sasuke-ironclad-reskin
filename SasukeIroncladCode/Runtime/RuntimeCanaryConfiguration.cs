@@ -74,6 +74,10 @@ public sealed class RuntimeCanaryOptIn
     [JsonPropertyName("failure_injection_card_id")] public string FailureInjectionCardId { get; init; } = string.Empty;
     [JsonPropertyName("failure_injection_once")] public bool FailureInjectionOnce { get; init; } = true;
     [JsonPropertyName("failure_injection_acknowledgement")] public string FailureInjectionAcknowledgement { get; init; } = string.Empty;
+    [JsonPropertyName("startup_failure_injection_scenario")] public string StartupFailureInjectionScenario { get; init; } = RuntimeCanaryStartupFailureScenarios.None;
+    [JsonPropertyName("startup_failure_injection_binding_id")] public string StartupFailureInjectionBindingId { get; init; } = string.Empty;
+    [JsonPropertyName("startup_failure_injection_once")] public bool StartupFailureInjectionOnce { get; init; } = true;
+    [JsonPropertyName("startup_failure_injection_acknowledgement")] public string StartupFailureInjectionAcknowledgement { get; init; } = string.Empty;
 }
 
 public sealed class CurrentBetaCardScopeMap
@@ -102,8 +106,18 @@ public sealed class RuntimeCanaryStatusDocument
     [JsonPropertyName("titles_enabled")] public bool TitlesEnabled { get; init; }
     [JsonPropertyName("session_id")] public string? SessionId { get; init; }
     [JsonPropertyName("event_file")] public string? EventFile { get; init; }
+    [JsonPropertyName("requested_session_label")] public string? RequestedSessionLabel { get; init; }
+    [JsonPropertyName("patch_install_attempted")] public bool PatchInstallAttempted { get; init; }
     [JsonPropertyName("failure_injection_scenario")] public string FailureInjectionScenario { get; init; } = RuntimeCanaryFailureScenarios.None;
     [JsonPropertyName("failure_injection_card_id")] public string? FailureInjectionCardId { get; init; }
+    [JsonPropertyName("startup_failure_injection_requested")] public bool StartupFailureInjectionRequested { get; init; }
+    [JsonPropertyName("startup_failure_injection_scenario")] public string StartupFailureInjectionScenario { get; init; } = RuntimeCanaryStartupFailureScenarios.None;
+    [JsonPropertyName("startup_failure_injection_binding_id")] public string? StartupFailureInjectionBindingId { get; init; }
+    [JsonPropertyName("startup_failure_injection_armed")] public bool StartupFailureInjectionArmed { get; init; }
+    [JsonPropertyName("startup_failure_injection_triggered")] public bool StartupFailureInjectionTriggered { get; init; }
+    [JsonPropertyName("startup_failure_injection_trigger_count")] public int StartupFailureInjectionTriggerCount { get; init; }
+    [JsonPropertyName("startup_failure_injection_trigger_stage")] public string? StartupFailureInjectionTriggerStage { get; init; }
+    [JsonPropertyName("startup_failure_injection_baseline_match_confirmed")] public bool StartupFailureInjectionBaselineMatchConfirmed { get; init; }
     [JsonPropertyName("patched_binding_ids")] public IReadOnlyList<string> PatchedBindingIds { get; init; } = [];
     [JsonPropertyName("reasons")] public IReadOnlyList<string> Reasons { get; init; } = [];
 }

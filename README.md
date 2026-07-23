@@ -217,6 +217,10 @@ python tools/test_graybox_timelines.py
 python tools/test_demon_form_contract.py
 python tools/test_character_state_contract.py
 python tools/test_runtime_safety_contract.py
+python tools/test_runtime_canary_contract.py
+python tools/test_runtime_canary_journal.py
+python tools/test_runtime_canary_failure.py
+python tools/test_runtime_canary_startup_failure.py
 python tools/test_game_integration_contract.py
 python tools/test_game_integration_startup.py
 python tools/test_latest_beta_guard.py

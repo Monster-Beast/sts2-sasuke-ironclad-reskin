@@ -20,7 +20,8 @@ public static class RuntimeCanaryTargetResolver
     public static RuntimeCanaryResolutionResult Resolve(
         Assembly gameAssembly,
         RuntimeObservationManifestMap manifest,
-        IReadOnlyList<RuntimeCanaryBindingDecision> decisions)
+        IReadOnlyList<RuntimeCanaryBindingDecision> decisions,
+        RuntimeCanaryStartupFailureInjectionController? startupFailureInjection = null)
     {
         ArgumentNullException.ThrowIfNull(gameAssembly);
         ArgumentNullException.ThrowIfNull(manifest);
@@ -90,6 +91,22 @@ public static class RuntimeCanaryTargetResolver
             if (!string.Equals(Normalize(actualSignature), Normalize(decision.MethodSignature), StringComparison.Ordinal))
             {
                 reasons.Add($"Canary binding {decision.BindingId} method signature does not match the reviewed target.");
+                continue;
+            }
+            string comparisonActualSignature = actualSignature;
+            bool startupFailureInjected =
+                startupFailureInjection?.TryInjectMethodSignatureMismatch(
+                    decision.BindingId,
+                    actualSignature,
+                    out comparisonActualSignature) == true;
+            if (!string.Equals(
+                    Normalize(comparisonActualSignature),
+                    Normalize(decision.MethodSignature),
+                    StringComparison.Ordinal))
+            {
+                reasons.Add(startupFailureInjected
+                    ? $"Canary binding {decision.BindingId} method signature does not match the reviewed target ({RuntimeCanaryStartupFailureScenarios.ReasonMarker})."
+                    : $"Canary binding {decision.BindingId} method signature does not match the reviewed target.");
                 continue;
             }
             if (method.IsConstructor || method.IsAbstract || method.ContainsGenericParameters)

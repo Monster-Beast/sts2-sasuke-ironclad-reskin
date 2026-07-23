@@ -51,6 +51,9 @@ public partial class MainFile : Node
             $"[{ModId}] canary enabled={CanaryStatus.Enabled}; " +
             $"animations={CanaryStatus.AnimationsEnabled}; titles={CanaryStatus.TitlesEnabled}; " +
             $"session={CanaryStatus.SessionId ?? "none"}; events={CanaryStatus.EventFileName ?? "none"}; " +
+            $"startup_failure={CanaryStatus.StartupFailureInjection?.Scenario ?? RuntimeCanaryStartupFailureScenarios.None}; " +
+            $"startup_triggered={CanaryStatus.StartupFailureInjection?.Triggered == true}; " +
+            $"patch_install_attempted={CanaryStatus.PatchInstallAttempted}; " +
             $"bindings={string.Join(",", CanaryStatus.PatchedBindingIds)}; " +
             $"reasons={string.Join("; ", CanaryStatus.Reasons)}"
         );

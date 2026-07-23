@@ -14,6 +14,89 @@ internal static class AdditionalSafetyTests
         VerifyBetaBranchAndWorkshopBaseLibDetection();
         VerifyAuditedMethodResolution();
         VerifyFailureInjectionOneShot();
+        VerifyRuntimeCanaryStartupFailureInjection();
+    }
+
+    private static void VerifyRuntimeCanaryStartupFailureInjection()
+    {
+        Assembly assembly = Assembly.GetExecutingAssembly();
+        MethodInfo method = typeof(AdditionalSafetyTests).GetMethod(
+            nameof(AuditedResolverTarget),
+            BindingFlags.Static | BindingFlags.NonPublic
+        ) ?? throw new InvalidOperationException("Canary resolver test method was not found.");
+        string signature = AuditedMethodBindingResolver.FormatMethodSignature(method);
+        string token = $"0x{method.MetadataToken:X8}";
+        RuntimeCanaryBindingDecision decision = new()
+        {
+            BindingId = RuntimeCanaryStartupFailureScenarios.TargetBindingId,
+            Kind = "visual",
+            Status = "approved_for_canary",
+            SelectedTargetId = "fixture.card-visual-request",
+            DeclaringType = method.DeclaringType?.FullName ?? string.Empty,
+            MethodSignature = signature,
+            MetadataToken = token,
+            ObservedInAllSessions = true,
+        };
+        RuntimeObservationManifestMap manifest = new()
+        {
+            SchemaVersion = 1,
+            Fingerprint = new RuntimeObservationFingerprintSpec
+            {
+                ModuleMvid = assembly.ManifestModule.ModuleVersionId.ToString("D"),
+            },
+            Targets =
+            [
+                new RuntimeObservationTargetSpec
+                {
+                    Id = decision.SelectedTargetId,
+                    BindingIds = [decision.BindingId],
+                    DeclaringType = decision.DeclaringType,
+                    MethodSignature = signature,
+                    MetadataToken = token,
+                    Required = true,
+                }
+            ],
+        };
+
+        RuntimeCanaryResolutionResult baseline = RuntimeCanaryTargetResolver.Resolve(
+            assembly,
+            manifest,
+            [decision]);
+        if (!baseline.Success || baseline.Targets.Count != 1 || baseline.Targets[0].Method != method)
+            throw new InvalidOperationException("The unmodified runtime canary baseline did not resolve.");
+
+        RuntimeCanaryStartupFailureInjectionController controller = new(
+            RuntimeCanaryStartupFailureScenarios.MethodSignatureMismatch,
+            RuntimeCanaryStartupFailureScenarios.TargetBindingId);
+        RuntimeCanaryResolutionResult injected = RuntimeCanaryTargetResolver.Resolve(
+            assembly,
+            manifest,
+            [decision],
+            controller);
+        RuntimeCanaryStartupFailureInjectionSnapshot snapshot = controller.Snapshot();
+        string expectedReason =
+            $"Canary binding {RuntimeCanaryStartupFailureScenarios.TargetBindingId} method signature does not match the reviewed target ({RuntimeCanaryStartupFailureScenarios.ReasonMarker}).";
+        if (injected.Success || injected.Targets.Count != 0 ||
+            injected.Reasons.Count != 1 || injected.Reasons[0] != expectedReason)
+        {
+            throw new InvalidOperationException("The startup diagnostic did not fail at the exact signature comparison.");
+        }
+        if (!snapshot.Requested || snapshot.Armed || !snapshot.Triggered ||
+            snapshot.TriggerCount != 1 ||
+            snapshot.TriggerStage != RuntimeCanaryStartupFailureScenarios.TriggerStage ||
+            !snapshot.BaselineMatchConfirmed)
+        {
+            throw new InvalidOperationException("The startup diagnostic snapshot lost one-shot baseline evidence.");
+        }
+
+        string unchanged = signature;
+        if (controller.TryInjectMethodSignatureMismatch(
+                decision.BindingId,
+                signature,
+                out unchanged) || unchanged != signature)
+        {
+            throw new InvalidOperationException("The startup diagnostic triggered more than once.");
+        }
     }
 
     private static void VerifyFailureInjectionOneShot()
