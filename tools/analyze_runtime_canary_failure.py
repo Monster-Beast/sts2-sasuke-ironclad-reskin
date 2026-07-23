@@ -282,12 +282,17 @@ def main() -> int:
         json.dumps(result, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    marker = (
+        "RUNTIME_CANARY_FAILURE_PASS"
+        if result["passed"]
+        else "RUNTIME_CANARY_FAILURE_NOT_PASSED"
+    )
     print(
-        "RUNTIME_CANARY_FAILURE_OK "
-        f"status={result['status']} scenario={result['expected_scenario']} "
+        f"{marker} status={result['status']} "
+        f"scenario={result['expected_scenario']} "
         f"output={output_path.as_posix()}"
     )
-    return 0 if result["status"] != "invalid" else 1
+    return 0 if result["passed"] else 1
 
 
 if __name__ == "__main__":

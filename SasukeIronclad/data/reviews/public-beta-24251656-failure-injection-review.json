@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-07-23T13:28:35.2414427Z",
+  "status": "missing_timeline_passed_forced_playback_trigger_regression_open",
+  "profile_id": "public-beta-24251656-ee45848ff631",
+  "tested_mod_commit": "bc799e83619c9b6ddddadcba039f08693aaafae3",
+  "runtime": {
+    "branch": "public-beta",
+    "steam_build_id": "24251656",
+    "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+    "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+    "baselib_version": "v3.3.8",
+    "installed_mod_dll_sha256": "38df3b83e4cb9014c8d4b98870d48c108af5b85f696c542d947ab31abcce307e",
+    "installed_mod_pck_sha256": "0d13c96dcaa57159826ffa25c45893816977d7f965781a1f172e23061d7a082a"
+  },
+  "source_policy": {
+    "kind": "user_run_privacy_safe_checkpoint_and_analyzer_reviews",
+    "raw_archives_committed": false,
+    "raw_game_logs_committed": false,
+    "contains_absolute_local_paths": false,
+    "review_record_committed": true,
+    "reason": "Generated checkpoints and game logs remain local because they contain machine-specific paths; tracked results retain file names, sizes and SHA-256 digests."
+  },
+  "attempts": [
+    {
+      "session_label": "failure-missing-v338-2",
+      "scenario": "missing_timeline",
+      "target_card_id": "Strike",
+      "target_card_name_zh": "打击",
+      "followup_card_id": "Defend",
+      "followup_card_name_zh": "防御",
+      "analyzer_status": "partial",
+      "passed": false,
+      "event_count": 87,
+      "primary_fault_event_count": 1,
+      "unexpected_hard_failure_count": 0,
+      "closure_mode": "clean_process_checkpoint",
+      "failed_requirements": [
+        "pre_hide_failure"
+      ],
+      "diagnosis": "Bash (痛击) was played before the target Strike (打击), and later combats legitimately reused replacement, so this run could not prove the pre-hide failure assertion.",
+      "archive": {
+        "file_name": "local-failure-canary-failure-missing-v338-2.zip",
+        "size_bytes": 9101,
+        "sha256": "da48d4aa784573383c157f2c1c65b143dd451fd407bdf4c749948e1cd5bbd97b"
+      },
+      "journal": {
+        "file_name": "runtime-canary-failure-missing-v338-2-20260723T130518379Z-6d8fce2e462941779521323d2c2d28a1.jsonl",
+        "size_bytes": 34392,
+        "sha256": "a7562ca6019f86eccd84e69011d71a1475dca1a4258ce789ccd2dfc97a8edbef"
+      },
+      "analyzer_review": {
+        "size_bytes": 3647,
+        "sha256": "abf7ee65a1ef9785e05e51272552cd4679b086663431d018a06ab23c49bdd434"
+      }
+    },
+    {
+      "session_label": "failure-missing-v338-3",
+      "scenario": "missing_timeline",
+      "target_card_id": "Strike",
+      "target_card_name_zh": "打击",
+      "followup_card_id": "Defend",
+      "followup_card_name_zh": "防御",
+      "user_visual_verdict_zh": "已退出，打击和防御画面正常",
+      "analyzer_status": "passed",
+      "passed": true,
+      "event_count": 10,
+      "primary_fault_event_count": 1,
+      "unexpected_hard_failure_count": 0,
+      "closure_mode": "clean_process_checkpoint",
+      "failed_requirements": [],
+      "archive": {
+        "file_name": "local-failure-canary-failure-missing-v338-3.zip",
+        "size_bytes": 7394,
+        "sha256": "c35df8479b3e97d795b3dbe2436faf81b5434f2512070fad9a794b663026773e"
+      },
+      "journal": {
+        "file_name": "runtime-canary-failure-missing-v338-3-20260723T131757188Z-eda2bffa5b20490f83d6777615719e20.jsonl",
+        "size_bytes": 3959,
+        "sha256": "7fc44771ae81071560909fff70c2facbae286cd3846959359f8619649318854b"
+      },
+      "analyzer_review": {
+        "size_bytes": 3647,
+        "sha256": "50a16883237c9028dd434263e2bca251717bb3025531d648962f77ce06858931"
+      }
+    },
+    {
+      "session_label": "failure-playback-v338-1",
+      "scenario": "forced_playback_failure",
+      "target_card_id": "Strike",
+      "target_card_name_zh": "打击",
+      "followup_card_id": "Defend",
+      "followup_card_name_zh": "防御",
+      "user_visual_verdict_zh": "已退出，打出防御佐助贴图还在",
+      "analyzer_status": "partial",
+      "passed": false,
+      "event_count": 12,
+      "primary_fault_event_count": 0,
+      "unexpected_hard_failure_count": 0,
+      "closure_mode": "clean_process_checkpoint",
+      "failed_requirements": [
+        "expected_hard_event_present",
+        "scenario_reason_present",
+        "replacement_disabled_event",
+        "replacement_restored_after_fault",
+        "one_shot_triggered",
+        "recovery_confirmed",
+        "anchor_cleared",
+        "overlay_hidden",
+        "combat_failed_closed",
+        "post_hide_restoration"
+      ],
+      "diagnosis": "The post-hide failure remained armed and was never consumed. Both Strike (打击) and Defend (防御) completed Sasuke playback while replacement remained active.",
+      "archive": {
+        "file_name": "local-failure-canary-failure-playback-v338-1.zip",
+        "size_bytes": 7788,
+        "sha256": "d3233a280eeed350bff9d795e7b359704aebcca71d08535ecdc183e5360e69ee"
+      },
+      "journal": {
+        "file_name": "runtime-canary-failure-playback-v338-1-20260723T132205724Z-9c59b3c3d85342eebfe3f944287732f0.jsonl",
+        "size_bytes": 4740,
+        "sha256": "a6b302a7d611522ad10d39db06983456188d118d419cb01159affbfb71bc6080"
+      },
+      "analyzer_review": {
+        "size_bytes": 2486,
+        "sha256": "94a08e86977f1a909aed9f6c2834272fbc248b6ab830810c5c7727b7848c14a4"
+      },
+      "local_game_log": {
+        "file_name": "godot.log",
+        "size_bytes": 217158,
+        "sha256": "dd5cfae48f7f7984dc5f35a1959a556aca3981af2e73a4554d462895486a2851",
+        "argument_exception_count": 51,
+        "host_dispatch_frame_count": 45,
+        "sanitized_finding": "Godot-to-C# host callbacks repeatedly encountered a MonoMod JIT ArgumentException, so a safety path that depended only on _Process could not consume the pending fault."
+      }
+    }
+  ],
+  "conclusions": {
+    "missing_timeline_passed": true,
+    "forced_playback_failure_passed": false,
+    "anchor_invalidation_passed": false,
+    "forced_playback_failure_regression_open": true,
+    "production_profile_ready": false
+  },
+  "safety": {
+    "exact_build_only": true,
+    "explicit_local_opt_in_required": true,
+    "postfix_only": true,
+    "affects_gameplay": false,
+    "production_contract_promoted": false,
+    "raw_game_or_anime_assets_added": false
+  }
+}

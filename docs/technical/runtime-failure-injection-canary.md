@@ -12,7 +12,7 @@ branch          public-beta
 Steam buildid   24251656
 sts2.dll SHA    ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa
 MVID            a49d3537-5a42-4dcd-9877-663e394f2b44
-BaseLib         v3.3.7
+BaseLib         v3.3.8
 ```
 
 ## Safety boundary
@@ -141,8 +141,17 @@ For each scenario:
 6. play another reviewed card and verify the combat remains on original
    presentation rather than hiding the Ironclad again;
 7. finish or leave the combat normally;
-8. exit the game;
+8. exit the game without entering another combat;
 9. save one clean-process checkpoint.
+
+For `missing_timeline`, the selected target card must be the first card played
+in the fresh game process. Do not play another reviewed card first: a successful
+earlier timeline is allowed to hide the original Ironclad and therefore cannot
+prove the required pre-hide failure path. If the target card is not in the
+opening hand, end the turn without playing a card and wait for it. After the
+fault and one same-combat fallback card, leave or finish that combat and exit the
+game; a later combat may legitimately use replacement again and would make the
+process-level snapshot unsuitable for this assertion.
 
 The expected visual difference is:
 
@@ -222,6 +231,43 @@ Change `--expected-scenario` for the other two runs. A pass requires:
 - anchor and overlay cleared;
 - replacement disabled for the current combat;
 - runtime `session_stop` or a clean-process checkpoint.
+
+The analyzer succeeds only when all requirements pass. Confirm all three signals:
+
+```text
+process exit code                         0
+console marker                            RUNTIME_CANARY_FAILURE_PASS status=passed
+runtime-canary-failure-review.json        "status": "passed", "passed": true
+```
+
+`partial` and `invalid` evidence both print
+`RUNTIME_CANARY_FAILURE_NOT_PASSED` and return a non-zero exit code. Keep the
+generated review for diagnosis, but do not count that run as accepted evidence.
+
+## Reviewed real-game results
+
+The tracked, path-redacted result record is stored at:
+
+```text
+SasukeIronclad/data/reviews/public-beta-24251656-failure-injection-review.json
+```
+
+The raw checkpoints and game logs remain local because they contain
+machine-specific paths. The tracked record preserves their file names, sizes and
+SHA-256 digests together with each analyzer result and the user's visual verdict.
+
+Current exact-build result:
+
+- `missing_timeline` passed after one partial run caused by playing Bash before
+  the target Strike and continuing into later combats;
+- `forced_playback_failure` did not trigger in the first real-game run: Strike
+  and the follow-up Defend both completed Sasuke playback, while the diagnostic
+  remained armed;
+- the failed playback run's local game log recorded repeated MonoMod JIT
+  `ArgumentException` frames at the Godot-to-C# host dispatcher, so the
+  post-hide safety fault may not rely solely on `_Process` to consume its pending
+  trigger;
+- `anchor_invalidation` remains untested and must not be counted as passed.
 
 ## Remaining boundary
 

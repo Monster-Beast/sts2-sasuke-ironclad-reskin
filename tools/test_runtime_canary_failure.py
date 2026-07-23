@@ -2,12 +2,46 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 from analyze_runtime_canary_failure import analyze_failure
 
 ROOT = Path(__file__).resolve().parents[1]
+ANALYZER = ROOT / "tools/analyze_runtime_canary_failure.py"
+REVIEW = (
+    ROOT
+    / "SasukeIronclad/data/reviews"
+    / "public-beta-24251656-failure-injection-review.json"
+)
+
+
+def run_analyzer_cli(
+    journal: Path,
+    checkpoint_root: Path,
+    scenario: str,
+    output: Path,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            str(ANALYZER),
+            "--input",
+            str(journal),
+            "--checkpoint-root",
+            str(checkpoint_root),
+            "--expected-scenario",
+            scenario,
+            "--output",
+            str(output),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def write_events(path: Path, scenario: str, *, unexpected: bool = False) -> None:
@@ -209,6 +243,14 @@ def main() -> int:
             assert result["passed"] is True
             assert result["primary_fault_event_count"] == 1
             assert result["status_requirements"]["recovery_confirmed"] is True
+            completed = run_analyzer_cli(
+                journal,
+                checkpoint_root,
+                scenario,
+                root / f"{scenario}-review",
+            )
+            assert completed.returncode == 0, completed
+            assert "RUNTIME_CANARY_FAILURE_PASS status=passed" in completed.stdout
 
         unexpected_journal = root / "unexpected.jsonl"
         unexpected_root = root / "unexpected-evidence"
@@ -225,6 +267,17 @@ def main() -> int:
         )
         assert unexpected["status"] == "partial", unexpected
         assert unexpected["unexpected_hard_failures"]
+        unexpected_completed = run_analyzer_cli(
+            unexpected_journal,
+            unexpected_root,
+            "forced_playback_failure",
+            root / "unexpected-review",
+        )
+        assert unexpected_completed.returncode == 1, unexpected_completed
+        assert (
+            "RUNTIME_CANARY_FAILURE_NOT_PASSED status=partial"
+            in unexpected_completed.stdout
+        )
 
         unrecovered_journal = root / "unrecovered.jsonl"
         unrecovered_root = root / "unrecovered-evidence"
@@ -242,6 +295,28 @@ def main() -> int:
         )
         assert unrecovered["status"] == "partial", unrecovered
         assert unrecovered["status_requirements"]["recovery_confirmed"] is False
+
+    review = json.loads(REVIEW.read_text(encoding="utf-8"))
+    assert review["schema_version"] == 1
+    assert (
+        review["status"]
+        == "missing_timeline_passed_forced_playback_trigger_regression_open"
+    )
+    attempts = {
+        attempt["session_label"]: attempt for attempt in review["attempts"]
+    }
+    assert attempts["failure-missing-v338-2"]["analyzer_status"] == "partial"
+    assert attempts["failure-missing-v338-2"]["passed"] is False
+    assert attempts["failure-missing-v338-3"]["analyzer_status"] == "passed"
+    assert attempts["failure-missing-v338-3"]["passed"] is True
+    failed_playback = attempts["failure-playback-v338-1"]
+    assert failed_playback["analyzer_status"] == "partial"
+    assert failed_playback["primary_fault_event_count"] == 0
+    assert failed_playback["passed"] is False
+    assert review["conclusions"]["forced_playback_failure_regression_open"] is True
+    assert review["conclusions"]["production_profile_ready"] is False
+    assert review["source_policy"]["raw_game_logs_committed"] is False
+    assert review["safety"]["affects_gameplay"] is False
 
     control_source = (ROOT / "tools/runtime-canary.ps1").read_text(encoding="ascii")
     checkpoint_source = (ROOT / "tools/runtime-canary-checkpoint.ps1").read_text(encoding="ascii")

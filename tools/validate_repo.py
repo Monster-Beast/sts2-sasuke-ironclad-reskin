@@ -210,7 +210,15 @@ def main():
         die('Godot export may include local audit or runtime evidence')
 
     forbidden={'.pck','.dll','.atlas','.skel','.ogg','.mp3','.ttf','.otf'}
-    bad=[str(p.relative_to(ROOT)) for p in ROOT.rglob('*') if p.is_file() and '.git' not in p.parts and p.suffix.lower() in forbidden]
+    generated_dirs={'.git','.godot','bin','obj','audit-output'}
+    bad=[]
+    for p in ROOT.rglob('*'):
+        if not p.is_file() or p.suffix.lower() not in forbidden:
+            continue
+        relative=p.relative_to(ROOT)
+        if generated_dirs.intersection(relative.parts[:-1]):
+            continue
+        bad.append(str(relative))
     if bad: die('forbidden binary/extracted assets: '+', '.join(bad))
     damage_count=sum(1 for card in cards['cards'] if card['is_damage_card'])
     bespoke_count=sum(1 for animation in card_animations['animations'] if animation['animation_mode']=='bespoke')
