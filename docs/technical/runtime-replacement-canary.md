@@ -196,11 +196,10 @@ contradict the runtime transition sequence or the user's visual verdict.
 
 This replacement canary is not a production release because it still needs:
 
-- combined title-and-animation presentation verification;
 - multiplayer local-player-only verification;
 - different resolutions and UI scales;
 - multi-Mod visibility ownership checks;
-- missing-resource and forced playback-failure tests;
+- startup-level fail-closed evidence for a reviewed method-signature mismatch;
 - targeted Demon Form removal and character-state evidence;
 - a separate audit and profile for the default public game branch;
 - broader reviewed card coverage for the current Beta;

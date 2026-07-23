@@ -55,11 +55,11 @@
 - [x] 组合模式在真实游戏中完成 `card_art`、`hand`、`deck_list` 标题与 Strike/Defend 动画共存验证；
 - [x] 组合模式聚焦验收完成 `reward`、`compendium`、`tooltip`，六种标题显示面全部通过；
 - [x] 聚焦组合运行覆盖 3 场战斗、170 个连续事件、6 张动作牌且无硬故障；
-- [x] 使用 clean-process checkpoint 补足运行时未落盘 `session_stop` 的关闭证据。
+- [x] 使用 clean-process checkpoint 补足运行时未落盘 `session_stop` 的关闭证据；
+- [x] `missing_timeline`、`forced_playback_failure`、`anchor_invalidation` 三类故障恢复实机验收。
 
 待在真实游戏电脑完成：
 
-- [ ] `missing_timeline`、`forced_playback_failure`、`anchor_invalidation` 三类故障恢复实机验收；
 - [ ] 完整 Ironclad 卡池、多人卡、衍生卡和变化卡 ID；
 - [ ] 战士头像、选人立绘及非战斗人物场景锚点；
 - [ ] Demon Form 精确 Form 移除事件；
@@ -90,11 +90,11 @@
 - [x] 组合标题/动画事件日志及自动分析工具；
 - [x] 检查点进程查询、游戏进程计数、日志尾事件和外部关闭证据；
 - [x] 组合模式六种标题显示面与多场动作播放真实游戏验收；
-- [x] 三类一次性内存故障注入、恢复状态文件、检查点和自动分析器。
+- [x] 三类一次性内存故障注入、恢复状态文件、检查点和自动分析器；
+- [x] 三类故障注入的真实游戏恢复证据。
 
 待完成：
 
-- [ ] 三类故障注入的真实游戏恢复证据；
 - [ ] 签名不匹配时的独立启动级 fail-closed 实机证据；
 - [ ] 多人本地/远端人物严格隔离回归；
 - [ ] 多 Mod 标题标签和人物可见性所有权回归；
