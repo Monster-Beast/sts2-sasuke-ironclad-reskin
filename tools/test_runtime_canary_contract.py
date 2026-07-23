@@ -9,6 +9,7 @@ REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-runtime-b
 CALIBRATION_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-anchor-calibration.json"
 REPLACEMENT_REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-replacement-canary-review.json"
 STABILITY_REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-multi-combat-stability-review.json"
+RESOLUTION_UI_REVIEW_PATH = ROOT / "SasukeIronclad/data/reviews/public-beta-24251656-resolution-ui-review.json"
 ANIMATION_MANIFEST_PATH = ROOT / "SasukeIronclad/data/card_animation_manifest.json"
 MANIFEST_PATH = ROOT / "SasukeIronclad/data/runtime_observation_targets.json"
 CONTRACT_PATH = ROOT / "SasukeIronclad/data/game_integration_contract.json"
@@ -51,6 +52,7 @@ EXPECTED_LOG_HASHES = {
     "97f411fa0761bbd9dc644227477c1c3ac19ea354eabb0547ea6471ec33ffbf18",
 }
 EXPECTED_STABILITY_ARCHIVE_HASH = "8b74fc4e9bf0abb6567e68e672a186909f6fe7c7ac5cd51eff47af1960d17026"
+EXPECTED_RESOLUTION_UI_ARCHIVE_HASH = "060c87dba25f004dcc5b618f953ac61a7d2ed5cd1d8ebfeef78e9dce9ad5cf05"
 REPLACEMENT_ACK = "public-beta-24251656-local-ironclad-replacement"
 FAILURE_ACK = "public-beta-24251656-local-visual-failure-injection"
 STARTUP_FAILURE_ACK = "public-beta-24251656-local-startup-method-signature-mismatch"
@@ -70,6 +72,7 @@ def main() -> int:
     calibration = load(CALIBRATION_PATH)
     replacement_review = load(REPLACEMENT_REVIEW_PATH)
     stability_review = load(STABILITY_REVIEW_PATH)
+    resolution_ui_review = load(RESOLUTION_UI_REVIEW_PATH)
     animation_manifest = load(ANIMATION_MANIFEST_PATH)
     manifest = load(MANIFEST_PATH)
     contract = load(CONTRACT_PATH)
@@ -177,6 +180,33 @@ def main() -> int:
         require(stability_conclusions[key] is True, f"stability conclusion is not passed: {key}")
     require(stability_conclusions["production_profile_ready"] is False, "stability review promoted production")
     require(len(stability_review["capture_caveats"]) >= 4, "checkpoint capture caveats were discarded")
+
+    require(resolution_ui_review["schema_version"] == 1 and resolution_ui_review["status"] == "passed", "resolution/UI review is not passed")
+    require(resolution_ui_review["profile_id"] == review["profile_id"], "resolution/UI review profile mismatch")
+    resolution_attempts = resolution_ui_review["attempts"]
+    require(len(resolution_attempts) == 3, "resolution/UI attempt history changed")
+    require(resolution_attempts[0]["menu_cleanup_passed"] is False, "initial 4K menu cleanup regression was discarded")
+    require(resolution_attempts[1]["passed"] is True and resolution_attempts[1]["window_width"] == 3840 and resolution_attempts[1]["window_height"] == 2160, "4K fullscreen retest evidence changed")
+    latest_resolution_attempt = resolution_attempts[2]
+    require(latest_resolution_attempt["passed"] is True and latest_resolution_attempt["display_mode"] == "windowed", "1080P windowed attempt is not passed")
+    require((latest_resolution_attempt["window_width"], latest_resolution_attempt["window_height"]) == (1920, 1080), "1080P window dimensions changed")
+    require([item["card_id"] for item in latest_resolution_attempt["cards_played"]] == ["Strike", "Defend"], "resolution/UI card sequence changed")
+    require(latest_resolution_attempt["menu_cleanup_passed"] is True and latest_resolution_attempt["scene_exit_watchdog_log_count"] == 1, "1080P menu cleanup evidence changed")
+    require(latest_resolution_attempt["archive"]["sha256"] == EXPECTED_RESOLUTION_UI_ARCHIVE_HASH, "1080P evidence archive digest changed")
+    resolution_conclusions = resolution_ui_review["conclusions"]
+    for key in [
+        "4k_fullscreen_alignment_passed",
+        "4k_fullscreen_title_display_passed",
+        "4k_fullscreen_menu_cleanup_passed",
+        "1080p_windowed_alignment_passed",
+        "1080p_windowed_title_display_passed",
+        "1080p_windowed_menu_cleanup_passed",
+        "scene_exit_watchdog_verified",
+        "resolution_ui_matrix_passed",
+    ]:
+        require(resolution_conclusions[key] is True, f"resolution/UI conclusion is not passed: {key}")
+    require(resolution_conclusions["production_profile_ready"] is False, "resolution/UI evidence promoted production")
+    require(resolution_ui_review["safety"]["affects_gameplay"] is False, "resolution/UI review changed gameplay scope")
 
     animations = animation_manifest["animations"]
     require(sum(1 for item in animations if item["is_damage_card"]) == 8, "damage-card animation inventory changed")

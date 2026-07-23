@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-07-23T14:41:18.3684529+00:00",
-  "status": "4k_passed_1080p_pending",
+  "generated_at_utc": "2026-07-23T14:47:17.1463510+00:00",
+  "status": "passed",
   "profile_id": "public-beta-24251656-ee45848ff631",
   "tested_mod_commit": "2fc7463b79b45b42bc14b02c58c83743fe48ef99",
   "runtime": {
@@ -176,15 +176,96 @@
         "host_dispatch_frame_count": 27
       },
       "resolution": "A Godot-side tree_exiting watchdog released and hid the runtime visuals without depending on CombatRoom.OnCombatEnded or the failing C# per-frame dispatcher."
+    },
+    {
+      "session_label": "resolution-1080p-v338-1",
+      "tested_mod_commit": "2fc7463b79b45b42bc14b02c58c83743fe48ef99",
+      "display_mode": "windowed",
+      "aspect_ratio": "sixteen_by_nine",
+      "window_width": 1920,
+      "window_height": 1080,
+      "display_dpi": 144,
+      "display_scale": 1,
+      "cards_played": [
+        {
+          "card_id": "Strike",
+          "card_name_zh": "打击"
+        },
+        {
+          "card_id": "Defend",
+          "card_name_zh": "防御"
+        }
+      ],
+      "user_visual_verdict_zh": "已退出，1080P下打击和防御正常，主菜单没有佐助",
+      "visual_alignment_passed": true,
+      "title_display_passed": true,
+      "menu_cleanup_passed": true,
+      "scene_exit_watchdog_log_count": 1,
+      "analyzer_status": "partial",
+      "passed": true,
+      "event_count": 16,
+      "combat_ended_event_count": 0,
+      "session_stop_event_count": 0,
+      "closure_mode": "clean_process_checkpoint",
+      "archive": {
+        "file_name": "local-resolution-ui-resolution-1080p-v338-1.zip",
+        "size_bytes": 24830,
+        "sha256": "060c87dba25f004dcc5b618f953ac61a7d2ed5cd1d8ebfeef78e9dce9ad5cf05"
+      },
+      "journal": {
+        "file_name": "runtime-canary-resolution-1080p-v338-1-20260723T144412091Z-0964b7eacc7b4f93b0cb2167c5e6bfde.jsonl",
+        "size_bytes": 6351,
+        "sha256": "c1c0750d5c087fd0cd2de48a6a5fa40e3497af4a77ddf322e04a68132959c4f7"
+      },
+      "checkpoint": {
+        "file_name": "checkpoint.json",
+        "size_bytes": 1244,
+        "sha256": "f3dfa1b1867e04eccbea6ace8371b61b3b0a194ced7dee638ec4e517a8208f55",
+        "process_query_succeeded": true,
+        "game_process_count": 0
+      },
+      "analyzer_review": {
+        "file_name": "runtime-canary-journal-review.json",
+        "size_bytes": 2964,
+        "sha256": "50cf0bf586fa090cd3ebe0bc87448fdb433bb77c01c243afca6c787d511a8573",
+        "failed_requirements": [
+          "combat_ended"
+        ]
+      },
+      "anchor_status": {
+        "size_bytes": 703,
+        "sha256": "63044c335d376c1d78b476df249dde63f5fde71ab7feb7d7631377525c82662e",
+        "managed_status_stale_after_gdscript_cleanup": true,
+        "candidate_count": 2,
+        "local_player_reference_count": 1
+      },
+      "replacement_status": {
+        "size_bytes": 812,
+        "sha256": "798a23eae1720a0adf96cecb46a2e236025aa73d96f730052ed0bd54ef45b328",
+        "managed_status_stale_after_gdscript_cleanup": true
+      },
+      "local_game_log": {
+        "file_name": "godot.log",
+        "size_bytes": 306688,
+        "sha256": "77dfa33381f9e4a76b593fa0b8ca23869ee0c8c3e809dbcd7e28405876b9d58d",
+        "scene_exit_watchdog_log_count": 1,
+        "argument_exception_count": 99,
+        "host_dispatch_frame_count": 92,
+        "windowed_1920x1080_confirmed": true
+      },
+      "resolution": "The existing Godot-side tree_exiting watchdog also released and hid the runtime visuals in 1920x1080 windowed mode."
     }
   ],
   "conclusions": {
     "4k_fullscreen_alignment_passed": true,
     "4k_fullscreen_title_display_passed": true,
     "4k_fullscreen_menu_cleanup_passed": true,
+    "1080p_windowed_alignment_passed": true,
+    "1080p_windowed_title_display_passed": true,
+    "1080p_windowed_menu_cleanup_passed": true,
     "scene_exit_watchdog_verified": true,
     "menu_cleanup_regression_open": false,
-    "resolution_ui_matrix_passed": false,
+    "resolution_ui_matrix_passed": true,
     "production_profile_ready": false
   },
   "safety": {
