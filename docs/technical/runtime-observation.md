@@ -49,7 +49,7 @@ The checked-in manifest is restricted to:
 ```text
 branch       public-beta
 Steam build  24251656
-BaseLib      v3.3.7
+BaseLib      v3.3.8
 profile      public-beta-24251656-ee45848ff631
 ```
 

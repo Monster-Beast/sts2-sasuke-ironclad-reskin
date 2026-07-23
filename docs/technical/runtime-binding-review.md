@@ -8,12 +8,12 @@ This review is bound to the exact installed runtime below:
 - Steam build: `24251656`
 - `sts2.dll` SHA-256: `ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa`
 - module MVID: `a49d3537-5a42-4dcd-9877-663e394f2b44`
-- BaseLib: `v3.3.7`
+- BaseLib: `v3.3.8`
 
 The source evidence consists of two independent real-game sessions:
 
-- run 1: 4,279 events, SHA-256 `338d85a75625876ffdaa8c29fc3452aacc2c48b35fce6e1d0153e66869b4a5b6`
-- run 2: 6,109 events, SHA-256 `bd22300d335cb6292051f0bb6d54e9e77837d5926a7b94c049bd001eb35f9392`
+- run 1: 8,977 events, SHA-256 `c7d6f7dbe679ec57c70de9a36eb3f009565992ef4f7a253dfd882c01e4e6e24f`
+- run 2: 9,319 events, SHA-256 `97f411fa0761bbd9dc644227477c1c3ac19ea354eabb0547ea6471ec33ffbf18`
 
 Both sessions have balanced enter/return pairs, zero open calls and no analysis errors. Neither session contains a final `session_stop` record, so that warning remains visible and is not treated as proof of a clean shutdown.
 

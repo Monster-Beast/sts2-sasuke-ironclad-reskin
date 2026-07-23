@@ -41,8 +41,8 @@ EXPECTED_APPROVED = {
 }
 EXPECTED_BLOCKED = {"form_removed", "character_state"}
 EXPECTED_LOG_HASHES = {
-    "338d85a75625876ffdaa8c29fc3452aacc2c48b35fce6e1d0153e66869b4a5b6",
-    "bd22300d335cb6292051f0bb6d54e9e77837d5926a7b94c049bd001eb35f9392",
+    "c7d6f7dbe679ec57c70de9a36eb3f009565992ef4f7a253dfd882c01e4e6e24f",
+    "97f411fa0761bbd9dc644227477c1c3ac19ea354eabb0547ea6471ec33ffbf18",
 }
 EXPECTED_STABILITY_ARCHIVE_HASH = "8b74fc4e9bf0abb6567e68e672a186909f6fe7c7ac5cd51eff47af1960d17026"
 REPLACEMENT_ACK = "public-beta-24251656-local-ironclad-replacement"
@@ -76,7 +76,7 @@ def main() -> int:
     require(review["runtime"]["module_mvid"] == manifest["fingerprint"]["module_mvid"], "MVID mismatch")
     require(review["runtime"]["baselib_version"] == manifest["fingerprint"]["baselib_version"], "BaseLib mismatch")
     require({item["sha256"] for item in review["source"]["logs"]} == EXPECTED_LOG_HASHES, "runtime log digest set changed")
-    require(review["quality"]["event_counts"] == [4279, 6109], "reviewed event counts changed")
+    require(review["quality"]["event_counts"] == [8977, 9319], "reviewed event counts changed")
     require(review["quality"]["balanced_call_pairs"] is True and review["quality"]["errors"] == [], "runtime evidence is invalid")
 
     decisions = {item["binding_id"]: item for item in review["decisions"]}
@@ -272,7 +272,7 @@ def main() -> int:
     require("Sts2ModdingStubs.cs" in runtime_contract_text, "runtime contract does not compile the STS2 Mod stubs")
 
     print(
-        "RUNTIME_CANARY_CONTRACT_OK sessions=2 events=10388 approved=10 blocked=2 "
+        "RUNTIME_CANARY_CONTRACT_OK sessions=2 events=18296 approved=10 blocked=2 "
         "explicit_opt_in=true anchor=true candidate_counts=2,3 calibration=1.2,0,-150 "
         "replacement=true restoration=true unreviewed_fallback=true damage_only_impact_sync=true "
         "impact_retest_passed=true multi_combat_stability=true capture_caveats=true "

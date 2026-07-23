@@ -30,8 +30,8 @@ EXPECTED_CANARY_BINDINGS = {
 }
 EXPECTED_TARGETED_BINDINGS = {"form_removed", "character_state"}
 EXPECTED_RUNTIME_LOG_SHA256 = {
-    "338d85a75625876ffdaa8c29fc3452aacc2c48b35fce6e1d0153e66869b4a5b6",
-    "bd22300d335cb6292051f0bb6d54e9e77837d5926a7b94c049bd001eb35f9392",
+    "c7d6f7dbe679ec57c70de9a36eb3f009565992ef4f7a253dfd882c01e4e6e24f",
+    "97f411fa0761bbd9dc644227477c1c3ac19ea354eabb0547ea6471ec33ffbf18",
 }
 
 
@@ -133,14 +133,14 @@ def main() -> int:
         require(binding_review["runtime"][key] == manifest_fingerprint[key], f"binding review fingerprint mismatch: {key}")
     require(
         binding_review["source"]["runtime_review_sha256"]
-        == "8eaf9869c1c6f3ceca0ee33c94569951a478e1e16550107261eca1f7bc99fe6f",
+        == "2fa4d6c86be2510fdf186dde9d6d799b757601d85c163d379658ef2b0f828c0a",
         "uploaded runtime review digest changed",
     )
     require(
         {item["sha256"] for item in binding_review["source"]["logs"]} == EXPECTED_RUNTIME_LOG_SHA256,
         "runtime log digest set changed",
     )
-    require(binding_review["quality"]["event_counts"] == [4279, 6109], "reviewed event counts changed")
+    require(binding_review["quality"]["event_counts"] == [8977, 9319], "reviewed event counts changed")
     require(binding_review["quality"]["balanced_call_pairs"] is True, "runtime calls are not balanced")
     require(binding_review["quality"]["errors"] == [], "runtime review contains errors")
     require(binding_review["policy"]["production_contract_remains_disabled"] is True, "review enabled production")

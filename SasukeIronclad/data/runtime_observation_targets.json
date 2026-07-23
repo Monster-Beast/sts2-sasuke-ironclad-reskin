@@ -8,14 +8,14 @@
     "steam_build_id": "24251656",
     "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
     "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
-    "baselib_version": "v3.3.7",
-    "baselib_manifest_sha256": "e74480e29a3a23300002fffe4d53b1a08ad545b690bd34f157b1cd315ef65064"
+    "baselib_version": "v3.3.8",
+    "baselib_manifest_sha256": "a18ab523da25e146f384a6989eddccc8230d00556b30d3576910c41fa19ce876"
   },
   "beta_attestation": {
     "status": "verified",
-    "checked_at_utc": "2026-07-21T08:19:47.960412+00:00",
+    "checked_at_utc": "2026-07-23T01:33:53.102829+00:00",
     "source": "steamcmd_app_info_print",
-    "steamcmd_output_sha256": "e5c0751c8f1d688eff27af1fa6cc4e1f469d8dfa88dab3ae152e2effb51b9bcf",
+    "steamcmd_output_sha256": "6bf18e453f27e9fbac1443982ab09d4c17b46bf7da28406edadc92f9d2528886",
     "max_age_hours": 72
   },
   "policy": {
