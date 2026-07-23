@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-07-23T14:32:28.8564894+00:00",
+  "status": "4k_menu_cleanup_regression_open",
+  "profile_id": "public-beta-24251656-ee45848ff631",
+  "tested_mod_commit": "2cb78fa2daba4c8d05aad5a645f42baa9a851fb6",
+  "runtime": {
+    "branch": "public-beta",
+    "steam_build_id": "24251656",
+    "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+    "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+    "baselib_version": "v3.3.8",
+    "installed_mod_dll_sha256": "94f480873af5d8f8e4f73806e8d6aeaeb37768d8bdc0f30fee9912556eb28224",
+    "installed_mod_pck_sha256": "34ea6e00c949131f300c9fc3e8aae94a3faa5c50af17e0f5211a1e74cfbea563"
+  },
+  "source_policy": {
+    "kind": "user_run_privacy_safe_checkpoint_and_analyzer_review",
+    "raw_archive_committed": false,
+    "raw_game_log_committed": false,
+    "contains_absolute_local_paths": false,
+    "review_record_committed": true
+  },
+  "attempts": [
+    {
+      "session_label": "resolution-4k-v338-1",
+      "display_mode": "fullscreen",
+      "aspect_ratio": "sixteen_by_nine",
+      "window_width": 3840,
+      "window_height": 2160,
+      "display_dpi": 144,
+      "display_scale": 1,
+      "cards_played": [
+        {
+          "card_id": "Strike",
+          "card_name_zh": "打击"
+        },
+        {
+          "card_id": "Defend",
+          "card_name_zh": "防御"
+        }
+      ],
+      "user_visual_verdict_zh": "已退出，4K下打击和防御位置正常，卡名正常。但是退出的时候佐助还在主界面菜单中",
+      "visual_alignment_passed": true,
+      "title_display_passed": true,
+      "menu_cleanup_passed": false,
+      "analyzer_status": "partial",
+      "passed": false,
+      "event_count": 23,
+      "combat_ended_event_count": 0,
+      "session_stop_event_count": 0,
+      "closure_mode": "clean_process_checkpoint",
+      "archive": {
+        "file_name": "local-resolution-ui-resolution-4k-v338-1.zip",
+        "size_bytes": 21900,
+        "sha256": "c739ca8ebc043dc9c5fd8213945a6f42b2b0abff7e426bb663f13f2382824ca2"
+      },
+      "journal": {
+        "file_name": "runtime-canary-resolution-4k-v338-1-20260723T142735751Z-8cc7c38571c34f62b42520b70804494d.jsonl",
+        "size_bytes": 9060,
+        "sha256": "a92de4bbcb7ce6acaee574000a4365ef88debd025895ad9f21e3c5103be4a977"
+      },
+      "checkpoint": {
+        "file_name": "checkpoint.json",
+        "size_bytes": 1227,
+        "sha256": "7ee32d1eba378f7bb110b58517407921cfe482a66de556f9358330871afc3739",
+        "process_query_succeeded": true,
+        "game_process_count": 0
+      },
+      "analyzer_review": {
+        "file_name": "runtime-canary-journal-review.json",
+        "size_bytes": 2975,
+        "sha256": "ce40f6bfe28473dec6c3fa491b81f41f13e00e085f5eae5207f62b575554462a",
+        "failed_requirements": [
+          "combat_ended"
+        ]
+      },
+      "anchor_status": {
+        "size_bytes": 703,
+        "sha256": "56ad27bc3513ea76ed99384dc317f8937c4319da87643d272eeb465a3cd31f0a",
+        "bound": true,
+        "overlay_visible": true,
+        "strategy": "callback_local_player_reference",
+        "candidate_count": 3,
+        "local_player_reference_count": 1
+      },
+      "replacement_status": {
+        "size_bytes": 812,
+        "sha256": "53fbd7c073679e915523efb09dcfd55e9602eb891fee23fdd18890fde0a0f1d1",
+        "active": true,
+        "restore_count": 0,
+        "original_visual_hidden": true
+      },
+      "local_game_log": {
+        "file_name": "godot.log",
+        "size_bytes": 227011,
+        "sha256": "10c54721db4d3fb68cf7ada7879abd645960560036a9fd57dad9ab13b9bd5c39",
+        "argument_exception_count": 58,
+        "host_dispatch_frame_count": 52
+      },
+      "diagnosis": "The selected CombatRoom.OnCombatEnded endpoint was not observed when leaving combat for the main menu. Repeated Godot-to-C# dispatcher exceptions also prevented the C# per-frame anchor invalidation fallback, leaving the root-mounted overlay visible."
+    }
+  ],
+  "conclusions": {
+    "4k_fullscreen_alignment_passed": true,
+    "4k_fullscreen_title_display_passed": true,
+    "menu_cleanup_regression_open": true,
+    "resolution_ui_matrix_passed": false,
+    "production_profile_ready": false
+  },
+  "safety": {
+    "exact_build_only": true,
+    "explicit_local_opt_in_required": true,
+    "affects_gameplay": false,
+    "production_contract_promoted": false,
+    "raw_game_or_anime_assets_added": false
+  }
+}
