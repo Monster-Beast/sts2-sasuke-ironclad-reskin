@@ -41,20 +41,18 @@ public partial class GodotVisualSceneHost : Node2D, IVisualSceneHost, IVisualSce
     {
         Visible = false;
         SetProcess(true);
-        try
+    }
+
+    public void ConfigureFailureDiagnostics(string modAssemblyPath, RuntimeCanaryOptIn optIn)
+    {
+        ArgumentNullException.ThrowIfNull(optIn);
+        if (string.IsNullOrWhiteSpace(modAssemblyPath) ||
+            !RuntimeCanaryFailureScenarios.IsFailure(optIn.FailureInjectionScenario))
         {
-            string assemblyPath = typeof(GodotVisualSceneHost).Assembly.Location;
-            RuntimeCanaryOptInLoadResult loaded = RuntimeCanaryLocalFiles.LoadOptIn(assemblyPath);
-            if (loaded.OptIn is { } optIn &&
-                RuntimeCanaryFailureScenarios.IsFailure(optIn.FailureInjectionScenario))
-            {
-                RuntimeCanaryFailureDiagnostics.Configure(assemblyPath, optIn, this);
-            }
+            return;
         }
-        catch
-        {
-            // Failure diagnostics are optional and can never affect the host.
-        }
+
+        RuntimeCanaryFailureDiagnostics.Configure(modAssemblyPath, optIn, this);
     }
 
     public override void _Process(double delta)

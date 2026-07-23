@@ -70,6 +70,7 @@ public sealed class RuntimeCanarySession : IDisposable
             {
                 Name = "SasukeIroncladRuntimeCanaryHost",
             };
+            host.ConfigureFailureDiagnostics(_modAssemblyPath, optIn);
             _sceneTree.Root.AddChild(host);
             _sceneHost = host;
             _playback = new CardVisualPlaybackService(host, new PreserveOriginalAnimationFallback());

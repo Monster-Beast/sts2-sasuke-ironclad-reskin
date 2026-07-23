@@ -246,6 +246,7 @@ def main() -> int:
     control_source = (ROOT / "tools/runtime-canary.ps1").read_text(encoding="ascii")
     checkpoint_source = (ROOT / "tools/runtime-canary-checkpoint.ps1").read_text(encoding="ascii")
     host_source = (ROOT / "SasukeIroncladCode/Adapters/GodotVisualSceneHost.cs").read_text(encoding="utf-8")
+    session_source = (ROOT / "SasukeIroncladCode/Runtime/RuntimeCanarySession.cs").read_text(encoding="utf-8")
     replacement_source = (ROOT / "SasukeIroncladCode/Runtime/RuntimeOriginalVisualReplacementController.cs").read_text(encoding="utf-8")
     gate_source = (ROOT / "SasukeIroncladCode/Runtime/RuntimeCanaryGate.cs").read_text(encoding="utf-8")
 
@@ -263,6 +264,9 @@ def main() -> int:
     assert "RuntimeCanaryFailureDiagnostics.NotifyOriginalVisualHidden" in replacement_source
     assert "RuntimeCanaryFailureDiagnostics.NotifyReplacementRestored" in replacement_source
     assert "OriginalVisibilityRestored" in replacement_source
+    assert "ConfigureFailureDiagnostics" in host_source
+    assert "host.ConfigureFailureDiagnostics(_modAssemblyPath, optIn);" in session_source
+    assert "typeof(GodotVisualSceneHost).Assembly.Location" not in host_source
     assert "File.Delete" not in host_source
     assert "File.Move" not in host_source
 
