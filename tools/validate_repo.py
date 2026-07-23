@@ -203,11 +203,13 @@ def main():
         die(f'invalid export_presets.cfg exclude_filter: {exc}')
     excluded={item.strip() for item in parsed_exclusions.split(',') if item.strip()}
     required_exclusions={
-        'local-audit*/*','audit-output/*','local-canary-*/*',
+        'local-audit*/*','audit-output/*','local-canary-*/*','local-failure-canary*/*',
         'runtime-*/*','runtime-*.json','*.zip'
     }
     if not required_exclusions <= excluded:
         die('Godot export may include local audit or runtime evidence')
+    if not (ROOT/'audit-output/.gdignore').is_file():
+        die('Godot filesystem scan may enter generated audit fixtures')
 
     forbidden={'.pck','.dll','.atlas','.skel','.ogg','.mp3','.ttf','.otf'}
     generated_dirs={'.git','.godot','bin','obj','audit-output'}

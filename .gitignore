@@ -15,7 +15,8 @@ extracted/
 recovered_project/
 game_assets/
 local-audit*/
-audit-output/
+audit-output/*
+!audit-output/.gdignore
 observation-output/
 runtime-observation-review/
 runtime-observation-upload/
