@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-07-23T14:20:05.8565456+00:00",
+  "status": "startup_signature_mismatch_fail_closed_passed",
+  "profile_id": "public-beta-24251656-ee45848ff631",
+  "tested_mod_commit": "2cb78fa2daba4c8d05aad5a645f42baa9a851fb6",
+  "runtime": {
+    "branch": "public-beta",
+    "steam_build_id": "24251656",
+    "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+    "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+    "baselib_version": "v3.3.8",
+    "installed_mod_dll_sha256": "94f480873af5d8f8e4f73806e8d6aeaeb37768d8bdc0f30fee9912556eb28224",
+    "installed_mod_pck_sha256": "34ea6e00c949131f300c9fc3e8aae94a3faa5c50af17e0f5211a1e74cfbea563"
+  },
+  "source_policy": {
+    "kind": "user_run_privacy_safe_checkpoint_and_analyzer_review",
+    "raw_archive_committed": false,
+    "raw_game_log_committed": false,
+    "contains_absolute_local_paths": false,
+    "review_record_committed": true
+  },
+  "test": {
+    "session_label": "startup-signature-v338-1",
+    "scenario": "method_signature_mismatch",
+    "binding_id": "card_visual_request",
+    "target_card_id": "Strike",
+    "target_card_name_zh": "打击",
+    "user_visual_verdict_zh": "已退出，打击时没有佐助",
+    "analyzer_status": "passed",
+    "passed": true,
+    "closure_mode": "clean_process_checkpoint",
+    "baseline_signature_match_confirmed": true,
+    "trigger_count": 1,
+    "trigger_stage": "method_signature_comparison",
+    "patch_install_attempted": false,
+    "runtime_session_created": false,
+    "event_journal_created": false,
+    "patched_binding_count": 0,
+    "game_process_count_at_checkpoint": 0,
+    "archive": {
+      "file_name": "local-startup-failure-startup-signature-v338-1.zip",
+      "size_bytes": 11956,
+      "sha256": "75611d17c29055594688edad85876b45f3ba7b58223adce817461b09257009ba"
+    },
+    "checkpoint": {
+      "file_name": "checkpoint.json",
+      "size_bytes": 806,
+      "sha256": "f8b9059ba424025f6a713e06f4bd19579016f3ec64ae39517098e4bb8aeef438",
+      "process_query_succeeded": true,
+      "game_process_count": 0
+    },
+    "marker": {
+      "file_name": "SasukeIronclad.canary.json",
+      "size_bytes": 1016,
+      "sha256": "c36a88bf5bfb1bbb44b6dcc5af15dd0d27e5728837510bd4fd22e93aec3f6f0c",
+      "mode": "local_startup_failure_only"
+    },
+    "startup_status": {
+      "file_name": "runtime-canary-status.json",
+      "size_bytes": 1088,
+      "sha256": "0d80d16881033b5b3f19d65b136708a9ddf438a965b04ad88ff8d7d6e8e81dc8"
+    },
+    "analyzer_review": {
+      "file_name": "runtime-canary-startup-failure-review.json",
+      "size_bytes": 5254,
+      "sha256": "c0b58903daebe7cb7344dbc96559ada21309b0b761de8a132807ae84d605217f"
+    },
+    "local_game_log": {
+      "file_name": "godot.log",
+      "size_bytes": 23556,
+      "sha256": "1d4a747004e318114583bb85974347fbd8ad461a7fce63ca756e37dbdee87062",
+      "startup_failure_marker_count": 1,
+      "argument_exception_count": 0,
+      "harmony_text_count": 0
+    }
+  },
+  "automated_checks": [
+    {
+      "name": "python tools/analyze_runtime_canary_startup_failure.py",
+      "status": "passed"
+    },
+    {
+      "name": "python tools/test_runtime_canary_startup_failure.py",
+      "status": "passed",
+      "negative_cases": 40
+    },
+    {
+      "name": "python tools/validate_repo.py",
+      "status": "passed"
+    },
+    {
+      "name": "dotnet run tools/integration_gate_test --no-build",
+      "status": "passed"
+    }
+  ],
+  "conclusions": {
+    "startup_signature_mismatch_fail_closed": true,
+    "baseline_signature_match_confirmed": true,
+    "patch_install_attempted": false,
+    "runtime_session_created": false,
+    "event_journal_created": false,
+    "original_presentation_visual_passed": true,
+    "production_profile_ready": false
+  },
+  "safety": {
+    "exact_build_only": true,
+    "explicit_local_opt_in_required": true,
+    "affects_gameplay": false,
+    "production_contract_promoted": false,
+    "raw_game_or_anime_assets_added": false
+  }
+}

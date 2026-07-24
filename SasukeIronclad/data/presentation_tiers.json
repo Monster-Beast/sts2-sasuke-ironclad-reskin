@@ -1,0 +1,82 @@
+{
+  "schema_version": 2,
+  "gameplay_changes": false,
+  "default_policy": {
+    "card_identity_first": true,
+    "damage_selects_base_animation": false,
+    "hit_count_selects_base_animation": false,
+    "damage_variant_fields": [
+      "impact_scale",
+      "energy_density",
+      "camera_intensity",
+      "lethal_variant"
+    ],
+    "hit_count_variant_fields": [
+      "impact_event_count",
+      "combo_loop_count",
+      "target_distribution"
+    ],
+    "cutin_enabled": true,
+    "fast_mode_cap": "signature",
+    "low_flash_available": true,
+    "fallback_policy": "original_only_on_unverified_or_asset_failure",
+    "runtime_inputs_read_only": [
+      "card_id",
+      "upgrade_state",
+      "final_damage",
+      "hit_count",
+      "target_count",
+      "energy_spent",
+      "lethal",
+      "strength",
+      "hand_count"
+    ]
+  },
+  "tiers": [
+    {
+      "id": "quick",
+      "rank": 1,
+      "max_duration_ms": 650,
+      "cutin": false,
+      "screen_takeover": false,
+      "purpose": "A card-specific short timeline for high-frequency cards; not a shared final animation.",
+      "development_fallback_profiles": ["sword_slash_fast", "sword_thrust_fast", "projectile_burst"]
+    },
+    {
+      "id": "standard",
+      "rank": 2,
+      "max_duration_ms": 950,
+      "cutin": false,
+      "screen_takeover": false,
+      "purpose": "A distinct card choreography assembled from reusable primitives.",
+      "development_fallback_profiles": ["sword_cross_slash", "sword_combo_three", "chidori_stream", "fireball_cast"]
+    },
+    {
+      "id": "signature",
+      "rank": 3,
+      "max_duration_ms": 1250,
+      "cutin": false,
+      "screen_takeover": false,
+      "purpose": "A bespoke card scene with unique motion, VFX timing and camera language.",
+      "development_fallback_profiles": ["sword_slash_heavy", "chidori_thrust", "dragon_flame", "curse_mark_amplify"]
+    },
+    {
+      "id": "cutin",
+      "rank": 4,
+      "max_duration_ms": 1600,
+      "cutin": true,
+      "screen_takeover": false,
+      "purpose": "An iconic card-specific cut-in; damage cannot promote an unrelated card into this tier.",
+      "development_fallback_profiles": ["kirin_cutin", "curse_mark_transform"]
+    },
+    {
+      "id": "finisher",
+      "rank": 5,
+      "max_duration_ms": 2000,
+      "cutin": true,
+      "screen_takeover": true,
+      "purpose": "A card-owned finisher variant selected by that card plus lethal or explicit conditions.",
+      "development_fallback_profiles": ["kirin_finisher", "curse_mark_finisher"]
+    }
+  ]
+}

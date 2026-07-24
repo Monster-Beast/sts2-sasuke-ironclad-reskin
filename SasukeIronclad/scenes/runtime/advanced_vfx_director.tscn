@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://SasukeIronclad/scripts/runtime/demon_form_advanced_vfx_director.gd" id="1_advanced_vfx"]
+
+[node name="AdvancedVfxDirector" type="Node2D"]
+script = ExtResource("1_advanced_vfx")

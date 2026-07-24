@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "gameplay_changes": false,
+  "strategy": "explicit_override_then_original",
+  "rules": {
+    "normal": "explicit_override_required",
+    "derived": "explicit_override_when_semantics_differ",
+    "transformed": "resolve_target_card_id",
+    "temporary": "explicit_override_or_original",
+    "multiplayer": "explicit_override_after_id_audit",
+    "unknown": "original"
+  },
+  "guarantees": {
+    "never_copy_source_title_implicitly": true,
+    "internal_ids_unchanged": true,
+    "rules_and_upgrade_unchanged": true,
+    "unknown_id_uses_original": true
+  },
+  "examples": [
+    {
+      "card_id": "GIANT_ROCK",
+      "kind": "derived",
+      "resolution": "explicit_override",
+      "display_name": {"zh-CN": "千鸟锐枪", "en-US": "Chidori Spear"},
+      "id_status": "pending_local_audit"
+    }
+  ]
+}

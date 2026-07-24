@@ -1,0 +1,263 @@
+name: Validate game audit
+on: [push, pull_request]
+
+jobs:
+  windows-powershell-51:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - name: Parse audit entrypoints with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $paths = @(
+            "tools/run-game-audit.ps1",
+            "tools/steamcmd-query.ps1",
+            "tools/dotnet-sdk.ps1",
+            "tools/test_steamcmd_query.ps1",
+            "tools/test_dotnet_sdk.ps1"
+          )
+          foreach ($path in $paths) {
+            $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $path))
+            $nonAscii = @($bytes | Where-Object { $_ -gt 127 })
+            if ($nonAscii.Count -gt 0) {
+              throw "$path must remain ASCII-only for Windows PowerShell 5.1 compatibility."
+            }
+
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path),
+              [ref]$tokens,
+              [ref]$errors
+            )
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "${path}: $($_.Message)" }
+              exit 1
+            }
+          }
+      - name: Execute SteamCMD parser regression with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          .\tools\test_steamcmd_query.ps1 | Tee-Object -FilePath windows-steamcmd-query-test.log
+          if (-not (Select-String -Path windows-steamcmd-query-test.log -Pattern "STEAMCMD_QUERY_OK" -Quiet)) {
+            throw "Windows PowerShell SteamCMD parser regression did not report success."
+          }
+      - name: Validate .NET 9 SDK preflight with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          .\tools\test_dotnet_sdk.ps1 | Tee-Object -FilePath windows-dotnet-sdk-test.log
+          if (-not (Select-String -Path windows-dotnet-sdk-test.log -Pattern "DOTNET_SDK_OK" -Quiet)) {
+            throw "Windows PowerShell .NET SDK regression did not report success."
+          }
+
+  audit-self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate cross-platform helper syntax
+        shell: pwsh
+        run: |
+          bash -n tools/run-game-audit.sh
+          foreach ($path in @(
+            "tools/run-game-audit.ps1",
+            "tools/steamcmd-query.ps1",
+            "tools/dotnet-sdk.ps1",
+            "tools/test_steamcmd_query.ps1",
+            "tools/test_dotnet_sdk.ps1"
+          )) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path),
+              [ref]$tokens,
+              [ref]$errors
+            )
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "${path}: $($_.Message)" }
+              exit 1
+            }
+          }
+      - name: Validate SteamCMD self-update exit handling
+        shell: pwsh
+        run: |
+          ./tools/test_steamcmd_query.ps1 | Tee-Object -FilePath steamcmd-query-test.log
+          if (-not (Select-String -Path steamcmd-query-test.log -Pattern "STEAMCMD_QUERY_OK" -Quiet)) {
+            throw "SteamCMD query regression test did not report success."
+          }
+      - name: Validate .NET 9 SDK preflight
+        shell: pwsh
+        run: |
+          ./tools/test_dotnet_sdk.ps1 | Tee-Object -FilePath dotnet-sdk-test.log
+          if (-not (Select-String -Path dotnet-sdk-test.log -Pattern "DOTNET_SDK_OK" -Quiet)) {
+            throw ".NET SDK regression test did not report success."
+          }
+      - name: Restore audit tool
+        run: dotnet restore tools/game_audit/SasukeIronclad.GameAudit.csproj
+      - name: Build audit tool
+        run: dotnet build tools/game_audit/SasukeIronclad.GameAudit.csproj --configuration Release --no-restore
+      - name: Restore integration gate behavior tests
+        run: dotnet restore tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj
+      - name: Build integration gate behavior tests
+        run: dotnet build tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj --configuration Release --no-restore
+      - name: Validate disabled-until-audited integration contract
+        run: python tools/test_game_integration_contract.py
+      - name: Validate game integration startup contract
+        run: python tools/test_game_integration_startup.py
+      - name: Validate latest public-beta guard contract
+        run: python tools/test_latest_beta_guard.py
+      - name: Validate rolling Beta profile contract
+        run: python tools/test_latest_beta_profiles.py
+      - name: Validate audit review pipeline contract
+        run: python tools/test_audit_review_pipeline.py
+      - name: Validate real audit evidence contract
+        run: python tools/test_real_audit_evidence.py
+      - name: Execute exact-build integration gate matrix
+        run: |
+          set -o pipefail
+          dotnet run --project tools/integration_gate_test/SasukeIronclad.IntegrationGateTest.csproj \
+            --configuration Release --no-build 2>&1 | tee integration-gate-test.log
+          grep -q "INTEGRATION_GATE_OK" integration-gate-test.log
+          grep -q "RUNTIME_OBSERVATION_GATE_OK" integration-gate-test.log
+          grep -q "stable=false" integration-gate-test.log
+          grep -q "stale=false" integration-gate-test.log
+          grep -q "superseded=false" integration-gate-test.log
+          grep -q "bootstrap=true" integration-gate-test.log
+          grep -q "collector=true" integration-gate-test.log
+          grep -q "fail_closed=true" integration-gate-test.log
+      - name: Run two-scan redaction self-test
+        run: |
+          set -o pipefail
+          dotnet run --project tools/game_audit/SasukeIronclad.GameAudit.csproj \
+            --configuration Release --no-build -- \
+            self-test --output audit-output/self-test 2>&1 | tee audit-self-test.log
+          grep -q "GAME_AUDIT_SELF_TEST_OK" audit-self-test.log
+          grep -q '"kind": "field"' audit-output/self-test/first/audit-report.json
+          grep -q '"constantValue": "STRIKE"' audit-output/self-test/first/audit-report.json
+          grep -q '"kind": "event"' audit-output/self-test/first/audit-report.json
+          grep -q '"kind": "property"' audit-output/self-test/first/audit-report.json
+      - name: Build latest public-beta fixture attestation
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('audit-output/self-test')
+          manifest = root / 'fixture/steamapps/appmanifest_2868840.acf'
+          manifest.write_text('''"AppState"
+          {
+            "appid" "2868840"
+            "buildid" "999999"
+            "UserConfig"
+            {
+              "BetaKey" "public-beta"
+            }
+          }
+          ''', encoding='utf-8')
+          steamcmd = root / 'steamcmd-app-info.txt'
+          steamcmd.write_text('''AppID : 2868840
+          "2868840"
+          {
+            "depots"
+            {
+              "branches"
+              {
+                "public"
+                {
+                  "buildid" "888888"
+                }
+                "public-beta"
+                {
+                  "buildid" "999999"
+                }
+              }
+            }
+          }
+          ''', encoding='utf-8')
+          report_path = root / 'first/audit-report.json'
+          report = json.loads(report_path.read_text(encoding='utf-8'))
+          report['branch'] = 'public-beta'
+          (root / 'first/latest-beta-audit-report.json').write_text(
+              json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          PY
+          python tools/latest_beta_guard.py verify \
+            --game-path "audit-output/self-test/fixture/steamapps/common/Slay the Spire 2" \
+            --steamcmd-output audit-output/self-test/steamcmd-app-info.txt \
+            --output audit-output/self-test/latest-beta-attestation.json \
+            --required-branch public-beta \
+            | tee latest-beta-guard.log
+          grep -q "LATEST_BETA_OK" latest-beta-guard.log
+          grep -q '"is_latest": true' audit-output/self-test/latest-beta-attestation.json
+      - name: Generate pending-review profile template
+        run: |
+          set -o pipefail
+          python tools/create_integration_profile.py \
+            --report audit-output/self-test/first/latest-beta-audit-report.json \
+            --comparison audit-output/self-test/comparison/audit-comparison.json \
+            --latest-beta-attestation audit-output/self-test/latest-beta-attestation.json \
+            --output audit-output/self-test/integration-profile-template.json \
+            | tee profile-template.log
+          grep -q "INTEGRATION_PROFILE_TEMPLATE_OK" profile-template.log
+          python - <<'PY'
+          import json
+          data = json.load(open('audit-output/self-test/integration-profile-template.json', encoding='utf-8'))
+          assert data['profile']['status'] == 'pending_review'
+          assert data['profile']['branch'] == 'public-beta'
+          assert data['profile']['beta_attestation']['status'] == 'verified'
+          assert data['profile']['beta_attestation']['remote_build_id'] == '999999'
+          assert all(item['status'] == 'pending_review' for item in data['profile']['visual_bindings'])
+          assert all(item['status'] == 'pending_review' for item in data['profile']['title_bindings'])
+          PY
+      - name: Generate no-auto-selection review workbook
+        run: |
+          set -o pipefail
+          python tools/build_audit_review.py \
+            --report audit-output/self-test/first/latest-beta-audit-report.json \
+            --comparison audit-output/self-test/comparison/audit-comparison.json \
+            --latest-beta-attestation audit-output/self-test/latest-beta-attestation.json \
+            --output audit-output/self-test/review \
+            | tee audit-review.log
+          grep -q "AUDIT_REVIEW_OK" audit-review.log
+          grep -q '"auto_selection_forbidden": true' audit-output/self-test/review/binding-review.json
+          grep -q '"latest_public_beta_required": true' audit-output/self-test/review/binding-review.json
+          grep -q '"selected_candidate_id": ""' audit-output/self-test/review/binding-review.json
+          grep -q '"constant_value": "STRIKE"' audit-output/self-test/review/binding-review.json
+          python - <<'PY'
+          import json
+          data = json.load(open('audit-output/self-test/review/binding-review.json', encoding='utf-8'))
+          assert data['latest_beta']['remote_build_id'] == '999999'
+          assert all(c['kind'] == 'method' for b in data['bindings'] for c in b['candidates'])
+          PY
+      - name: Upload metadata-only self-test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-audit-self-test-reports
+          path: |
+            steamcmd-query-test.log
+            dotnet-sdk-test.log
+            integration-gate-test.log
+            audit-self-test.log
+            latest-beta-guard.log
+            profile-template.log
+            audit-review.log
+            audit-output/self-test/first/audit-report.json
+            audit-output/self-test/first/latest-beta-audit-report.json
+            audit-output/self-test/first/audit-report.md
+            audit-output/self-test/first/audit-fingerprint.json
+            audit-output/self-test/second/audit-report.json
+            audit-output/self-test/comparison/audit-comparison.json
+            audit-output/self-test/comparison/audit-comparison.md
+            audit-output/self-test/latest-beta-attestation.json
+            audit-output/self-test/integration-profile-template.json
+            audit-output/self-test/review/binding-review.json
+            audit-output/self-test/review/binding-review.md
+          if-no-files-found: error

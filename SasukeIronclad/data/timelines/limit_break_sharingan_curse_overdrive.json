@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "animation_id": "limit_break_sharingan_curse_overdrive",
+  "card_id": "Limit Break",
+  "duration_ms": 1520,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.48},
+    "upgraded": {"speed_scale": 1.0},
+    "empowered": {"speed_scale": 0.94},
+    "low_flash": {"speed_scale": 0.96}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "limit_focus", "duration_ms": 230},
+    {"time_ms": 90, "type": "eye", "active": false},
+    {"time_ms": 180, "type": "cutin", "style": "sharingan_side", "duration_ms": 270, "suppress_in_low_flash": true, "skip_in_fast": true},
+    {"time_ms": 330, "type": "eye", "active": true},
+    {"time_ms": 360, "type": "advanced_vfx", "effect": "sharingan_overdrive", "anchor": "eye", "params": {"rings": 3, "radius": 72.0}},
+    {"time_ms": 430, "type": "camera", "effect": "scene_dim", "params": {"opacity": 0.24, "duration": 0.34}, "skip_in_fast": true},
+    {"time_ms": 535, "type": "pose", "pose": "limit_overdrive", "duration_ms": 210},
+    {
+      "time_ms": 590,
+      "type": "state_install",
+      "state_id": "limit_break_overdrive",
+      "style": "curse_overdrive",
+      "anchor": "vfx",
+      "params": {"radius": 90.0, "marks": 9, "spokes": 10, "rotation_speed": 0.26, "pulse": 0.032, "pulse_speed": 4.0},
+      "param_bindings": {
+        "marks": {"source": "strength", "scale": 0.35, "offset": 7.0, "min": 7, "max": 12, "integer": true},
+        "spokes": {"source": "strength", "scale": 0.5, "offset": 8.0, "min": 8, "max": 18, "integer": true}
+      }
+    },
+    {"time_ms": 650, "type": "state_pulse", "state_id": "limit_break_overdrive", "params": {"scale": 1.26, "opacity": 1.0, "duration": 0.24}},
+    {
+      "time_ms": 685,
+      "type": "advanced_vfx",
+      "effect": "power_afterimages",
+      "anchor": "vfx",
+      "params": {"copies": 4, "distance": 76.0},
+      "param_bindings": {
+        "copies": {"source": "strength", "scale": 0.18, "offset": 3.0, "min": 3, "max": 8, "integer": true}
+      }
+    },
+    {"time_ms": 760, "type": "impact"},
+    {"time_ms": 790, "type": "camera", "effect": "shake_light", "params": {"amplitude": 4.5, "duration": 0.18}},
+    {"time_ms": 940, "type": "eye", "active": false},
+    {"time_ms": 1070, "type": "return_idle", "duration_ms": 230}
+  ]
+}

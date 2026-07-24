@@ -5,11 +5,18 @@
     <ImplicitUsings>true</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
     <PathMap>$(AppOutputBase)=.\</PathMap>
     <GodotDisabledSourceGenerators>GodotPluginsInitializer</GodotDisabledSourceGenerators>
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
+    <ModOutputDirectory>$(ModsPath)$(MSBuildProjectName)/</ModOutputDirectory>
+    <ModPckPath>$(ModOutputDirectory)$(MSBuildProjectName).pck</ModPckPath>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="SasukeIroncladCode/**/*.cs" />
+  </ItemGroup>
 
   <ItemGroup Condition="Exists('$(Sts2DataDir)')">
     <Reference Include="0Harmony"><HintPath>$(Sts2DataDir)/0Harmony.dll</HintPath><Private>false</Private></Reference>
@@ -21,16 +28,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Alchyr.Sts2.BaseLib" Version="*" PrivateAssets="All"/>
+    <!-- BaseLib is a runtime Mod dependency declared in SasukeIronclad.json.
+         The production assembly does not consume BaseLib APIs directly, so a
+         floating NuGet package must not raise the Mod loader minimum version. -->
     <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="All"/>
     <PackageReference Include="Alchyr.Sts2.ModAnalyzers" Version="*" />
     <AdditionalFiles Include="SasukeIronclad/localization/**/*.json"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="SasukeIronclad/**" />
-    <Compile Remove="art/**" />
-    <Compile Remove="animation/**" />
     <EmbeddedResource Remove="SasukeIronclad/**" />
     <EmbeddedResource Remove="art/**" />
     <EmbeddedResource Remove="animation/**" />
@@ -48,21 +54,22 @@
     <Error Text="Slay the Spire 2 data not found at path '$(Sts2DataDir)'" Condition="'$(Sts2DataDir)' == '' or !Exists('$(Sts2DataDir)')" />
   </Target>
 
-  <Target Name="UpdateDependencyVersions" BeforeTargets="BeforeBuild" Condition="Exists('.godot/mono/temp/obj/project.assets.json')">
+  <Target Name="GenerateModManifest" BeforeTargets="BeforeBuild">
     <PropertyGroup>
-      <ManifestPath>$(MSBuildProjectName).json</ManifestPath>
-      <NuGetData>$([System.IO.File]::ReadAllText(&quot;.godot/mono/temp/obj/project.assets.json&quot;))</NuGetData>
-      <ActiveBaseLibVersion>$([System.Text.RegularExpressions.Regex]::Match($(NuGetData), '&quot;Alchyr.Sts2.BaseLib\/([^&quot;]*)&quot;').Result('$1'))</ActiveBaseLibVersion>
-      <OldContent>$([System.IO.File]::ReadAllText($(ManifestPath)))</OldContent>
-      <NewContent>$([System.Text.RegularExpressions.Regex]::Replace($(OldContent), '(&quot;id&quot;:\s*&quot;BaseLib&quot;,\s*&quot;min_version&quot;:\s*&quot;)[^&quot;]*', '${1}$(ActiveBaseLibVersion)'))</NewContent>
+      <SourceManifestPath>$(MSBuildProjectDirectory)\$(MSBuildProjectName).json</SourceManifestPath>
+      <GeneratedManifestDirectory>$(IntermediateOutputPath)generated\</GeneratedManifestDirectory>
+      <GeneratedManifestPath>$(GeneratedManifestDirectory)$(MSBuildProjectName).json</GeneratedManifestPath>
     </PropertyGroup>
-    <WriteLinesToFile Condition="'$(OldContent)' != '$(NewContent)'" File="$(ManifestPath)" Lines="$(NewContent)" Overwrite="true" Encoding="UTF-8" />
+    <MakeDir Directories="$(GeneratedManifestDirectory)" />
+    <Copy SourceFiles="$(SourceManifestPath)" DestinationFiles="$(GeneratedManifestPath)" />
   </Target>
 
-  <Target Name="CopyToModsFolderOnBuild" AfterTargets="PostBuildEvent">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
-    <Copy SourceFiles="$(AssemblyName).json" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
-    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
+  <Target Name="CopyToModsFolderOnBuild" AfterTargets="PostBuildEvent" DependsOnTargets="GenerateModManifest">
+    <MakeDir Directories="$(ModOutputDirectory)" />
+    <Error Text="Generated Mod manifest was not created at '$(GeneratedManifestPath)'." Condition="!Exists('$(GeneratedManifestPath)')" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModOutputDirectory)" />
+    <Copy SourceFiles="$(GeneratedManifestPath)" DestinationFolder="$(ModOutputDirectory)" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModOutputDirectory)" />
   </Target>
 
   <Target Name="NeedGodotForPublish" BeforeTargets="Publish">
@@ -70,6 +77,16 @@
   </Target>
 
   <Target Name="GodotPublish" AfterTargets="Publish" Condition="'$(GodotPath)' != '' and Exists('$(GodotPath)') and '$(IsInnerGodotExport)' != 'true'">
-    <Exec Command="&quot;$(GodotPath)&quot; --headless --export-pack &quot;BasicExport&quot; &quot;$(ModsPath)$(MSBuildProjectName)/$(MSBuildProjectName).pck&quot;" EnvironmentVariables="IsInnerGodotExport=true;MSBUILDDISABLENODEREUSE=1" ContinueOnError="WarnAndContinue"/>
+    <MakeDir Directories="$(ModOutputDirectory)" />
+    <Delete Files="$(ModPckPath)" />
+    <Exec
+      Command="&quot;$(GodotPath)&quot; --headless --path &quot;$(MSBuildProjectDirectory)&quot; --export-pack &quot;BasicExport&quot; &quot;$(ModPckPath)&quot;"
+      WorkingDirectory="$(MSBuildProjectDirectory)"
+      EnvironmentVariables="IsInnerGodotExport=true;MSBUILDDISABLENODEREUSE=1"
+      IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="GodotExportExitCode" />
+    </Exec>
+    <Error Text="Godot did not produce the expected PCK at '$(ModPckPath)' (exit code $(GodotExportExitCode))." Condition="!Exists('$(ModPckPath)')" />
+    <Warning Text="Godot returned exit code $(GodotExportExitCode) after producing a new PCK. The pack will be validated by the real-game observation run." Condition="'$(GodotExportExitCode)' != '0' and Exists('$(ModPckPath)')" />
   </Target>
 </Project>

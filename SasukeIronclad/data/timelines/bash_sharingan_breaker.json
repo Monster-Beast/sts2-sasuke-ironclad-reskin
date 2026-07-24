@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "animation_id": "bash_sharingan_breaker",
+  "card_id": "Bash",
+  "duration_ms": 890,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.35},
+    "upgraded": {"speed_scale": 1.0},
+    "empowered": {"speed_scale": 0.96},
+    "lethal": {"speed_scale": 0.90},
+    "low_flash": {"speed_scale": 1.0}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "bash_lock", "duration_ms": 150},
+    {"time_ms": 30, "type": "eye", "active": true},
+    {"time_ms": 95, "type": "vfx", "effect": "red_target_line", "anchor": "eye", "suppress_in_low_flash": true},
+    {"time_ms": 185, "type": "camera", "effect": "scene_dim", "params": {"opacity": 0.14, "duration": 0.22}, "skip_in_fast": true},
+    {"time_ms": 255, "type": "pose", "pose": "bash_impact", "duration_ms": 125},
+    {"time_ms": 355, "type": "vfx", "effect": "short_impact_ring", "anchor": "right_hand", "params": {"width": 9.0}},
+    {"time_ms": 370, "type": "impact"},
+    {"time_ms": 375, "type": "camera", "effect": "impact_flash", "params": {"opacity": 0.22, "duration": 0.09}},
+    {"time_ms": 380, "type": "camera", "effect": "shake_medium", "params": {"amplitude": 5.5, "duration": 0.15}},
+    {"time_ms": 560, "type": "eye", "active": false},
+    {"time_ms": 620, "type": "return_idle", "duration_ms": 185}
+  ]
+}

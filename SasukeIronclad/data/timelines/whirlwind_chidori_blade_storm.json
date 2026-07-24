@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "animation_id": "whirlwind_chidori_blade_storm",
+  "card_id": "Whirlwind",
+  "duration_ms": 1180,
+  "dynamic_duration": true,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.5},
+    "upgraded": {"speed_scale": 1.0},
+    "empowered": {"speed_scale": 0.94},
+    "lethal": {"speed_scale": 0.9},
+    "low_flash": {"speed_scale": 0.98}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "draw_windup", "duration_ms": 150},
+    {"time_ms": 45, "type": "eye", "active": true},
+    {"time_ms": 80, "type": "advanced_vfx", "effect": "body_flicker_trail", "anchor": "ground", "params": {"copies": 4, "distance": 82.0}},
+    {"time_ms": 165, "type": "cutin", "style": "sharingan_side", "duration_ms": 210, "suppress_in_low_flash": true, "skip_in_fast": true},
+    {"time_ms": 245, "type": "pose", "pose": "slash_impact", "duration_ms": 90},
+    {"time_ms": 275, "type": "advanced_vfx", "effect": "chidori_spin_ring", "anchor": "vfx", "params": {"radius": 86.0, "branches": 8}},
+    {
+      "time_ms": 320,
+      "type": "impact_loop",
+      "count_source": "hit_count",
+      "fallback_count": 3,
+      "min_count": 0,
+      "max_count": 64,
+      "detailed_visual_count": 8,
+      "interval_ms": 92,
+      "fast_interval_ms": 44,
+      "external_interval_cap_ms": 34,
+      "poses": ["slash_impact", "cleave_impact"],
+      "pose_duration_ms": 76,
+      "effect": "whirlwind_slash_impact",
+      "anchor": "vfx",
+      "params": {"radius": 88.0, "width": 10.0},
+      "param_bindings": {
+        "radius": {"source": "energy_spent", "scale": 8.0, "offset": 72.0, "min": 78.0, "max": 126.0},
+        "width": {"source": "energy_spent", "scale": 1.2, "offset": 8.0, "min": 8.0, "max": 15.0}
+      },
+      "camera_effect": "shake_light",
+      "camera_every": 3,
+      "camera_params": {"amplitude": 3.5, "duration": 0.08}
+    },
+    {"time_ms": 355, "type": "pose", "pose": "heavy_impact", "duration_ms": 105},
+    {"time_ms": 380, "type": "advanced_vfx", "effect": "cross_cut_finish", "anchor": "vfx", "params": {"size": 118.0}},
+    {"time_ms": 405, "type": "camera", "effect": "shake_medium", "params": {"amplitude": 6.0, "duration": 0.14}},
+    {"time_ms": 455, "type": "eye", "active": false},
+    {"time_ms": 610, "type": "return_idle", "duration_ms": 210}
+  ]
+}

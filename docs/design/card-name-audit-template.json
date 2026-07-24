@@ -1,0 +1,19 @@
+{
+  "game_version": "UNVERIFIED",
+  "branch": "stable_or_beta",
+  "cards": [
+    {
+      "card_id": "UNVERIFIED_CARD_ID",
+      "original_name": {"zh-CN": "", "en-US": ""},
+      "display_name": {"zh-CN": "", "en-US": ""},
+      "card_kind": "normal",
+      "source_card_id": null,
+      "generated_card_ids": [],
+      "semantic_anchor": "",
+      "art_concept": "",
+      "title_width_checked": false,
+      "game_id_verified": false,
+      "rename_status": "provisional"
+    }
+  ]
+}

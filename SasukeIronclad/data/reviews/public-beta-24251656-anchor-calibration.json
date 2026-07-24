@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "status": "user_approved_single_setup",
+  "profile_id": "public-beta-24251656-ee45848ff631",
+  "runtime": {
+    "branch": "public-beta",
+    "steam_build_id": "24251656",
+    "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+    "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+    "baselib_version": "v3.3.7"
+  },
+  "resolved_anchor": {
+    "strategy": "callback_local_player_reference",
+    "anchor_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals",
+    "anchor_name": "Ironclad",
+    "candidate_count": 2,
+    "local_player_reference_count": 1,
+    "observed_global_x": 480,
+    "observed_global_y": 740
+  },
+  "additional_observations": {
+    "candidate_counts_seen": [2, 3],
+    "candidate_count_is_identity_invariant": false,
+    "stable_anchor_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals",
+    "stable_anchor_name": "Ironclad",
+    "stable_local_player_reference_count": 1,
+    "replacement_activation_confirmed": true,
+    "unsupported_card_restoration_confirmed": true
+  },
+  "approved_calibration": {
+    "anchor_scale": 1.2,
+    "anchor_offset_x": 0.0,
+    "anchor_offset_y": -150.0,
+    "approval_source": "local_visual_review",
+    "approved_at_utc": null,
+    "approval_time_note": "The conversation recorded approval after iterative local adjustment but did not provide an exact UTC timestamp."
+  },
+  "safety": {
+    "exact_build_only": true,
+    "local_player_reference_required": true,
+    "original_visual_hidden": false,
+    "production_profile_promoted": false,
+    "default_public_version_covered": false
+  },
+  "limitations": [
+    "The calibration was visually approved on one local display and UI-scale setup.",
+    "Other resolutions and UI scales must retain explicit offset and scale overrides.",
+    "The scene-wide candidate count is diagnostic and may vary as transient combat nodes are created; anchor identity is established by the exact local Player reference, type and name instead.",
+    "This review authorizes a replacement canary only; it does not authorize production bindings."
+  ]
+}

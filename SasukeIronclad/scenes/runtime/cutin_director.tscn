@@ -1,0 +1,53 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://SasukeIronclad/scripts/runtime/cutin_director.gd" id="1_cutin"]
+
+[node name="CutinDirector" type="CanvasLayer"]
+layer = 16
+script = ExtResource("1_cutin")
+
+[node name="Root" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Shade" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.01, 0.015, 0.03, 1)
+
+[node name="Band" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 165.0
+offset_bottom = 410.0
+grow_horizontal = 2
+mouse_filter = 2
+color = Color(0.055, 0.065, 0.11, 0.96)
+
+[node name="Eye" type="Polygon2D" parent="Root/Band"]
+position = Vector2(340, 122)
+polygon = PackedVector2Array(-128, 0, -70, -38, 0, -46, 72, -36, 128, 0, 68, 38, 0, 48, -74, 36)
+color = Color(0.88, 0.08, 0.13, 0.92)
+
+[node name="Pupil" type="Polygon2D" parent="Root/Band/Eye"]
+polygon = PackedVector2Array(-14, 0, -8, -14, 8, -14, 14, 0, 8, 14, -8, 14)
+color = Color(0.04, 0.01, 0.02, 1)
+
+[node name="Slash" type="Line2D" parent="Root/Band"]
+position = Vector2(760, 124)
+points = PackedVector2Array(-260, 92, 270, -92)
+width = 9.0
+default_color = Color(0.45, 0.86, 1, 0.85)
+antialiased = true

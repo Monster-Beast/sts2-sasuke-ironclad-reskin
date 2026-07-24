@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <StartupObject>SasukeIronclad.IntegrationGateTest.CombinedProgram</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../SasukeIroncladCode/Runtime/GameIntegrationGate.cs" Link="GameIntegrationGate.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/GameIntegrationBootstrap.cs" Link="GameIntegrationBootstrap.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeBuildFingerprintCollector.cs" Link="RuntimeBuildFingerprintCollector.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/AuditedMethodBindingResolver.cs" Link="AuditedMethodBindingResolver.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeObservationConfiguration.cs" Link="RuntimeObservationConfiguration.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeObservationGate.cs" Link="RuntimeObservationGate.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeObservationTargetResolver.cs" Link="RuntimeObservationTargetResolver.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeObservationSession.cs" Link="RuntimeObservationSession.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeObservationBootstrap.cs" Link="RuntimeObservationBootstrap.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeCanaryFailureInjection.cs" Link="RuntimeCanaryFailureInjection.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeCanaryStartupFailureInjection.cs" Link="RuntimeCanaryStartupFailureInjection.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeCanaryConfiguration.cs" Link="RuntimeCanaryConfiguration.cs" />
+    <Compile Include="../../SasukeIroncladCode/Runtime/RuntimeCanaryTargetResolver.cs" Link="RuntimeCanaryTargetResolver.cs" />
+    <Compile Include="../../SasukeIroncladCode/Adapters/IGameIntegrationInstaller.cs" Link="IGameIntegrationInstaller.cs" />
+    <Compile Include="../../SasukeIroncladCode/Adapters/IRuntimeObservationPatcher.cs" Link="IRuntimeObservationPatcher.cs" />
+    <Compile Include="../../SasukeIroncladCode/Visuals/GameIntegrationConfiguration.cs" Link="GameIntegrationConfiguration.cs" />
+  </ItemGroup>
+</Project>

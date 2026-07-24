@@ -1,0 +1,112 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://SasukeIronclad/scripts/runtime/graybox_preview.gd" id="1_preview"]
+[ext_resource type="PackedScene" path="res://SasukeIronclad/scenes/runtime/animation_director.tscn" id="2_runtime"]
+
+[node name="GrayboxPreview" type="Node2D"]
+script = ExtResource("1_preview")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+offset_right = 1280.0
+offset_bottom = 720.0
+mouse_filter = 2
+color = Color(0.055, 0.067, 0.10, 1)
+show_behind_parent = true
+
+[node name="Ground" type="Line2D" parent="."]
+position = Vector2(0, 540)
+points = PackedVector2Array(0, 0, 1280, 0)
+width = 4.0
+default_color = Color(0.25, 0.29, 0.38, 1)
+
+[node name="SasukeAnimationRuntime" parent="." instance=ExtResource("2_runtime")]
+position = Vector2(320, 400)
+
+[node name="Interface" type="CanvasLayer" parent="."]
+layer = 20
+
+[node name="Panel" type="PanelContainer" parent="Interface"]
+offset_left = 715.0
+offset_top = 2.0
+offset_right = 1265.0
+offset_bottom = 718.0
+
+[node name="Margin" type="MarginContainer" parent="Interface/Panel"]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 6
+
+[node name="VBox" type="VBoxContainer" parent="Interface/Panel/Margin"]
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Interface/Panel/Margin/VBox"]
+text = "Sasuke Ironclad — Graybox"
+
+[node name="Hint" type="Label" parent="Interface/Panel/Margin/VBox"]
+text = "13 card timelines. State and Form controls are local-only."
+autowrap_mode = 2
+
+[node name="Strike" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Strike — Kusanagi Draw Slash"
+
+[node name="Defend" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Defend — Wire Parry Guard"
+
+[node name="Bash" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Bash — Sharingan Breaker"
+
+[node name="Anger" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Anger — Shuriken Afterimage"
+
+[node name="Cleave" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Cleave — Chidori Ground Arc"
+
+[node name="Thunderclap" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Thunderclap — Chidori Ring Burst"
+
+[node name="HeavyBlade" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Heavy Blade — Lightning Execution"
+
+[node name="FlameBarrier" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Flame Barrier — Uchiha Fire Guard"
+
+[node name="Whirlwind" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Whirlwind — Chidori Blade Storm"
+
+[node name="BurningPact" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Burning Pact — Curse Seal Consumption"
+
+[node name="DemonForm" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Demon Form — Curse Mark Stage Two"
+
+[node name="LimitBreak" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Limit Break — Sharingan Curse Overdrive"
+
+[node name="FiendFire" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Fiend Fire — Dragon Flame Annihilation"
+
+[node name="Empowered" type="CheckButton" parent="Interface/Panel/Margin/VBox"]
+text = "Empowered card-local variant"
+
+[node name="FastMode" type="CheckButton" parent="Interface/Panel/Margin/VBox"]
+text = "Fast timeline variant"
+
+[node name="LowFlash" type="CheckButton" parent="Interface/Panel/Margin/VBox"]
+text = "Low-flash variant"
+
+[node name="PulseFlame" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Pulse Flame Barrier state"
+
+[node name="ClearStates" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Clear persistent visual states"
+
+[node name="ClearForm" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Clear Demon Form"
+
+[node name="Cancel" type="Button" parent="Interface/Panel/Margin/VBox"]
+text = "Cancel current timeline"
+
+[node name="Status" type="Label" parent="Interface/Panel/Margin/VBox"]
+text = "Ready"
+autowrap_mode = 2

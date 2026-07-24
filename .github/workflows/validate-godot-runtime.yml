@@ -1,0 +1,113 @@
+name: Validate Godot runtime
+on: [push, pull_request]
+
+jobs:
+  parse-godot-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.5.1
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output godot.zip \
+            "https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_linux.x86_64.zip"
+          mkdir -p .godot-ci/bin
+          unzip -q godot.zip -d .godot-ci/bin
+          GODOT_RELATIVE="$(find .godot-ci/bin -type f -name 'Godot_v4.5.1-stable_linux*x86_64' | head -n 1)"
+          test -n "$GODOT_RELATIVE"
+          chmod +x "$GODOT_RELATIVE"
+          echo "GODOT_BIN=${GITHUB_WORKSPACE}/${GODOT_RELATIVE}" >> "$GITHUB_ENV"
+          "${GITHUB_WORKSPACE}/${GODOT_RELATIVE}" --version
+      - name: Create isolated validation project
+        run: |
+          set -euo pipefail
+          mkdir -p .godot-ci/project
+          cp -R SasukeIronclad .godot-ci/project/SasukeIronclad
+          cp tools/godot_validation/validate_all.gd .godot-ci/project/validate_all.gd
+          cat > .godot-ci/project/project.godot <<'EOF'
+          config_version=5
+
+          [application]
+          config/name="SasukeRuntimeValidation"
+          config/features=PackedStringArray("4.5")
+
+          [rendering]
+          renderer/rendering_method="gl_compatibility"
+          renderer/rendering_method.mobile="gl_compatibility"
+          EOF
+      - id: parse
+        continue-on-error: true
+        name: Import and parse GDScript resources
+        run: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --editor \
+            --path "${GITHUB_WORKSPACE}/.godot-ci/project" \
+            --quit-after 30 2>&1 | tee godot-import.log
+          "$GODOT_BIN" --headless \
+            --path "${GITHUB_WORKSPACE}/.godot-ci/project" \
+            --script res://validate_all.gd 2>&1 | tee godot-parse.log
+      - name: Upload Godot validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-validation-logs
+          path: |
+            godot-import.log
+            godot-parse.log
+          if-no-files-found: error
+      - name: Enforce clean Godot parser logs
+        if: always()
+        run: |
+          test -f godot-import.log
+          test -f godot-parse.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR: Failed to load" godot-import.log godot-parse.log; then
+            exit 1
+          fi
+          grep -E "GODOT_PARSE_OK scripts=[1-9][0-9]* scenes=[1-9][0-9]*" godot-parse.log
+          test "${{ steps.parse.outcome }}" = "success"
+      - id: runtime_tests
+        continue-on-error: true
+        name: Execute runtime test scenes
+        run: |
+          set -u
+          PROJECT="${GITHUB_WORKSPACE}/.godot-ci/project"
+          status=0
+          run_scene() {
+            name="$1"
+            scene="$2"
+            marker="$3"
+            log="godot-${name}.log"
+            set +e
+            timeout 240s "$GODOT_BIN" --headless --path "$PROJECT" "$scene" >"$log" 2>&1
+            code=$?
+            set -e
+            cat "$log"
+            if [ "$code" -ne 0 ] || ! grep -q "$marker" "$log"; then
+              status=1
+            fi
+            if grep -E "SCRIPT ERROR|Parse Error|Compile Error|^ERROR:|ObjectDB instances leaked" "$log"; then
+              status=1
+            fi
+          }
+          run_scene stress res://SasukeIronclad/scenes/runtime/runtime_stress_test.tscn STRESS_OK
+          run_scene release res://SasukeIronclad/scenes/runtime/combat_resource_release_test.tscn RELEASE_OK
+          run_scene form res://SasukeIronclad/scenes/runtime/form_lifecycle_test.tscn FORM_OK
+          run_scene character res://SasukeIronclad/scenes/runtime/character_state_machine_test.tscn CHAR_STATE_OK
+          exit "$status"
+      - name: Upload runtime scene logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-runtime-test-logs
+          path: godot-*.log
+          if-no-files-found: error
+      - name: Enforce runtime scene success
+        if: always()
+        run: |
+          test "${{ steps.runtime_tests.outcome }}" = "success"
+          grep -q "STRESS_OK" godot-stress.log
+          grep -q "RELEASE_OK" godot-release.log
+          grep -q "FORM_OK" godot-form.log
+          grep -q "CHAR_STATE_OK" godot-character.log
+          ! grep -E "SCRIPT ERROR|Parse Error|Compile Error|^ERROR:|ObjectDB instances leaked" godot-stress.log godot-release.log godot-form.log godot-character.log

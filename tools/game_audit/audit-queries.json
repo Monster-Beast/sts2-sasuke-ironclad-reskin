@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "queries": [
+    {
+      "id": "target_cards",
+      "priority": true,
+      "exactTypeNames": [
+        "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad",
+        "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad",
+        "MegaCrit.Sts2.Core.Models.Cards.Bash",
+        "MegaCrit.Sts2.Core.Models.Cards.Anger",
+        "MegaCrit.Sts2.Core.Models.Cards.Cleave",
+        "MegaCrit.Sts2.Core.Models.Cards.Thunderclap",
+        "MegaCrit.Sts2.Core.Models.Cards.HeavyBlade",
+        "MegaCrit.Sts2.Core.Models.Cards.FlameBarrier",
+        "MegaCrit.Sts2.Core.Models.Cards.Whirlwind",
+        "MegaCrit.Sts2.Core.Models.Cards.BurningPact",
+        "MegaCrit.Sts2.Core.Models.Cards.DemonForm",
+        "MegaCrit.Sts2.Core.Models.Cards.LimitBreak",
+        "MegaCrit.Sts2.Core.Models.Cards.FiendFire"
+      ],
+      "typeContains": [],
+      "methodContains": [],
+      "memberContains": [],
+      "assetContains": []
+    },
+    {
+      "id": "cards",
+      "priority": false,
+      "exactTypeNames": [],
+      "typeContains": [
+        "Card",
+        "Ironclad",
+        "StrikeIronclad",
+        "DefendIronclad",
+        "Bash",
+        "Anger",
+        "Cleave",
+        "Thunderclap",
+        "HeavyBlade",
+        "FlameBarrier",
+        "Whirlwind",
+        "BurningPact",
+        "DemonForm",
+        "LimitBreak",
+        "FiendFire"
+      ],
+      "methodContains": [
+        "Card",
+        "Model",
+        "Id",
+        "Upgrade",
+        "Transform",
+        "OnPlay",
+        "BeforeCardPlayed",
+        "AfterCardPlayed",
+        "CardPlayStarted",
+        "CardPlayFinished"
+      ],
+      "memberContains": [
+        "Card",
+        "Id",
+        "Key",
+        "Slug",
+        "Strike",
+        "Defend",
+        "Bash",
+        "Anger",
+        "Cleave",
+        "Thunderclap",
+        "HeavyBlade",
+        "FlameBarrier",
+        "Whirlwind",
+        "BurningPact",
+        "DemonForm",
+        "LimitBreak",
+        "FiendFire",
+        "Ironclad"
+      ],
+      "assetContains": [
+        "ironclad",
+        "strike",
+        "defend",
+        "bash",
+        "anger",
+        "cleave",
+        "thunderclap",
+        "heavy_blade",
+        "flame_barrier",
+        "whirlwind",
+        "burning_pact",
+        "demon_form",
+        "limit_break",
+        "fiend_fire",
+        "card"
+      ]
+    },
+    {
+      "id": "visuals",
+      "priority": false,
+      "exactTypeNames": [],
+      "typeContains": [
+        "Animation",
+        "Player",
+        "Combat",
+        "Visual",
+        "NCard",
+        "NPlayerHand",
+        "NCardPlayQueue",
+        "MegaSprite",
+        "SpineAnimation"
+      ],
+      "methodContains": [
+        "Play",
+        "Animate",
+        "Impact",
+        "Visual",
+        "Block",
+        "Damage",
+        "Hit",
+        "StartCardPlay",
+        "OnLocalCardPlayed",
+        "UpdateCardVisuals",
+        "EndCardOrPotionEffect"
+      ],
+      "memberContains": [
+        "Animation",
+        "Impact",
+        "Hit",
+        "Damage",
+        "Block",
+        "Visual",
+        "Character",
+        "Player",
+        "CurrentCardPlay"
+      ],
+      "assetContains": ["animation", "spine", "atlas", "character", "combat", "effect"]
+    },
+    {
+      "id": "titles",
+      "priority": false,
+      "exactTypeNames": [],
+      "typeContains": [
+        "Hand",
+        "Deck",
+        "Reward",
+        "Compendium",
+        "Tooltip",
+        "Localization",
+        "CardLibrary",
+        "CardsView",
+        "CardRewardSelection",
+        "MessyCardPreview",
+        "CardHolder",
+        "NCard"
+      ],
+      "methodContains": [
+        "Name",
+        "Title",
+        "Text",
+        "Local",
+        "Render",
+        "Refresh",
+        "Display",
+        "Preview",
+        "CardModel"
+      ],
+      "memberContains": [
+        "Name",
+        "Title",
+        "Text",
+        "Hand",
+        "Deck",
+        "Reward",
+        "Compendium",
+        "Tooltip",
+        "CardLibrary",
+        "Preview"
+      ],
+      "assetContains": ["localization", "hand", "deck", "reward", "compendium", "tooltip"]
+    },
+    {
+      "id": "lifecycle",
+      "priority": false,
+      "exactTypeNames": [],
+      "typeContains": ["Combat", "Power", "Status", "Player", "CardPlay", "CombatHistory"],
+      "methodContains": [
+        "End",
+        "Remove",
+        "Apply",
+        "Dispose",
+        "Victory",
+        "Start",
+        "Reset",
+        "Death",
+        "CombatEnded",
+        "StateChanged",
+        "PowerRemoved"
+      ],
+      "memberContains": [
+        "End",
+        "Remove",
+        "Expire",
+        "Dispose",
+        "Victory",
+        "Death",
+        "State",
+        "Form",
+        "CombatEnded"
+      ],
+      "assetContains": ["combat", "power", "status", "victory"]
+    },
+    {
+      "id": "audit_fixture",
+      "priority": false,
+      "exactTypeNames": [],
+      "typeContains": ["Audit"],
+      "methodContains": ["Scan", "Compare", "Write"],
+      "memberContains": ["Fixture", "Card", "Impact", "Title", "Removed", "Ended", "State"],
+      "assetContains": ["audit_fixture"]
+    }
+  ]
+}

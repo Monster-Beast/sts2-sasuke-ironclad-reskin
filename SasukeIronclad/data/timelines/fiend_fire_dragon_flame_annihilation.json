@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "animation_id": "fiend_fire_dragon_flame_annihilation",
+  "card_id": "Fiend Fire",
+  "duration_ms": 1560,
+  "dynamic_duration": true,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.42},
+    "upgraded": {"speed_scale": 1.0},
+    "empowered": {"speed_scale": 0.93},
+    "lethal": {"speed_scale": 0.86},
+    "low_flash": {"speed_scale": 0.97}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "bash_lock", "duration_ms": 170},
+    {"time_ms": 55, "type": "eye", "active": true},
+    {
+      "time_ms": 105,
+      "type": "advanced_vfx",
+      "effect": "card_afterimage_orbit",
+      "anchor": "vfx",
+      "params": {"count": 4, "radius": 96.0},
+      "param_bindings": {
+        "count": {"source": "exhausted_card_count", "scale": 1.0, "offset": 0.0, "min": 1.0, "max": 12.0, "integer": true},
+        "radius": {"source": "exhausted_card_count", "scale": 4.0, "offset": 82.0, "min": 86.0, "max": 132.0}
+      }
+    },
+    {"time_ms": 230, "type": "cutin", "style": "dragon_fire", "duration_ms": 280, "suppress_in_low_flash": true, "skip_in_fast": true},
+    {"time_ms": 320, "type": "camera", "effect": "scene_dim", "params": {"opacity": 0.32, "duration": 0.34}, "skip_in_fast": true},
+    {"time_ms": 405, "type": "pose", "pose": "heavy_charge", "duration_ms": 190},
+    {
+      "time_ms": 480,
+      "type": "advanced_vfx",
+      "effect": "dragon_flame_launch",
+      "anchor": "vfx",
+      "params": {"length": 260.0, "width": 18.0, "embers": 10},
+      "param_bindings": {
+        "width": {"source": "exhausted_card_count", "scale": 1.1, "offset": 14.0, "min": 15.0, "max": 28.0},
+        "embers": {"source": "exhausted_card_count", "scale": 1.4, "offset": 5.0, "min": 6.0, "max": 20.0, "integer": true}
+      }
+    },
+    {
+      "time_ms": 545,
+      "type": "impact_loop",
+      "count_source": "hit_count",
+      "fallback_count": 4,
+      "min_count": 0,
+      "max_count": 64,
+      "detailed_visual_count": 10,
+      "interval_ms": 105,
+      "fast_interval_ms": 48,
+      "external_interval_cap_ms": 38,
+      "poses": ["heavy_charge", "slash_impact"],
+      "pose_duration_ms": 82,
+      "effect": "dragon_flame_impact",
+      "anchor": "vfx",
+      "params": {"radius": 42.0, "petals": 7},
+      "param_bindings": {
+        "radius": {"source": "exhausted_card_count", "scale": 2.0, "offset": 34.0, "min": 36.0, "max": 58.0}
+      },
+      "camera_effect": "shake_light",
+      "camera_every": 4,
+      "camera_params": {"amplitude": 4.0, "duration": 0.09}
+    },
+    {"time_ms": 585, "type": "advanced_vfx", "effect": "dragon_flame_coil", "anchor": "vfx", "params": {"radius": 132.0, "turns": 2.4}},
+    {"time_ms": 620, "type": "pose", "pose": "heavy_impact", "duration_ms": 130},
+    {"time_ms": 650, "type": "camera", "effect": "shake_medium", "params": {"amplitude": 8.0, "duration": 0.20}},
+    {"time_ms": 680, "type": "camera", "effect": "impact_flash", "params": {"opacity": 0.24, "duration": 0.11}, "suppress_in_low_flash": true},
+    {"time_ms": 760, "type": "eye", "active": false},
+    {"time_ms": 920, "type": "return_idle", "duration_ms": 240}
+  ]
+}

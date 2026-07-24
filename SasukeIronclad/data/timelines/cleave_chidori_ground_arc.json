@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "animation_id": "cleave_chidori_ground_arc",
+  "card_id": "Cleave",
+  "duration_ms": 1080,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.4},
+    "upgraded": {"speed_scale": 1.0},
+    "lethal": {"speed_scale": 0.94},
+    "low_flash": {"speed_scale": 0.96}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "cleave_windup", "duration_ms": 190},
+    {"time_ms": 80, "type": "eye", "active": true},
+    {"time_ms": 175, "type": "vfx", "effect": "lightning_blade_charge", "anchor": "weapon", "params": {"count": 12}},
+    {"time_ms": 300, "type": "pose", "pose": "cleave_impact", "duration_ms": 150},
+    {"time_ms": 330, "type": "vfx", "effect": "silver_ground_arc", "anchor": "ground", "params": {"radius": 138.0, "width": 16.0, "rotation": -0.08}},
+    {
+      "time_ms": 355,
+      "type": "vfx",
+      "effect": "chidori_ground_fan",
+      "anchor": "ground",
+      "params": {"radius": 190.0, "branches": 9},
+      "param_bindings": {
+        "branches": {"source": "target_count", "scale": 1.0, "offset": 7.0, "min": 7, "max": 12, "integer": true}
+      }
+    },
+    {"time_ms": 400, "type": "impact"},
+    {"time_ms": 415, "type": "camera", "effect": "shake_light", "params": {"amplitude": 4.5, "duration": 0.15}},
+    {
+      "time_ms": 435,
+      "type": "vfx",
+      "effect": "multi_target_impact",
+      "anchor": "vfx",
+      "params": {"count": 3, "spacing": 72.0},
+      "param_bindings": {
+        "count": {"source": "target_count", "min": 1, "max": 5, "integer": true}
+      }
+    },
+    {"time_ms": 540, "type": "eye", "active": false},
+    {"time_ms": 700, "type": "return_idle", "duration_ms": 210}
+  ]
+}

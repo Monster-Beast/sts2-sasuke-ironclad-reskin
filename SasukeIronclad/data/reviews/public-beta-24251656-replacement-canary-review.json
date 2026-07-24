@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "status": "replacement_canary_and_multi_combat_stability_passed",
+  "profile_id": "public-beta-24251656-ee45848ff631",
+  "runtime": {
+    "branch": "public-beta",
+    "steam_build_id": "24251656",
+    "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+    "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+    "baselib_version": "v3.3.7"
+  },
+  "source": {
+    "kind": "user_provided_local_status_transcript_and_checkpoint_archive",
+    "raw_transcript_committed": false,
+    "raw_archive_committed": false,
+    "contains_absolute_local_paths": false,
+    "review_note": "The user confirmed successful replacement activation, unsupported-card restoration and a later same-process multi-combat stability run."
+  },
+  "activation": {
+    "observed_at_utc": "2026-07-21T21:56:52.1875910+00:00",
+    "requested": true,
+    "active": true,
+    "ever_hidden": true,
+    "restore_count": 0,
+    "last_transition": "original_visual_hidden_after_verified_overlay_playback",
+    "target_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals",
+    "target_name": "Ironclad",
+    "original_visible_before_hide": true,
+    "anchor_bound": true,
+    "overlay_visible": true,
+    "candidate_count": 3,
+    "local_player_reference_count": 1,
+    "anchor_scale": 1.2,
+    "anchor_offset_x": 0.0,
+    "anchor_offset_y": -150.0,
+    "passed": true
+  },
+  "unsupported_card_restoration": {
+    "observed_at_utc": "2026-07-21T21:57:07.8743229+00:00",
+    "requested": true,
+    "active": false,
+    "ever_hidden": true,
+    "restore_count": 1,
+    "last_transition": "original_visual_restored:card_not_in_reviewed_replacement_scope",
+    "target_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals",
+    "target_name": "Ironclad",
+    "original_visible_before_hide": true,
+    "anchor_bound": false,
+    "overlay_visible": false,
+    "candidate_count": 3,
+    "local_player_reference_count": 1,
+    "passed": true
+  },
+  "observed_followup": {
+    "observed_at_utc": "2026-07-21T21:55:36.5540648+00:00",
+    "reason": "playback_fallback:asynchronous visual playback failed: original_impact_timeout",
+    "original_visual_restored": true,
+    "restore_count": 1,
+    "diagnosis": "The runtime selection path could request external original-impact synchronization for non-damage timelines whose impact markers are timeline-local visual beats.",
+    "code_resolution": "Original-impact synchronization now requires both an is_damage_card animation specification and the reviewed original_hit_events mode.",
+    "local_retest_required": false,
+    "local_retest": {
+      "archive_file_name": "local-canary-stability-20260722-100455.zip",
+      "archive_sha256": "8b74fc4e9bf0abb6567e68e672a186909f6fe7c7ac5cd51eff47af1960d17026",
+      "tested_mod_commit": "ab76ff43c285e65fac94022d6acae9d49dcf9b72",
+      "same_process_multi_combat": true,
+      "original_impact_timeout_occurrences": 0,
+      "playback_fallback_occurrences": 0,
+      "replacement_reactivation_observed": true,
+      "combat_end_restoration_observed": true,
+      "unsupported_card_restoration_observed": true,
+      "passed": true
+    }
+  },
+  "anchor_observation": {
+    "stable_identity": {
+      "strategy": "callback_local_player_reference",
+      "anchor_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals",
+      "anchor_name": "Ironclad",
+      "local_player_reference_count": 1,
+      "observed_global_x": 480,
+      "observed_global_y": 740
+    },
+    "candidate_counts_seen": [2, 3],
+    "candidate_count_is_identity_invariant": false
+  },
+  "stability_review": {
+    "path": "SasukeIronclad/data/reviews/public-beta-24251656-multi-combat-stability-review.json",
+    "status": "multi_combat_stability_passed_with_capture_caveats",
+    "replacement_hide_cycles_observed": 4,
+    "final_restore_count": 4,
+    "same_process_id_across_active_checkpoints": true,
+    "capture_caveats_do_not_contradict_runtime_transitions": true
+  },
+  "conclusions": {
+    "replacement_activation_passed": true,
+    "unsupported_card_restoration_passed": true,
+    "captured_original_visibility_restoration_passed": true,
+    "exact_local_player_anchor_identity_passed": true,
+    "impact_sync_regression_closed": true,
+    "same_process_multi_combat_stability_passed": true,
+    "production_profile_ready": false
+  },
+  "safety": {
+    "explicit_replace_original_opt_in_required": true,
+    "postfix_only": true,
+    "gameplay_changes": false,
+    "production_contract_promoted": false,
+    "form_removed_enabled": false,
+    "character_state_enabled": false,
+    "demon_form_replacement_enabled": false
+  }
+}

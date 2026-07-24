@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "animation_id": "burning_pact_curse_seal_consumption",
+  "card_id": "Burning Pact",
+  "duration_ms": 1380,
+  "variant_overrides": {
+    "fast": {"speed_scale": 1.46},
+    "upgraded": {"speed_scale": 1.0},
+    "low_flash": {"speed_scale": 0.96}
+  },
+  "events": [
+    {"time_ms": 0, "type": "pose", "pose": "pact_focus", "duration_ms": 210},
+    {"time_ms": 70, "type": "eye", "active": true},
+    {
+      "time_ms": 120,
+      "type": "state_install",
+      "state_id": "burning_pact_channel",
+      "style": "curse_channel",
+      "anchor": "vfx",
+      "params": {"radius": 72.0, "marks": 8, "rotation_speed": 0.20, "pulse": 0.025, "pulse_speed": 3.6}
+    },
+    {"time_ms": 165, "type": "advanced_vfx", "effect": "curse_mark_spread", "anchor": "vfx", "params": {"marks": 9, "radius": 88.0}},
+    {
+      "time_ms": 250,
+      "type": "advanced_vfx",
+      "effect": "pact_card_afterimages",
+      "anchor": "vfx",
+      "params": {"count": 1, "radius": 98.0},
+      "param_bindings": {
+        "count": {"source": "exhausted_card_count", "scale": 1.0, "min": 1, "max": 4, "integer": true}
+      }
+    },
+    {"time_ms": 390, "type": "camera", "effect": "scene_dim", "params": {"opacity": 0.22, "duration": 0.28}, "skip_in_fast": true},
+    {"time_ms": 470, "type": "pose", "pose": "pact_consume", "duration_ms": 170},
+    {"time_ms": 520, "type": "state_pulse", "state_id": "burning_pact_channel", "params": {"scale": 1.22, "opacity": 1.0, "duration": 0.18}},
+    {"time_ms": 565, "type": "advanced_vfx", "effect": "pact_consumption_burst", "anchor": "vfx", "params": {"radius": 94.0, "spokes": 10}},
+    {"time_ms": 620, "type": "impact"},
+    {"time_ms": 680, "type": "state_clear", "state_id": "burning_pact_channel"},
+    {"time_ms": 710, "type": "advanced_vfx", "effect": "chakra_return", "anchor": "vfx", "params": {"radius": 76.0, "streams": 7}},
+    {"time_ms": 840, "type": "eye", "active": false},
+    {"time_ms": 950, "type": "return_idle", "duration_ms": 220}
+  ]
+}

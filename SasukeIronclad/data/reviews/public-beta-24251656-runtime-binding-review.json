@@ -1,0 +1,524 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-07-23T11:30:04.935824+00:00",
+  "status": "partial_manual_review",
+  "profile_id": "public-beta-24251656-ee45848ff631",
+  "runtime": {
+    "branch": "public-beta",
+    "steam_build_id": "24251656",
+    "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+    "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+    "baselib_version": "v3.3.8"
+  },
+  "source": {
+    "runtime_review_file": "runtime-observation-review.json",
+    "runtime_review_sha256": "2fa4d6c86be2510fdf186dde9d6d799b757601d85c163d379658ef2b0f828c0a",
+    "manifest_file": "runtime_observation_targets.json",
+    "manifest_sha256": "a24a521524a93917756830698a525b1ba8771094e24e601f144d824bd92dbf1e",
+    "logs": [
+      {
+        "file_name": "runtime-observation-observed-v338-run-1-20260723T110523463Z-6d27d022eef24ec4ba34a601252d8594.jsonl",
+        "sha256": "c7d6f7dbe679ec57c70de9a36eb3f009565992ef4f7a253dfd882c01e4e6e24f",
+        "session_id": "observed-v338-run-1-20260723T110523466Z"
+      },
+      {
+        "file_name": "runtime-observation-observed-v338-run-2-20260723T112339631Z-963dc5ae5c394a17bd2aa15b1204b848.jsonl",
+        "sha256": "97f411fa0761bbd9dc644227477c1c3ac19ea354eabb0547ea6471ec33ffbf18",
+        "session_id": "observed-v338-run-2-20260723T112339634Z"
+      }
+    ]
+  },
+  "quality": {
+    "session_count": 2,
+    "event_counts": [
+      8977,
+      9319
+    ],
+    "all_required_bindings_observed_in_all_sessions": true,
+    "balanced_call_pairs": true,
+    "session_stop_present": false,
+    "errors": [],
+    "warnings": [
+      "runtime-observation-observed-v338-run-1-20260723T110523463Z-6d27d022eef24ec4ba34a601252d8594.jsonl: no session_stop event; the game may not have exited cleanly",
+      "runtime-observation-observed-v338-run-2-20260723T112339631Z-963dc5ae5c394a17bd2aa15b1204b848.jsonl: no session_stop event; the game may not have exited cleanly"
+    ]
+  },
+  "policy": {
+    "auto_selection_forbidden": true,
+    "production_contract_remains_disabled": true,
+    "runtime_bindings_remain_disabled": true,
+    "canary_requires_explicit_local_opt_in": true,
+    "fallback_to_original_required": true,
+    "multiplayer_local_visual_only_required": true
+  },
+  "readiness": {
+    "title_canary_candidate_count": 6,
+    "visual_canary_candidate_count": 4,
+    "blocked_binding_count": 2,
+    "production_profile_ready": false
+  },
+  "decisions": [
+    {
+      "binding_id": "card_visual_request",
+      "kind": "visual",
+      "status": "approved_for_canary",
+      "selected_target_id": "card-play.local-queue",
+      "rationale": "The local queue callback is the earliest local visual request and carries the concrete CardModel directly.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCardPlayQueue",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Combat.NCardPlayQueue.OnLocalCardPlayed(MegaCrit.Sts2.Core.GameActions.PlayCardAction, MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder, MegaCrit.Sts2.Core.Models.CardModel)",
+      "metadata_token": "0x06003DFF",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 33,
+          "return_count": 33,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.Anger",
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad",
+            "MegaCrit.Sts2.Core.Models.Cards.PerfectedStrike",
+            "MegaCrit.Sts2.Core.Models.Cards.PommelStrike",
+            "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad"
+          ]
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 35,
+          "return_count": 35,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.Brand",
+            "MegaCrit.Sts2.Core.Models.Cards.BurningPact",
+            "MegaCrit.Sts2.Core.Models.Cards.Cinder",
+            "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad",
+            "MegaCrit.Sts2.Core.Models.Cards.Headbutt",
+            "MegaCrit.Sts2.Core.Models.Cards.Pillage",
+            "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad"
+          ]
+        }
+      ]
+    },
+    {
+      "binding_id": "original_impact",
+      "kind": "visual",
+      "status": "approved_for_canary",
+      "selected_target_id": "impact.damage-history",
+      "rationale": "The combat-history damage record occurs after card-play start, carries DamageResult plus the concrete CardModel, and is paired in both runs.",
+      "declaring_type": "MegaCrit.Sts2.Core.Combat.History.CombatHistory",
+      "method_signature": "void MegaCrit.Sts2.Core.Combat.History.CombatHistory.DamageReceived(MegaCrit.Sts2.Core.Combat.ICombatState, MegaCrit.Sts2.Core.Entities.Creatures.Creature, MegaCrit.Sts2.Core.Entities.Creatures.Creature, MegaCrit.Sts2.Core.Entities.Creatures.DamageResult, MegaCrit.Sts2.Core.Models.CardModel)",
+      "metadata_token": "0x060089D6",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 42,
+          "return_count": 42,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.Anger",
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.PerfectedStrike",
+            "MegaCrit.Sts2.Core.Models.Cards.PommelStrike",
+            "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad"
+          ]
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 33,
+          "return_count": 33,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.Brand",
+            "MegaCrit.Sts2.Core.Models.Cards.Cinder",
+            "MegaCrit.Sts2.Core.Models.Cards.Headbutt",
+            "MegaCrit.Sts2.Core.Models.Cards.Pillage",
+            "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad"
+          ]
+        }
+      ]
+    },
+    {
+      "binding_id": "state_removed",
+      "kind": "visual",
+      "status": "approved_for_canary",
+      "selected_target_id": "power.container-removed",
+      "rationale": "The container callback directly carries the removed PowerModel and distinguishes the state type without inspecting private UI nodes.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Combat.NPowerContainer",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Combat.NPowerContainer.OnPowerRemoved(MegaCrit.Sts2.Core.Models.PowerModel)",
+      "metadata_token": "0x06004120",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 15,
+          "return_count": 15,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Powers.FrailPower",
+            "MegaCrit.Sts2.Core.Models.Powers.RavenousPower",
+            "MegaCrit.Sts2.Core.Models.Powers.RitualPower",
+            "MegaCrit.Sts2.Core.Models.Powers.StrengthPower",
+            "MegaCrit.Sts2.Core.Models.Powers.VulnerablePower",
+            "MegaCrit.Sts2.Core.Models.Powers.WeakPower"
+          ]
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 11,
+          "return_count": 11,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Powers.ShacklingPotionPower",
+            "MegaCrit.Sts2.Core.Models.Powers.ShrinkPower",
+            "MegaCrit.Sts2.Core.Models.Powers.SlowPower",
+            "MegaCrit.Sts2.Core.Models.Powers.StrengthPower",
+            "MegaCrit.Sts2.Core.Models.Powers.VulnerablePower"
+          ]
+        }
+      ]
+    },
+    {
+      "binding_id": "form_removed",
+      "kind": "visual",
+      "status": "needs_targeted_observation",
+      "selected_target_id": "",
+      "rationale": "Generic power removal was observed, but no Demon Form power removal occurred in either run; form-specific cleanup remains unselected.",
+      "declaring_type": "",
+      "method_signature": "",
+      "metadata_token": "",
+      "observed_in_all_sessions": false,
+      "session_evidence": []
+    },
+    {
+      "binding_id": "combat_ended",
+      "kind": "visual",
+      "status": "approved_for_canary",
+      "selected_target_id": "combat.room-ended",
+      "rationale": "CombatRoom.OnCombatEnded is the earliest semantic combat endpoint and precedes the UI/save cleanup callback in both runs.",
+      "declaring_type": "MegaCrit.Sts2.Core.Rooms.CombatRoom",
+      "method_signature": "void MegaCrit.Sts2.Core.Rooms.CombatRoom.OnCombatEnded()",
+      "metadata_token": "0x06000E81",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 4,
+          "return_count": 4,
+          "related_model_types": []
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 4,
+          "return_count": 4,
+          "related_model_types": []
+        }
+      ]
+    },
+    {
+      "binding_id": "character_state",
+      "kind": "visual",
+      "status": "needs_targeted_observation",
+      "selected_target_id": "",
+      "rationale": "Observed candidates represent combat reset, phase changes, and energy changes; they do not prove hit, death, or victory presentation semantics.",
+      "declaring_type": "",
+      "method_signature": "",
+      "metadata_token": "",
+      "observed_in_all_sessions": false,
+      "session_evidence": []
+    },
+    {
+      "binding_id": "card_art",
+      "kind": "title",
+      "status": "approved_for_canary",
+      "selected_target_id": "title.card-label-update",
+      "rationale": "NCard.UpdateTitleLabel is the direct title-label refresh and was observed with concrete card models across all tested card contexts.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.NCard",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.NCard.UpdateTitleLabel()",
+      "metadata_token": "0x060041F3",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 1309,
+          "return_count": 1309,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.Aggression",
+            "MegaCrit.Sts2.Core.Models.Cards.Anger",
+            "MegaCrit.Sts2.Core.Models.Cards.Armaments",
+            "MegaCrit.Sts2.Core.Models.Cards.AscendersBane",
+            "MegaCrit.Sts2.Core.Models.Cards.AshenStrike",
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.BattleTrance",
+            "MegaCrit.Sts2.Core.Models.Cards.Blaze",
+            "MegaCrit.Sts2.Core.Models.Cards.BloodWall",
+            "MegaCrit.Sts2.Core.Models.Cards.Bloodletting",
+            "MegaCrit.Sts2.Core.Models.Cards.Bludgeon",
+            "MegaCrit.Sts2.Core.Models.Cards.BodySlam",
+            "MegaCrit.Sts2.Core.Models.Cards.Brand",
+            "MegaCrit.Sts2.Core.Models.Cards.Breakthrough",
+            "MegaCrit.Sts2.Core.Models.Cards.Bully",
+            "MegaCrit.Sts2.Core.Models.Cards.BurningPact"
+          ]
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 1387,
+          "return_count": 1387,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.Aggression",
+            "MegaCrit.Sts2.Core.Models.Cards.Anger",
+            "MegaCrit.Sts2.Core.Models.Cards.Armaments",
+            "MegaCrit.Sts2.Core.Models.Cards.AscendersBane",
+            "MegaCrit.Sts2.Core.Models.Cards.AshenStrike",
+            "MegaCrit.Sts2.Core.Models.Cards.Automation",
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.BattleTrance",
+            "MegaCrit.Sts2.Core.Models.Cards.Blaze",
+            "MegaCrit.Sts2.Core.Models.Cards.BloodWall",
+            "MegaCrit.Sts2.Core.Models.Cards.Bloodletting",
+            "MegaCrit.Sts2.Core.Models.Cards.Bludgeon",
+            "MegaCrit.Sts2.Core.Models.Cards.BodySlam",
+            "MegaCrit.Sts2.Core.Models.Cards.Brand",
+            "MegaCrit.Sts2.Core.Models.Cards.Breakthrough",
+            "MegaCrit.Sts2.Core.Models.Cards.Bully"
+          ]
+        }
+      ]
+    },
+    {
+      "binding_id": "hand",
+      "kind": "title",
+      "status": "approved_for_canary",
+      "selected_target_id": "title.hand-card-update",
+      "rationale": "NHandCardHolder.UpdateCard is hand-specific, repeatedly paired, and carries related card model types through the holder.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.Holders.NHandCardHolder",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.Holders.NHandCardHolder.UpdateCard()",
+      "metadata_token": "0x06004340",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 867,
+          "return_count": 867,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.Anger",
+            "MegaCrit.Sts2.Core.Models.Cards.AscendersBane",
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad",
+            "MegaCrit.Sts2.Core.Models.Cards.PerfectedStrike",
+            "MegaCrit.Sts2.Core.Models.Cards.PommelStrike",
+            "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad"
+          ]
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 998,
+          "return_count": 998,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.AscendersBane",
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.Brand",
+            "MegaCrit.Sts2.Core.Models.Cards.BurningPact",
+            "MegaCrit.Sts2.Core.Models.Cards.Cinder",
+            "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad",
+            "MegaCrit.Sts2.Core.Models.Cards.Headbutt",
+            "MegaCrit.Sts2.Core.Models.Cards.Pillage",
+            "MegaCrit.Sts2.Core.Models.Cards.Slimed",
+            "MegaCrit.Sts2.Core.Models.Cards.SpoilsMap",
+            "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad"
+          ]
+        }
+      ]
+    },
+    {
+      "binding_id": "deck_list",
+      "kind": "title",
+      "status": "approved_for_canary",
+      "selected_target_id": "title.deck-grid-set",
+      "rationale": "NCardGrid.SetCards was observed in both runs with PileType=Deck and deck/card-library caller stacks.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.NCardGrid",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.NCardGrid.SetCards(System.Collections.Generic.IReadOnlyList`1<MegaCrit.Sts2.Core.Models.CardModel>, MegaCrit.Sts2.Core.Entities.Cards.PileType, System.Collections.Generic.List`1<MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.SortingOrders>, System.Threading.Tasks.Task)",
+      "metadata_token": "0x0600424D",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 3,
+          "return_count": 3,
+          "related_model_types": []
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 8,
+          "return_count": 8,
+          "related_model_types": []
+        }
+      ]
+    },
+    {
+      "binding_id": "reward",
+      "kind": "title",
+      "status": "approved_for_canary",
+      "selected_target_id": "title.reward-refresh",
+      "rationale": "The reward screen refresh callback is the narrowest reward population entrypoint observed in both runs.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CardSelection.NCardRewardSelectionScreen",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Screens.CardSelection.NCardRewardSelectionScreen.RefreshOptions(System.Collections.Generic.IReadOnlyList`1<MegaCrit.Sts2.Core.Entities.Cards.CardCreationResult>, System.Collections.Generic.IReadOnlyList`1<MegaCrit.Sts2.Core.Entities.CardRewardAlternatives.CardRewardAlternative>)",
+      "metadata_token": "0x06002FD1",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 4,
+          "return_count": 4,
+          "related_model_types": []
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 4,
+          "return_count": 4,
+          "related_model_types": []
+        }
+      ]
+    },
+    {
+      "binding_id": "compendium",
+      "kind": "title",
+      "status": "approved_for_canary",
+      "selected_target_id": "title.compendium-grid-display",
+      "rationale": "The card-library grid display callback is compendium-specific and was observed in both runs.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.NCardLibraryGrid",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.NCardLibraryGrid.DisplayCards(System.Collections.Generic.List`1<MegaCrit.Sts2.Core.Models.CardModel>, System.Collections.Generic.List`1<MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.SortingOrders>)",
+      "metadata_token": "0x06003122",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 1,
+          "return_count": 1,
+          "related_model_types": []
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 1,
+          "return_count": 1,
+          "related_model_types": []
+        }
+      ]
+    },
+    {
+      "binding_id": "tooltip",
+      "kind": "title",
+      "status": "approved_for_canary",
+      "selected_target_id": "title.card-hover",
+      "rationale": "The holder hover callback is the narrowest tooltip/inspection trigger and was observed with concrete card models in both runs.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder.DoCardHoverEffects(bool)",
+      "metadata_token": "0x060042E6",
+      "observed_in_all_sessions": true,
+      "session_evidence": [
+        {
+          "session_id": "observed-v338-run-1-20260723T110523466Z",
+          "enter_count": 204,
+          "return_count": 204,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.Anger",
+            "MegaCrit.Sts2.Core.Models.Cards.AscendersBane",
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.BattleTrance",
+            "MegaCrit.Sts2.Core.Models.Cards.BodySlam",
+            "MegaCrit.Sts2.Core.Models.Cards.Breakthrough",
+            "MegaCrit.Sts2.Core.Models.Cards.Cascade",
+            "MegaCrit.Sts2.Core.Models.Cards.Cruelty",
+            "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad",
+            "MegaCrit.Sts2.Core.Models.Cards.EvilEye",
+            "MegaCrit.Sts2.Core.Models.Cards.ExpectAFight",
+            "MegaCrit.Sts2.Core.Models.Cards.FiendFire",
+            "MegaCrit.Sts2.Core.Models.Cards.FightMe",
+            "MegaCrit.Sts2.Core.Models.Cards.Headbutt",
+            "MegaCrit.Sts2.Core.Models.Cards.Hemokinesis",
+            "MegaCrit.Sts2.Core.Models.Cards.PactsEnd"
+          ]
+        },
+        {
+          "session_id": "observed-v338-run-2-20260723T112339634Z",
+          "enter_count": 154,
+          "return_count": 154,
+          "related_model_types": [
+            "MegaCrit.Sts2.Core.Models.Cards.AscendersBane",
+            "MegaCrit.Sts2.Core.Models.Cards.Bash",
+            "MegaCrit.Sts2.Core.Models.Cards.Brand",
+            "MegaCrit.Sts2.Core.Models.Cards.Bully",
+            "MegaCrit.Sts2.Core.Models.Cards.BurningPact",
+            "MegaCrit.Sts2.Core.Models.Cards.Cinder",
+            "MegaCrit.Sts2.Core.Models.Cards.Cruelty",
+            "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad",
+            "MegaCrit.Sts2.Core.Models.Cards.DemonicShield",
+            "MegaCrit.Sts2.Core.Models.Cards.Dismantle",
+            "MegaCrit.Sts2.Core.Models.Cards.DrumOfBattle",
+            "MegaCrit.Sts2.Core.Models.Cards.ExpectAFight",
+            "MegaCrit.Sts2.Core.Models.Cards.FeelNoPain",
+            "MegaCrit.Sts2.Core.Models.Cards.FiendFire",
+            "MegaCrit.Sts2.Core.Models.Cards.FlameBarrier",
+            "MegaCrit.Sts2.Core.Models.Cards.ForgottenRitual"
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "id": "form_removed_requires_demon_form_evidence",
+      "bindings": [
+        "form_removed"
+      ],
+      "detail": "Run a targeted observation in which Demon Form is applied and later removed/cleared; keep the generic power hook unselected until its concrete PowerModel type is observed."
+    },
+    {
+      "id": "character_state_semantics_incomplete",
+      "bindings": [
+        "character_state"
+      ],
+      "detail": "Add or review targets that directly represent local-player hit, death and victory events. Current reset/phase/energy callbacks are too broad."
+    },
+    {
+      "id": "fallback_regression_pending",
+      "bindings": [
+        "card_visual_request",
+        "original_impact",
+        "state_removed",
+        "form_removed",
+        "combat_ended",
+        "character_state",
+        "card_art",
+        "hand",
+        "deck_list",
+        "reward",
+        "compendium",
+        "tooltip"
+      ],
+      "detail": "The exact-build canary adapter must demonstrate that missing assets, target mismatch and adapter errors leave original visuals and titles unchanged."
+    },
+    {
+      "id": "multiplayer_local_only_regression_pending",
+      "bindings": [
+        "card_visual_request",
+        "original_impact",
+        "state_removed",
+        "form_removed",
+        "combat_ended",
+        "character_state",
+        "card_art",
+        "hand",
+        "deck_list",
+        "reward",
+        "compendium",
+        "tooltip"
+      ],
+      "detail": "The canary must be exercised in multiplayer and prove that only local visual nodes change and no gameplay/network model is mutated."
+    }
+  ],
+  "next_stage": [
+    "Build an exact-build canary adapter from approved_for_canary decisions only.",
+    "Keep the production game_integration_contract status and profile list unchanged.",
+    "Run fallback and multiplayer-local-only regressions.",
+    "Collect targeted Demon Form and character hit/death/victory evidence before promoting the remaining visual bindings."
+  ]
+}

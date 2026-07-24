@@ -1,0 +1,324 @@
+{
+  "schema_version": 1,
+  "status": "observation_only",
+  "gameplay_changes": false,
+  "profile_id": "public-beta-24251656-ee45848ff631",
+  "branch": "public-beta",
+  "fingerprint": {
+    "steam_build_id": "24251656",
+    "sts2_sha256": "ee45848ff6319dfc7af2538d3a52d05d82bef35ee4c5fd0400dc9efe8f9054aa",
+    "module_mvid": "a49d3537-5a42-4dcd-9877-663e394f2b44",
+    "baselib_version": "v3.3.8",
+    "baselib_manifest_sha256": "a18ab523da25e146f384a6989eddccc8230d00556b30d3576910c41fa19ce876"
+  },
+  "beta_attestation": {
+    "status": "verified",
+    "checked_at_utc": "2026-07-23T01:33:53.102829+00:00",
+    "source": "steamcmd_app_info_print",
+    "steamcmd_output_sha256": "6bf18e453f27e9fbac1443982ab09d4c17b46bf7da28406edadc92f9d2528886",
+    "max_age_hours": 72
+  },
+  "policy": {
+    "default_enabled": false,
+    "read_only_only": true,
+    "exact_fingerprint_required": true,
+    "fail_closed_on_target_mismatch": true,
+    "unpatch_on_reset": true,
+    "opt_in_file_name": "SasukeIronclad.observe.json",
+    "output_directory_name": "observation-output",
+    "default_max_events": 20000,
+    "minimum_max_events": 100,
+    "maximum_max_events": 50000,
+    "maximum_stack_frames": 8,
+    "capture_argument_values": false,
+    "capture_absolute_paths": false
+  },
+  "required_binding_ids": [
+    "card_visual_request",
+    "original_impact",
+    "state_removed",
+    "form_removed",
+    "combat_ended",
+    "character_state",
+    "card_art",
+    "hand",
+    "deck_list",
+    "reward",
+    "compendium",
+    "tooltip"
+  ],
+  "active_card_model_types": [
+    "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad",
+    "MegaCrit.Sts2.Core.Models.Cards.DefendIronclad",
+    "MegaCrit.Sts2.Core.Models.Cards.Bash",
+    "MegaCrit.Sts2.Core.Models.Cards.Anger",
+    "MegaCrit.Sts2.Core.Models.Cards.Thunderclap",
+    "MegaCrit.Sts2.Core.Models.Cards.FlameBarrier",
+    "MegaCrit.Sts2.Core.Models.Cards.Whirlwind",
+    "MegaCrit.Sts2.Core.Models.Cards.BurningPact",
+    "MegaCrit.Sts2.Core.Models.Cards.DemonForm",
+    "MegaCrit.Sts2.Core.Models.Cards.FiendFire"
+  ],
+  "targets": [
+    {
+      "id": "card-play.local-queue",
+      "binding_ids": ["card_visual_request"],
+      "purpose": "Observe the local card-play request with its CardModel argument.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCardPlayQueue",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Combat.NCardPlayQueue.OnLocalCardPlayed(MegaCrit.Sts2.Core.GameActions.PlayCardAction, MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder, MegaCrit.Sts2.Core.Models.CardModel)",
+      "metadata_token": "0x06003DFF",
+      "capture_stack": false,
+      "required": true
+    },
+    {
+      "id": "card-play.hand-start",
+      "binding_ids": ["card_visual_request"],
+      "purpose": "Observe the local hand transition into card play.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Combat.NPlayerHand",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Combat.NPlayerHand.StartCardPlay(MegaCrit.Sts2.Core.Nodes.Cards.Holders.NHandCardHolder, bool)",
+      "metadata_token": "0x060040BF",
+      "capture_stack": false,
+      "required": true
+    },
+    {
+      "id": "card-play.history-started",
+      "binding_ids": ["card_visual_request"],
+      "purpose": "Observe authoritative combat-history card-play start ordering.",
+      "declaring_type": "MegaCrit.Sts2.Core.Combat.History.CombatHistory",
+      "method_signature": "void MegaCrit.Sts2.Core.Combat.History.CombatHistory.CardPlayStarted(MegaCrit.Sts2.Core.Combat.ICombatState, MegaCrit.Sts2.Core.Entities.Cards.CardPlay)",
+      "metadata_token": "0x060089CE",
+      "capture_stack": false,
+      "required": true
+    },
+    {
+      "id": "card-play.history-finished",
+      "binding_ids": ["card_visual_request"],
+      "purpose": "Observe authoritative combat-history card-play completion ordering.",
+      "declaring_type": "MegaCrit.Sts2.Core.Combat.History.CombatHistory",
+      "method_signature": "void MegaCrit.Sts2.Core.Combat.History.CombatHistory.CardPlayFinished(MegaCrit.Sts2.Core.Combat.ICombatState, MegaCrit.Sts2.Core.Entities.Cards.CardPlay)",
+      "metadata_token": "0x060089CF",
+      "capture_stack": false,
+      "required": true
+    },
+    {
+      "id": "impact.damage-history",
+      "binding_ids": ["original_impact"],
+      "purpose": "Observe one combat-history damage record per authoritative damage result, including CardModel type.",
+      "declaring_type": "MegaCrit.Sts2.Core.Combat.History.CombatHistory",
+      "method_signature": "void MegaCrit.Sts2.Core.Combat.History.CombatHistory.DamageReceived(MegaCrit.Sts2.Core.Combat.ICombatState, MegaCrit.Sts2.Core.Entities.Creatures.Creature, MegaCrit.Sts2.Core.Entities.Creatures.Creature, MegaCrit.Sts2.Core.Entities.Creatures.DamageResult, MegaCrit.Sts2.Core.Models.CardModel)",
+      "metadata_token": "0x060089D6",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "power.container-removed",
+      "binding_ids": ["state_removed", "form_removed"],
+      "purpose": "Observe the removed PowerModel type before persistent cosmetic state cleanup is selected.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Combat.NPowerContainer",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Combat.NPowerContainer.OnPowerRemoved(MegaCrit.Sts2.Core.Models.PowerModel)",
+      "metadata_token": "0x06004120",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "power.node-removed",
+      "binding_ids": ["state_removed", "form_removed"],
+      "purpose": "Observe removal of the visual Power node as a secondary cleanup candidate.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Combat.NPower",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Combat.NPower.OnPowerRemoved()",
+      "metadata_token": "0x0600410A",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "combat.room-ended",
+      "binding_ids": ["combat_ended"],
+      "purpose": "Observe the CombatRoom lifecycle endpoint.",
+      "declaring_type": "MegaCrit.Sts2.Core.Rooms.CombatRoom",
+      "method_signature": "void MegaCrit.Sts2.Core.Rooms.CombatRoom.OnCombatEnded()",
+      "metadata_token": "0x06000E81",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "combat.ui-ended",
+      "binding_ids": ["combat_ended"],
+      "purpose": "Observe the combat UI lifecycle endpoint for ordering comparison.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Combat.NCombatUi",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Combat.NCombatUi.OnCombatEnded(MegaCrit.Sts2.Core.Rooms.CombatRoom)",
+      "metadata_token": "0x06003E8B",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "character.player-state-set",
+      "binding_ids": ["character_state"],
+      "purpose": "Observe PlayerCombatState transitions without changing the assigned value.",
+      "declaring_type": "MegaCrit.Sts2.Core.Entities.Players.Player",
+      "method_signature": "void MegaCrit.Sts2.Core.Entities.Players.Player.set_PlayerCombatState(MegaCrit.Sts2.Core.Entities.Players.PlayerCombatState)",
+      "metadata_token": "0x060082D2",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "character.state-tracker-player-changed",
+      "binding_ids": ["character_state"],
+      "purpose": "Observe the state tracker notification after a player-state change.",
+      "declaring_type": "MegaCrit.Sts2.Core.Combat.CombatStateTracker",
+      "method_signature": "void MegaCrit.Sts2.Core.Combat.CombatStateTracker.OnPlayerStateChanged()",
+      "metadata_token": "0x0600896A",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "character.state-tracker-value-changed",
+      "binding_ids": ["character_state"],
+      "purpose": "Observe numeric player combat-state value transitions for ordering comparison.",
+      "declaring_type": "MegaCrit.Sts2.Core.Combat.CombatStateTracker",
+      "method_signature": "void MegaCrit.Sts2.Core.Combat.CombatStateTracker.OnPlayerCombatStateValueChanged(int, int)",
+      "metadata_token": "0x0600896B",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.card-model-set",
+      "binding_ids": ["card_art", "hand", "deck_list", "reward", "compendium", "tooltip"],
+      "purpose": "Observe which concrete CardModel is assigned to a reusable NCard node.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.NCard",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.NCard.set_Model(MegaCrit.Sts2.Core.Models.CardModel)",
+      "metadata_token": "0x060041D1",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.card-update-visuals",
+      "binding_ids": ["card_art", "hand", "deck_list", "reward", "compendium", "tooltip"],
+      "purpose": "Observe pile and preview mode when a card surface refreshes.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.NCard",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.NCard.UpdateVisuals(MegaCrit.Sts2.Core.Entities.Cards.PileType, MegaCrit.Sts2.Core.Entities.Cards.CardPreviewMode)",
+      "metadata_token": "0x060041E0",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.card-label-update",
+      "binding_ids": ["card_art", "hand", "deck_list", "reward", "compendium", "tooltip"],
+      "purpose": "Observe each card title-label refresh and its calling surface.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.NCard",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.NCard.UpdateTitleLabel()",
+      "metadata_token": "0x060041F3",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.card-text-read",
+      "binding_ids": ["card_art", "hand", "deck_list", "reward", "compendium", "tooltip"],
+      "purpose": "Observe the common card-title text getter and caller stack without recording the returned title.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.NCard",
+      "method_signature": "string MegaCrit.Sts2.Core.Nodes.Cards.NCard.GetTitleText()",
+      "metadata_token": "0x060041F8",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.hand-card-update",
+      "binding_ids": ["hand"],
+      "purpose": "Observe hand-holder card refreshes.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.Holders.NHandCardHolder",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.Holders.NHandCardHolder.UpdateCard()",
+      "metadata_token": "0x06004340",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.hand-card-added",
+      "binding_ids": ["hand"],
+      "purpose": "Observe cards entering the local hand surface.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Combat.NPlayerHand",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Combat.NPlayerHand.AddCardHolder(MegaCrit.Sts2.Core.Nodes.Cards.Holders.NHandCardHolder, int)",
+      "metadata_token": "0x060040A8",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.deck-display",
+      "binding_ids": ["deck_list"],
+      "purpose": "Observe the deck-view display entrypoint.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.NDeckViewScreen",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Screens.NDeckViewScreen.DisplayCards()",
+      "metadata_token": "0x06001E4A",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.deck-grid-set",
+      "binding_ids": ["deck_list"],
+      "purpose": "Observe the generic card-grid population path and pile type.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.NCardGrid",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.NCardGrid.SetCards(System.Collections.Generic.IReadOnlyList`1<MegaCrit.Sts2.Core.Models.CardModel>, MegaCrit.Sts2.Core.Entities.Cards.PileType, System.Collections.Generic.List`1<MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.SortingOrders>, System.Threading.Tasks.Task)",
+      "metadata_token": "0x0600424D",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.reward-refresh",
+      "binding_ids": ["reward"],
+      "purpose": "Observe card-reward option population.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CardSelection.NCardRewardSelectionScreen",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Screens.CardSelection.NCardRewardSelectionScreen.RefreshOptions(System.Collections.Generic.IReadOnlyList`1<MegaCrit.Sts2.Core.Entities.Cards.CardCreationResult>, System.Collections.Generic.IReadOnlyList`1<MegaCrit.Sts2.Core.Entities.CardRewardAlternatives.CardRewardAlternative>)",
+      "metadata_token": "0x06002FD1",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.reward-inspect",
+      "binding_ids": ["reward", "tooltip"],
+      "purpose": "Observe reward-card inspection and tooltip transition.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CardSelection.NCardRewardSelectionScreen",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Screens.CardSelection.NCardRewardSelectionScreen.InspectCard(MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder)",
+      "metadata_token": "0x06002FD6",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.compendium-display",
+      "binding_ids": ["compendium"],
+      "purpose": "Observe the card-library display entrypoint.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.NCardLibrary",
+      "method_signature": "System.Threading.Tasks.Task MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.NCardLibrary.DisplayCards()",
+      "metadata_token": "0x060030EC",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.compendium-grid-display",
+      "binding_ids": ["compendium"],
+      "purpose": "Observe the concrete card-library grid population method.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.NCardLibraryGrid",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.NCardLibraryGrid.DisplayCards(System.Collections.Generic.List`1<MegaCrit.Sts2.Core.Models.CardModel>, System.Collections.Generic.List`1<MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.SortingOrders>)",
+      "metadata_token": "0x06003122",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.card-hover",
+      "binding_ids": ["tooltip"],
+      "purpose": "Observe common card hover transitions.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder.DoCardHoverEffects(bool)",
+      "metadata_token": "0x060042E6",
+      "capture_stack": true,
+      "required": true
+    },
+    {
+      "id": "title.compendium-detail",
+      "binding_ids": ["compendium", "tooltip"],
+      "purpose": "Observe the card-library detail panel opening for a concrete holder.",
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.NCardLibrary",
+      "method_signature": "void MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary.NCardLibrary.ShowCardDetail(MegaCrit.Sts2.Core.Nodes.Cards.Holders.NCardHolder)",
+      "metadata_token": "0x060030F7",
+      "capture_stack": true,
+      "required": true
+    }
+  ]
+}
